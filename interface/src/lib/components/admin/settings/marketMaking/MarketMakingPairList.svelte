@@ -2,7 +2,7 @@
     import clsx from "clsx";
     import { createEventDispatcher } from "svelte";
     import { _ } from "svelte-i18n";
-    import toast from "svelte-french-toast";
+import { toast } from "svelte-sonner";
     import type {
         MarketMakingPair,
         MarketMakingPairDto,

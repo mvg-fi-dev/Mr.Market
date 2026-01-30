@@ -2,7 +2,7 @@
   import clsx from "clsx";
   import { validate } from "uuid";
   import { _ } from "svelte-i18n";
-  import toast from "svelte-french-toast";
+import { toast } from "svelte-sonner";
   import { page } from "$app/stores";
   import { invalidate } from "$app/navigation";
   import { mixinAsset } from "$lib/helpers/mixin/mixin";

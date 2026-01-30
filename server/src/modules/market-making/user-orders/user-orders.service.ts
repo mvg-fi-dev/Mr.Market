@@ -6,16 +6,12 @@ import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { ConfigService } from '@nestjs/config';
 import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
-import { StrategyService } from 'src/modules/market-making/strategy/strategy.service';
-import { createStrategyKey } from 'src/common/helpers/strategyKey';
 import {
-  ArbitrageOrder,
   MarketMakingOrder,
   PaymentState,
   SimplyGrowOrder,
 } from 'src/common/entities/user-orders.entity';
 import {
-  ArbitrageStates,
   MarketMakingStates,
   SimplyGrowStates,
 } from 'src/common/types/orders/states';
@@ -28,9 +24,6 @@ export class UserOrdersService {
 
   constructor(
     private readonly configService: ConfigService,
-    private readonly strategyService: StrategyService,
-    @InjectRepository(ArbitrageOrder)
-    private readonly arbitrageRepository: Repository<ArbitrageOrder>,
     @InjectRepository(MarketMakingOrder)
     private readonly marketMakingRepository: Repository<MarketMakingOrder>,
     @InjectRepository(PaymentState)
@@ -42,24 +35,22 @@ export class UserOrdersService {
     @InjectRepository(ArbitrageHistory)
     private readonly arbitrageHistoryRepository: Repository<ArbitrageHistory>,
     @InjectQueue('market-making') private readonly marketMakingQueue: Queue,
-  ) { }
+  ) {}
 
   async findAllStrategyByUser(userId: string) {
     try {
-      const arbitrages = await this.arbitrageRepository.findBy({ userId });
       const market_makings = await this.marketMakingRepository.findBy({
         userId,
       });
       const simply_grows = await this.simplyGrowRepository.findBy({ userId });
       return {
-        arbitrage: arbitrages,
         market_making: market_makings,
         simply_grow: simply_grows,
-        total: arbitrages.length + market_makings.length + simply_grows.length,
+        total: market_makings.length + simply_grows.length,
       };
     } catch (error) {
       this.logger.error('Error finding all strategy by user', error);
-      return { arbitrage: [], market_making: [], simply_grow: [], total: 0 };
+      return { market_making: [], simply_grow: [], total: 0 };
     }
   }
 
@@ -92,61 +83,6 @@ export class UserOrdersService {
       await this.simplyGrowRepository.update({ orderId }, { state: newState });
     } catch (error) {
       this.logger.error('Error updating simply grow state', error);
-      throw error;
-    }
-  }
-
-  async createArbitrage(
-    arbitrageOrder: ArbitrageOrder,
-  ): Promise<ArbitrageOrder> {
-    try {
-      return await this.arbitrageRepository.save(arbitrageOrder);
-    } catch (error) {
-      this.logger.error('Error creating arbitrage order', error.message);
-      throw error;
-    }
-  }
-
-  async findArbitrageByOrderId(
-    orderId: string,
-  ): Promise<ArbitrageOrder | undefined> {
-    try {
-      return await this.arbitrageRepository.findOneBy({ orderId });
-    } catch (error) {
-      this.logger.error(
-        'Error finding arbitrage order by orderId',
-        error.message,
-      );
-      throw error;
-    }
-  }
-
-  async findArbitrageByUserId(userId: string): Promise<ArbitrageOrder[]> {
-    try {
-      return await this.arbitrageRepository.findBy({ userId });
-    } catch (error) {
-      this.logger.error(
-        'Error finding arbitrage orders by userId',
-        error.message,
-      );
-      throw error;
-    }
-  }
-
-  async updateArbitrageOrderState(
-    orderId: string,
-    newState: ArbitrageStates,
-  ): Promise<void> {
-    try {
-      await this.arbitrageRepository.update({ orderId }, { state: newState });
-      this.logger.log(
-        `Arbitrage order ${orderId} updated successfully to state ${newState}`,
-      );
-    } catch (error) {
-      this.logger.error(
-        `Error updating arbitrage order state for orderId ${orderId}`,
-        error.message,
-      );
       throw error;
     }
   }
@@ -287,35 +223,10 @@ export class UserOrdersService {
     }
 
     // Get orders states that are created
-    const activeArb = await this.arbitrageRepository.findBy({
-      state: 'created',
-    });
     const activeMM = await this.marketMakingRepository.findBy({
       state: 'created',
     });
 
-    if (activeArb) {
-      activeArb.forEach(async (arb) => {
-        const key = createStrategyKey({
-          user_id: arb.userId,
-          client_id: arb.orderId,
-          type: 'arbitrage',
-        });
-        // TODO: FIX THIS HARDCODE -ERC20
-        await this.strategyService.startArbitrageIfNotStarted(
-          key,
-          {
-            ...arb,
-            pair: arb.pair.replaceAll('-ERC20', ''),
-            clientId: arb.orderId,
-            amountToTrade: Number(arb.amountToTrade),
-            minProfitability: Number(arb.minProfitability),
-          },
-          15, // example value for checkIntervalSeconds
-          1, // example value for maxOpenOrders
-        );
-      });
-    }
     if (activeMM) {
       activeMM.forEach(async (mm) => {
         await this.marketMakingQueue.add('start_mm', {
@@ -325,22 +236,10 @@ export class UserOrdersService {
       });
     }
 
-    const pausedArb = await this.arbitrageRepository.findBy({
-      state: 'paused',
-    });
     const pausedMM = await this.marketMakingRepository.findBy({
       state: 'paused',
     });
 
-    if (pausedArb) {
-      pausedArb.forEach(async (arb) => {
-        await this.strategyService.pauseStrategyIfNotPaused({
-          type: 'arbitrage',
-          user_id: arb.userId,
-          client_id: arb.orderId,
-        });
-      });
-    }
     if (pausedMM) {
       pausedMM.forEach(async (mm) => {
         await this.marketMakingQueue.add('stop_mm', {

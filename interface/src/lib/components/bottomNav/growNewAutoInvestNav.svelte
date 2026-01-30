@@ -3,7 +3,7 @@
   import { _ } from "svelte-i18n";
   import { page } from "$app/stores";
   import { goto } from "$app/navigation";
-	import toast from 'svelte-french-toast';
+import { toast } from "svelte-sonner";
   import { createAIAmounts, createAIAssets, createAIName, createAIPeriod } from "$lib/stores/grow";
 
   const move = () => {

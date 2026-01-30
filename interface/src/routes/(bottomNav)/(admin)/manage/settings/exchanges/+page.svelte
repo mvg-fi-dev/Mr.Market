@@ -1,6 +1,7 @@
 <script lang="ts">
   import clsx from "clsx";
   import { _ } from "svelte-i18n";
+  import { toast } from "svelte-sonner";
   import { onMount } from "svelte";
   import { page } from "$app/stores";
   import { invalidate } from "$app/navigation";
@@ -22,13 +23,27 @@
 
   let isRefreshing = false;
 
-  async function RefreshExchanges() {
+  async function RefreshExchanges(showToast = true) {
     isRefreshing = true;
-    setTimeout(() => {
-      invalidate("admin:settings:exchanges").finally(() => {
-        isRefreshing = false;
+    const refreshTask = new Promise<void>((resolve, reject) => {
+      setTimeout(() => {
+        invalidate("admin:settings:exchanges")
+          .then(() => resolve())
+          .catch((error) => reject(error))
+          .finally(() => {
+            isRefreshing = false;
+          });
+      }, getRandomDelay());
+    });
+    if (showToast) {
+      await toast.promise(refreshTask, {
+        loading: $_("refreshing_msg"),
+        success: $_("refresh_success_msg"),
+        error: $_("refresh_failed_msg"),
       });
-    }, getRandomDelay());
+    } else {
+      await refreshTask;
+    }
   }
 
   function getRandomDelay() {
@@ -79,7 +94,7 @@
 
     <!-- Action buttons -->
     <div class="flex items-center gap-3">
-      <AddExchange {allCcxtExchanges} />
+      <AddExchange {allCcxtExchanges} existingExchanges={exchanges} />
       <button
         class="btn btn-square btn-outline"
         on:click={() => RefreshExchanges()}

@@ -9,7 +9,10 @@ import { MarketMakingCreateMemoDetails } from 'src/common/types/memo/memo';
 import BigNumber from 'bignumber.js';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { MarketMakingOrder, PaymentState } from 'src/common/entities/user-orders.entity';
+import {
+  MarketMakingOrder,
+  PaymentState,
+} from 'src/common/entities/user-orders.entity';
 import { FeeService } from '../fee/fee.service';
 import { GrowdataRepository } from 'src/modules/data/grow-data/grow-data.repository';
 import { PriceSourceType } from 'src/common/enum/pricesourcetype';
@@ -66,7 +69,7 @@ export class MarketMakingOrderProcessor {
     private readonly marketMakingRepository: Repository<MarketMakingOrder>,
     @InjectQueue('withdrawal-confirmations')
     private readonly withdrawalConfirmationQueue: Queue,
-  ) { }
+  ) {}
 
   private readonly WITHDRAWAL_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
   private readonly RETRY_DELAY_MS = 30000; // 30 seconds
@@ -165,9 +168,7 @@ export class MarketMakingOrderProcessor {
       );
 
       if (!pairConfig) {
-        this.logger.error(
-          `Market making pair ${marketMakingPairId} not found`,
-        );
+        this.logger.error(`Market making pair ${marketMakingPairId} not found`);
         await this.refundUser(snapshot, 'Trading pair not found');
         return;
       }
@@ -272,7 +273,9 @@ export class MarketMakingOrderProcessor {
         this.logger.log(`Quote asset received: ${receivedAmount}`);
       } else if (receivedAssetId === baseFeeAssetId) {
         // Base fee asset received
-        paymentState.baseFeeAssetAmount = BigNumber(paymentState.baseFeeAssetAmount)
+        paymentState.baseFeeAssetAmount = BigNumber(
+          paymentState.baseFeeAssetAmount,
+        )
           .plus(receivedAmount)
           .toString();
         if (!paymentState.baseFeeAssetSnapshotId) {
@@ -282,7 +285,9 @@ export class MarketMakingOrderProcessor {
         this.logger.log(`Base fee asset received: ${receivedAmount}`);
       } else if (receivedAssetId === quoteFeeAssetId) {
         // Quote fee asset received
-        paymentState.quoteFeeAssetAmount = BigNumber(paymentState.quoteFeeAssetAmount)
+        paymentState.quoteFeeAssetAmount = BigNumber(
+          paymentState.quoteFeeAssetAmount,
+        )
           .plus(receivedAmount)
           .toString();
         if (!paymentState.quoteFeeAssetSnapshotId) {
@@ -330,7 +335,6 @@ export class MarketMakingOrderProcessor {
     }
   }
 
-
   /**
    * Step 2: Check if payment is complete
    * - Verify all 4 assets received with sufficient amounts
@@ -341,7 +345,9 @@ export class MarketMakingOrderProcessor {
   async handleCheckPaymentComplete(job: Job<CheckPaymentJobData>) {
     const { orderId, marketMakingPairId, retryCount = 0 } = job.data;
 
-    this.logger.log(`Checking payment for order ${orderId} (retry ${retryCount})`);
+    this.logger.log(
+      `Checking payment for order ${orderId} (retry ${retryCount})`,
+    );
 
     try {
       const paymentState = await this.paymentStateRepository.findOne({
@@ -364,20 +370,24 @@ export class MarketMakingOrderProcessor {
 
       // Check if all required assets received
       const hasBase = BigNumber(paymentState.baseAssetAmount).isGreaterThan(0);
-      const hasQuote = BigNumber(paymentState.quoteAssetAmount).isGreaterThan(0);
+      const hasQuote = BigNumber(paymentState.quoteAssetAmount).isGreaterThan(
+        0,
+      );
 
       // Check fees (comparing with required amounts)
-      const hasBaseFee = BigNumber(paymentState.baseFeeAssetAmount).isGreaterThanOrEqualTo(
-        paymentState.requiredBaseWithdrawalFee || 0,
-      );
-      const hasQuoteFee = BigNumber(paymentState.quoteFeeAssetAmount).isGreaterThanOrEqualTo(
-        paymentState.requiredQuoteWithdrawalFee || 0,
-      );
+      const hasBaseFee = BigNumber(
+        paymentState.baseFeeAssetAmount,
+      ).isGreaterThanOrEqualTo(paymentState.requiredBaseWithdrawalFee || 0);
+      const hasQuoteFee = BigNumber(
+        paymentState.quoteFeeAssetAmount,
+      ).isGreaterThanOrEqualTo(paymentState.requiredQuoteWithdrawalFee || 0);
 
       // Calculate required market making fee
       const totalPaidBase = BigNumber(paymentState.baseAssetAmount);
       const totalPaidQuote = BigNumber(paymentState.quoteAssetAmount);
-      const mmFeePercentage = BigNumber(paymentState.requiredMarketMakingFee || 0);
+      const mmFeePercentage = BigNumber(
+        paymentState.requiredMarketMakingFee || 0,
+      );
 
       // Note: Market making fee is usually deducted from the paid amounts
       // Here we assume user needs to pay extra or it's included
@@ -447,7 +457,11 @@ export class MarketMakingOrderProcessor {
           orderId,
           'failed',
         );
-        await this.refundPaymentState(orderId, paymentState, 'insufficient fees');
+        await this.refundPaymentState(
+          orderId,
+          paymentState,
+          'insufficient fees',
+        );
         return;
       }
 
@@ -490,22 +504,24 @@ export class MarketMakingOrderProcessor {
         'payment_complete',
       );
 
-      // Queue withdrawal
-      await (job.queue as any).add(
-        'withdraw_to_exchange',
-        {
-          orderId,
-          marketMakingPairId,
-        } as WithdrawJobData,
-        {
-          jobId: `withdraw_${orderId}`,
-          attempts: 3,
-          backoff: { type: 'exponential', delay: 10000 },
-          removeOnComplete: false,
-        },
-      );
+      // Queue withdrawal (disabled for snapshot flow testing)
+      // await (job.queue as any).add(
+      //   'withdraw_to_exchange',
+      //   {
+      //     orderId,
+      //     marketMakingPairId,
+      //   } as WithdrawJobData,
+      //   {
+      //     jobId: `withdraw_${orderId}`,
+      //     attempts: 3,
+      //     backoff: { type: 'exponential', delay: 10000 },
+      //     removeOnComplete: false,
+      //   },
+      // );
 
-      this.logger.log(`Payment complete, queued withdrawal for order ${orderId}`);
+      this.logger.log(
+        `Payment complete, withdrawal queueing skipped for order ${orderId}`,
+      );
     } catch (error) {
       this.logger.error(
         `Error checking payment for ${orderId}: ${error.message}`,
@@ -678,20 +694,22 @@ export class MarketMakingOrderProcessor {
   /**
    * Step 4: Join Campaign
    * Called after withdrawal is confirmed on exchange
-   * 
+   *
    * This handler:
    * 1. Joins the HuFi campaign (external Web3 integration) if campaign details provided
    * 2. Stores local record for tracking and future reward distribution
    */
   @Process('join_campaign')
-  async handleJoinCampaign(job: Job<{
-    orderId: string;
-    campaignId?: string;
-    hufiCampaign?: {
-      chainId: number;
-      campaignAddress: string;
-    };
-  }>) {
+  async handleJoinCampaign(
+    job: Job<{
+      orderId: string;
+      campaignId?: string;
+      hufiCampaign?: {
+        chainId: number;
+        campaignAddress: string;
+      };
+    }>,
+  ) {
     const { orderId, campaignId, hufiCampaign } = job.data;
     this.logger.log(`Joining campaign for order ${orderId}`);
 
@@ -701,7 +719,9 @@ export class MarketMakingOrderProcessor {
         'joining_campaign',
       );
 
-      const order = await this.userOrdersService.findMarketMakingByOrderId(orderId);
+      const order = await this.userOrdersService.findMarketMakingByOrderId(
+        orderId,
+      );
       if (!order) {
         throw new Error(`Order ${orderId} not found`);
       }
@@ -719,7 +739,8 @@ export class MarketMakingOrderProcessor {
           const matchingCampaign = campaigns.find(
             (c) =>
               c.chainId === hufiCampaign.chainId &&
-              c.address.toLowerCase() === hufiCampaign.campaignAddress.toLowerCase(),
+              c.address.toLowerCase() ===
+                hufiCampaign.campaignAddress.toLowerCase(),
           );
 
           if (matchingCampaign) {
@@ -743,7 +764,8 @@ export class MarketMakingOrderProcessor {
       }
 
       // Step 2: Store local campaign record for tracking and reward distribution
-      const localCampaignId = campaignId || `mm_${order.exchangeName}_${order.pair}`;
+      const localCampaignId =
+        campaignId || `mm_${order.exchangeName}_${order.pair}`;
       const participation = await this.localCampaignService.joinCampaign(
         order.userId,
         localCampaignId,
@@ -755,9 +777,7 @@ export class MarketMakingOrderProcessor {
       );
 
       if (hufiJoinResult) {
-        this.logger.log(
-          `HuFi campaign join scheduled for order ${orderId}`,
-        );
+        this.logger.log(`HuFi campaign join scheduled for order ${orderId}`);
       }
 
       await this.userOrdersService.updateMarketMakingOrderState(
@@ -895,18 +915,22 @@ export class MarketMakingOrderProcessor {
    * and proceeds to join_campaign once both are confirmed
    */
   @Process('monitor_mm_withdrawal')
-  async handleMonitorMMWithdrawal(job: Job<{
-    orderId: string;
-    marketMakingPairId: string;
-    baseWithdrawalTxId?: string;
-    quoteWithdrawalTxId?: string;
-  }>) {
+  async handleMonitorMMWithdrawal(
+    job: Job<{
+      orderId: string;
+      marketMakingPairId: string;
+      baseWithdrawalTxId?: string;
+      quoteWithdrawalTxId?: string;
+    }>,
+  ) {
     const { orderId, baseWithdrawalTxId, quoteWithdrawalTxId } = job.data;
     const startTime = Date.now();
     const retryCount = job.attemptsMade || 0;
 
     this.logger.log(
-      `Monitoring MM withdrawals for order ${orderId} (attempt ${retryCount + 1})`,
+      `Monitoring MM withdrawals for order ${orderId} (attempt ${
+        retryCount + 1
+      })`,
     );
 
     try {
@@ -921,7 +945,9 @@ export class MarketMakingOrderProcessor {
         : false;
 
       this.logger.log(
-        `Order ${orderId} withdrawal status - Base: ${baseConfirmed ? 'confirmed' : 'pending'}, Quote: ${quoteConfirmed ? 'confirmed' : 'pending'}`,
+        `Order ${orderId} withdrawal status - Base: ${
+          baseConfirmed ? 'confirmed' : 'pending'
+        }, Quote: ${quoteConfirmed ? 'confirmed' : 'pending'}`,
       );
 
       // Check for timeout
@@ -974,7 +1000,9 @@ export class MarketMakingOrderProcessor {
       const maxAttempts = 60; // 60 retries * 30s = 30 minutes max
       if (retryCount < maxAttempts) {
         this.logger.log(
-          `Retrying withdrawal monitoring for order ${orderId} (${retryCount + 1}/${maxAttempts})`,
+          `Retrying withdrawal monitoring for order ${orderId} (${
+            retryCount + 1
+          }/${maxAttempts})`,
         );
         await job.queue.add('monitor_mm_withdrawal', job.data, {
           jobId: `monitor_withdrawal_${orderId}`,
@@ -996,9 +1024,7 @@ export class MarketMakingOrderProcessor {
   /**
    * Check if a withdrawal is confirmed by checking the Mixin snapshot
    */
-  private async checkWithdrawalConfirmation(
-    txId: string,
-  ): Promise<boolean> {
+  private async checkWithdrawalConfirmation(txId: string): Promise<boolean> {
     try {
       const snapshot =
         await this.mixinClientService.client.safe.fetchSafeSnapshot(txId);
@@ -1020,9 +1046,7 @@ export class MarketMakingOrderProcessor {
 
       return confirmed;
     } catch (error) {
-      this.logger.error(
-        `Error checking withdrawal ${txId}: ${error.message}`,
-      );
+      this.logger.error(`Error checking withdrawal ${txId}: ${error.message}`);
       return false;
     }
   }

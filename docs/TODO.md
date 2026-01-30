@@ -21,3 +21,8 @@
 
 ## Hufi education illustrations
 1. Hufi education illustrations under /market-making/hufi/learn-more and Mr.market illustrations under /market-making/learn-more
+
+### Join Directly
+1. Create page for users to configure their exchange API keys to join hufi campaigns directly
+2. User should be able to add/select exchange, enter API keys, and join campaign in one flow
+3. Page should be accessible from campaign detail page via "Join Directly" button

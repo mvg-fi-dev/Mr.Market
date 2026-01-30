@@ -1,7 +1,7 @@
 <script lang="ts">
 	import "./styles.css";
 	import "../app.css";
-	import { Toaster } from "svelte-french-toast";
+import { Toaster } from "svelte-sonner";
 	import { initi18n as i18n } from "../i18n/i18n";
 	import { autoConnectMixin, checkMixinTokenExist } from "$lib/stores/wallet";
 	import Loading from "$lib/components/home/loading.svelte";

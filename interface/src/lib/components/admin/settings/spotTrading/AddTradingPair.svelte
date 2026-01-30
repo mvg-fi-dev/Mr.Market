@@ -9,7 +9,7 @@
   import { MIXIN_API_BASE_URL } from "$lib/helpers/constants";
   import AssetSelect from "../common/AssetSelect.svelte";
 
-  import toast from "svelte-french-toast";
+import { toast } from "svelte-sonner";
 
   export let configuredExchanges: {
     exchange_id: string;
@@ -17,6 +17,7 @@
     icon_url?: string;
     enable: boolean;
   }[] = [];
+  export let existingPairs: SpotTradingPair[] = [];
 
   let AddNewSymbol = "";
   let AddNewExchangeId = "";
@@ -37,6 +38,14 @@
   let isMarketDropdownOpen = false;
   let availableMarkets: any[] = [];
   let isLoadingMarkets = false;
+
+  const normalizeSymbol = (symbol: string) =>
+    symbol.split(":")[0].trim().toUpperCase();
+  $: existingPairKeys = new Set(
+    existingPairs.map(
+      (pair) => `${pair.exchange_id}:${normalizeSymbol(pair.symbol || "")}`,
+    ),
+  );
 
   const cleanUpStates = () => {
     isAdding = false;
@@ -62,6 +71,12 @@
   };
 
   async function AddSpotTradingPair(pair: SpotTradingPair) {
+    const existingKey = `${pair.exchange_id}:${normalizeSymbol(pair.symbol || "")}`;
+    if (existingPairKeys.has(existingKey)) {
+      toast.error($_("pair_already_added"));
+      return;
+    }
+
     if (
       !pair.symbol ||
       !pair.exchange_id ||
@@ -93,7 +108,12 @@
       {
         loading: $_("adding_pair_msg"),
         success: $_("add_pair_success_msg"),
-        error: (err) => `${$_("add_pair_failed_msg")}: ${err.message || err}`,
+        error: (err) => {
+          if (err instanceof Error) {
+            return `${$_("add_pair_failed_msg")}: ${err.message}`;
+          }
+          return `${$_("add_pair_failed_msg")}: ${String(err)}`;
+        },
       },
     );
   }
@@ -348,11 +368,14 @@
                     <span>{$_("no_markets_found")}</span>
                   </li>
                 {:else}
-                  {#each availableMarkets
-                    .filter((m) => m.symbol
-                        .toLowerCase()
-                        .includes(AddNewSymbol.toLowerCase()))
-                    .slice(0, 50) as market}
+                {#each availableMarkets
+                  .filter((m) => m.symbol
+                      .toLowerCase()
+                      .includes(AddNewSymbol.toLowerCase()))
+                  .filter((m) => !existingPairKeys.has(
+                    `${AddNewExchangeId}:${normalizeSymbol(m.symbol || "")}`,
+                  ))
+                  .slice(0, 50) as market}
                     <li>
                       <button
                         type="button"

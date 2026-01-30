@@ -9,9 +9,11 @@
   import { getAllCcxtExchanges } from "$lib/helpers/mrm/admin/growdata";
   import { encryptSecret } from "$lib/helpers/encryption/crypto";
   import { onMount } from "svelte";
-  import toast from "svelte-french-toast";
+  import { toast } from "svelte-sonner";
+  import type { AdminSingleKey } from "$lib/types/hufi/admin";
 
   let allCcxtExchanges: string[] = [];
+  export let existingKeys: AdminSingleKey[] = [];
 
   let AddNewExchange = "";
   let AddNewName = "";
@@ -24,6 +26,12 @@
   let isAdding = false;
   let isDropdownOpen = false;
 
+  $: existingKeyPairs = new Set(
+    existingKeys.map(
+      (key) => `${key.exchange.toLowerCase()}:${key.api_key}`,
+    ),
+  );
+
   async function AddAPIKey(
     exchange: string,
     name: string,
@@ -31,6 +39,10 @@
     api_secret: string,
   ) {
     if (!exchange || !name || !api_key || !api_secret) return;
+    if (existingKeyPairs.has(`${exchange.toLowerCase()}:${api_key}`)) {
+      toast.error($_("api_key_already_added"));
+      return;
+    }
     isAdding = true;
     const token = localStorage.getItem("admin-access-token");
     if (!token) return;

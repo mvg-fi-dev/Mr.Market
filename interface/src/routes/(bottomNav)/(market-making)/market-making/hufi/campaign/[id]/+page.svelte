@@ -1,6 +1,7 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
   import CampaignCard from "$lib/components/grow/marketMaking/hufi/CampaignCard.svelte";
+  import CampaignDetailActions from "$lib/components/grow/marketMaking/hufi/CampaignDetailActions.svelte";
 
   export let data;
 </script>
@@ -42,6 +43,7 @@
   {:then campaign}
     {#if campaign}
       <CampaignCard {campaign} />
+      <CampaignDetailActions {campaign} />
     {:else}
       <!-- Campaign Not Found -->
       <div class="flex flex-col items-center justify-center flex-1 px-4 py-20">

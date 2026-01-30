@@ -1,7 +1,7 @@
 <script lang="ts">
   import clsx from "clsx";
   import { _ } from "svelte-i18n";
-  import toast from "svelte-french-toast";
+import { toast } from "svelte-sonner";
   import { invalidate } from "$app/navigation";
   import { getRandomDelay } from "$lib/helpers/utils";
   import type { SpotTradingPair } from "$lib/types/hufi/spot";

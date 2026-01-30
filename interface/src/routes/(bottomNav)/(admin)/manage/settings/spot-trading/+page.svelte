@@ -1,24 +1,46 @@
 <script lang="ts">
   import clsx from "clsx";
   import { _ } from "svelte-i18n";
+  import { toast } from "svelte-sonner";
   import { page } from "$app/stores";
   import { invalidate } from "$app/navigation";
 
   import type { SpotTradingPair } from "$lib/types/hufi/spot";
   import Loading from "$lib/components/common/loading.svelte";
   import AddTradingPair from "$lib/components/admin/settings/spotTrading/AddTradingPair.svelte";
+  import QuickAddTradingPair from "$lib/components/admin/settings/spotTrading/QuickAddTradingPair.svelte";
   import TradingPairList from "$lib/components/admin/settings/spotTrading/TradingPairList.svelte";
 
   let isRefreshing = false;
+  let spotInfoPromise: Promise<any> | null = null;
+  let spotTradingPairs: SpotTradingPair[] = [];
 
-  async function RefreshSpotTradingPairs() {
+  async function RefreshSpotTradingPairs(showToast = true) {
     isRefreshing = true;
-    await invalidate("admin:settings:spot-trading").finally(() => {
-      isRefreshing = false;
-    });
+    const refreshTask = () =>
+      invalidate("admin:settings:spot-trading").finally(() => {
+        isRefreshing = false;
+      });
+    if (showToast) {
+      await toast.promise(refreshTask, {
+        loading: $_("refreshing_msg"),
+        success: $_("refresh_success_msg"),
+        error: $_("refresh_failed_msg"),
+      });
+    } else {
+      await refreshTask();
+    }
   }
 
   $: configuredExchanges = $page.data.growInfo?.exchanges || [];
+  $: if ($page.data.spotInfo && $page.data.spotInfo !== spotInfoPromise) {
+    spotInfoPromise = $page.data.spotInfo;
+    if (spotInfoPromise) {
+      spotInfoPromise.then((spotInfo) => {
+        spotTradingPairs = spotInfo?.trading_pairs || [];
+      });
+    }
+  }
 </script>
 
 <div class="p-6 md:p-10 space-y-6 max-w-7xl mx-auto">
@@ -54,7 +76,15 @@
     </div>
 
     <div class="flex items-center gap-3">
-      <AddTradingPair {configuredExchanges} />
+      <QuickAddTradingPair
+        {configuredExchanges}
+        existingPairs={spotTradingPairs}
+        on:refresh={() => RefreshSpotTradingPairs(false)}
+      />
+      <AddTradingPair
+        {configuredExchanges}
+        existingPairs={spotTradingPairs}
+      />
       <button
         class="btn btn-square btn-outline"
         on:click={() => RefreshSpotTradingPairs()}

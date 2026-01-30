@@ -1,6 +1,7 @@
 <script lang="ts">
   import clsx from "clsx";
   import { _ } from "svelte-i18n";
+  import { toast } from "svelte-sonner";
   import { invalidate } from "$app/navigation";
   import {
     addExchange,
@@ -8,6 +9,12 @@
   } from "$lib/helpers/mrm/admin/growdata";
 
   export let allCcxtExchanges: string[] = [];
+  export let existingExchanges: {
+    exchange_id: string;
+    name: string;
+    icon_url?: string;
+    enable: boolean;
+  }[] = [];
 
   let AddNewName = "";
   let AddNewExchangeId = "";
@@ -17,12 +24,20 @@
   let isAdding = false;
   let isDropdownOpen = false;
 
+  $: existingExchangeIds = new Set(
+    existingExchanges.map((exchange) => exchange.exchange_id.toLowerCase()),
+  );
+
   async function AddExchange(
     name: string,
     exchangeId: string,
     iconUrl: string,
   ) {
     if (!name || !exchangeId) return;
+    if (existingExchangeIds.has(exchangeId.toLowerCase())) {
+      toast.error($_("exchange_already_added"));
+      return;
+    }
     isAdding = true;
     const token = localStorage.getItem("admin-access-token");
     if (!token) return;
@@ -98,13 +113,15 @@
           />
           {#if isDropdownOpen && allCcxtExchanges.filter((e) => e
                 .toLowerCase()
-                .includes(AddNewExchangeId.toLowerCase())).length > 0}
+                .includes(AddNewExchangeId.toLowerCase()) &&
+                !existingExchangeIds.has(e.toLowerCase())).length > 0}
             <ul
               class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-full max-h-60 overflow-y-auto block z-[50] mt-1 border border-base-200"
             >
               {#each allCcxtExchanges.filter((e) => e
                   .toLowerCase()
-                  .includes(AddNewExchangeId.toLowerCase())) as exchangeId}
+                  .includes(AddNewExchangeId.toLowerCase()) &&
+                  !existingExchangeIds.has(e.toLowerCase())) as exchangeId}
                 <li>
                   <button
                     type="button"

@@ -1,6 +1,7 @@
 <script lang="ts">
   import clsx from "clsx";
   import { _ } from "svelte-i18n";
+  import { toast } from "svelte-sonner";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import {
@@ -16,19 +17,31 @@
   let isRefreshing = false;
   let isUpdating = false;
 
-  async function RefreshFees() {
+  async function RefreshFees(showToast = false) {
     if (!globalFee) isLoading = true;
     else isRefreshing = true;
 
     const token = localStorage.getItem("admin-access-token");
     if (!token) return;
-    try {
+    const refreshTask = async () => {
       const [fees, overridesData] = await Promise.all([
         getGlobalFees(token),
         getFeeOverrides(token),
       ]);
       globalFee = fees;
       feeOverrides = overridesData;
+    };
+
+    try {
+      if (showToast) {
+        await toast.promise(refreshTask(), {
+          loading: $_("refreshing_msg"),
+          success: $_("refresh_success_msg"),
+          error: $_("refresh_failed_msg"),
+        });
+      } else {
+        await refreshTask();
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -43,7 +56,7 @@
     if (!token) return;
     try {
       await updateGlobalFees(fees, token);
-      await RefreshFees();
+      await RefreshFees(false);
     } catch (e) {
       console.error(e);
     } finally {
@@ -88,7 +101,7 @@
       </div>
     </div>
 
-    <button class="btn btn-square btn-outline" on:click={() => RefreshFees()}>
+    <button class="btn btn-square btn-outline" on:click={() => RefreshFees(true)}>
       <span class={clsx(isRefreshing && "loading loading-spinner loading-sm")}>
         {#if !isRefreshing}
           <svg

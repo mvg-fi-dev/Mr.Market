@@ -3,7 +3,7 @@
   import { validate } from "uuid";
   import { createEventDispatcher } from "svelte";
   import { _ } from "svelte-i18n";
-  import toast from "svelte-french-toast";
+  import { toast } from "svelte-sonner";
   import { goto } from "$app/navigation";
   import { mixinAsset } from "$lib/helpers/mixin/mixin";
   import { getUuid } from "@mixin.dev/mixin-node-sdk";

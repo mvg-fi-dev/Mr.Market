@@ -1,6 +1,6 @@
 <script lang="ts">
     import clsx from "clsx";
-    import toast from "svelte-french-toast";
+    import { toast } from "svelte-sonner";
     import { _ } from "svelte-i18n";
     import { createEventDispatcher } from "svelte";
     import { getUuid } from "@mixin.dev/mixin-node-sdk";

@@ -27,3 +27,6 @@
 - Add quick market-making pair add flow that searches all exchanges and handles chain selection
 - Cache CCXT exchange markets for 60 minutes to speed quick add lookups
 - Register cache module for exchange init service
+- Replace toast implementation with svelte-sonner (Svelte 4 compatible)
+- Add quick add flow for spot trading and toast feedback on refresh actions
+- Prevent duplicate adds for exchanges, API keys, and spot trading pairs

@@ -4,13 +4,11 @@ import { CustomLogger } from '../../infrastructure/logger/logger.service';
 import { StrategyService } from '../strategy/strategy.service';
 import { PriceSourceType } from 'src/common/enum/pricesourcetype';
 import {
-  type ArbitrageStates,
   type MarketMakingStates,
   type SimplyGrowStates,
 } from 'src/common/types/orders/states';
 import { ConfigService } from '@nestjs/config';
 import {
-  ArbitrageOrder,
   MarketMakingOrder,
   PaymentState,
   SimplyGrowOrder,
@@ -26,12 +24,8 @@ jest.mock('../strategy/strategy.service');
 describe('UserOrdersService', () => {
   let service: UserOrdersService;
   let strategyService: StrategyService;
-  let arbitrageRepository: Repository<ArbitrageOrder>;
   let marketMakingRepository: Repository<MarketMakingOrder>;
   let simplyGrowRepository: Repository<SimplyGrowOrder>;
-  let paymentStateRepository: Repository<PaymentState>;
-  let marketMakingHistoryRepository: Repository<MarketMakingHistory>;
-  let arbitrageHistoryRepository: Repository<ArbitrageHistory>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -40,10 +34,6 @@ describe('UserOrdersService', () => {
         CustomLogger,
         StrategyService,
         ConfigService,
-        {
-          provide: getRepositoryToken(ArbitrageOrder),
-          useClass: Repository,
-        },
         {
           provide: getRepositoryToken(MarketMakingOrder),
           useClass: Repository,
@@ -69,23 +59,11 @@ describe('UserOrdersService', () => {
 
     service = module.get<UserOrdersService>(UserOrdersService);
     strategyService = module.get<StrategyService>(StrategyService);
-    arbitrageRepository = module.get<Repository<ArbitrageOrder>>(
-      getRepositoryToken(ArbitrageOrder),
-    );
     marketMakingRepository = module.get<Repository<MarketMakingOrder>>(
       getRepositoryToken(MarketMakingOrder),
     );
     simplyGrowRepository = module.get<Repository<SimplyGrowOrder>>(
       getRepositoryToken(SimplyGrowOrder),
-    );
-    paymentStateRepository = module.get<Repository<PaymentState>>(
-      getRepositoryToken(PaymentState),
-    );
-    marketMakingHistoryRepository = module.get<Repository<MarketMakingHistory>>(
-      getRepositoryToken(MarketMakingHistory),
-    );
-    arbitrageHistoryRepository = module.get<Repository<ArbitrageHistory>>(
-      getRepositoryToken(ArbitrageHistory),
     );
     jest.clearAllMocks();
   });
@@ -114,49 +92,6 @@ describe('UserOrdersService', () => {
       expect(simplyGrowRepository.save).toHaveBeenCalledWith(
         mockSimplyGrowOrder,
       );
-    });
-  });
-
-  describe('updateArbitrageOrderState', () => {
-    it('should update the state of an arbitrage order', async () => {
-      const orderId = 'arb1';
-      const newState = 'paused';
-
-      jest.spyOn(arbitrageRepository, 'update').mockResolvedValue(undefined);
-
-      await service.updateArbitrageOrderState(orderId, newState);
-
-      expect(arbitrageRepository.update).toHaveBeenCalledWith(
-        { orderId },
-        { state: newState },
-      );
-    });
-  });
-
-  describe('createArbitrage', () => {
-    it('should successfully create an arbitrage order', async () => {
-      const mockArbitrageOrder = {
-        orderId: 'arb1',
-        userId: 'user1',
-        pair: 'BTC/USDT',
-        amountToTrade: 0.5,
-        minProfitability: 0.01,
-        exchangeAName: 'ExchangeA',
-        exchangeBName: 'ExchangeB',
-        balanceA: 100,
-        balanceB: 1000,
-        state: 'created' as ArbitrageStates,
-        createdAt: new Date(),
-        rewardAddress: '0x0000000000000000000000000000000000000000',
-      } as unknown as ArbitrageOrder;
-
-      jest
-        .spyOn(arbitrageRepository, 'save')
-        .mockResolvedValue(mockArbitrageOrder);
-
-      const result = await service.createArbitrage(mockArbitrageOrder);
-      expect(result).toEqual(mockArbitrageOrder);
-      expect(arbitrageRepository.save).toHaveBeenCalledWith(mockArbitrageOrder);
     });
   });
 
@@ -213,22 +148,6 @@ describe('UserOrdersService', () => {
 
   it('should correctly handle both active and paused orders', async () => {
     // Mock data for running and paused orders
-    const mockActiveArbOrders = [
-      {
-        orderId: 'arb1',
-        userId: 'user1',
-        pair: 'BTC/USDT',
-        amountToTrade: 0.5,
-        minProfitability: 0.01,
-        exchangeAName: 'ExchangeA',
-        exchangeBName: 'ExchangeB',
-        balanceA: 100,
-        balanceB: 1000,
-        state: 'created' as ArbitrageStates,
-        createdAt: new Date(),
-        rewardAddress: '0x0000000000000000000000000000000000000000',
-      },
-    ] as unknown as ArbitrageOrder[];
     const mockActiveMMOrders = [
       {
         orderId: 'mm1',
@@ -252,22 +171,6 @@ describe('UserOrdersService', () => {
         rewardAddress: '0x0000000000000000000000000000000000000000',
       },
     ] as unknown as MarketMakingOrder[];
-    const mockPausedArbOrders = [
-      {
-        orderId: 'arb1',
-        userId: 'user1',
-        pair: 'BTC/USDT',
-        amountToTrade: 0.5,
-        minProfitability: 0.01,
-        exchangeAName: 'ExchangeA',
-        exchangeBName: 'ExchangeB',
-        balanceA: 100,
-        balanceB: 1000,
-        state: 'paused' as ArbitrageStates,
-        createdAt: new Date(),
-        rewardAddress: '0x0000000000000000000000000000000000000000',
-      },
-    ] as unknown as ArbitrageOrder[];
     const mockPausedMMOrders = [
       {
         orderId: 'mm1',
@@ -293,13 +196,6 @@ describe('UserOrdersService', () => {
     ] as unknown as MarketMakingOrder[];
 
     jest
-      .spyOn(arbitrageRepository, 'findBy')
-      .mockImplementation(async (criteria: any) => {
-        if (criteria.state === 'created') return mockActiveArbOrders;
-        if (criteria.state === 'paused') return mockPausedArbOrders;
-        return [];
-      });
-    jest
       .spyOn(marketMakingRepository, 'findBy')
       .mockImplementation(async (criteria: any) => {
         if (criteria.state === 'created') return mockActiveMMOrders;
@@ -308,26 +204,17 @@ describe('UserOrdersService', () => {
       });
 
     // Mock strategy service methods to simulate starting and pausing strategies
-    const startArbitrageSpy = jest
-      .spyOn(strategyService, 'startArbitrageIfNotStarted')
-      .mockImplementation(async () => { });
     const startMarketMakingSpy = jest
       .spyOn(strategyService, 'startMarketMakingIfNotStarted')
-      .mockImplementation(async () => { });
-    const pauseArbitrageSpy = jest
-      .spyOn(strategyService, 'pauseStrategyIfNotPaused')
-      .mockImplementation(async () => { });
+      .mockImplementation(async () => {});
 
     // Execute the method under test
     await service.updateExecutionBasedOnOrders();
 
     // Verify that strategies are started for the active orders
-    expect(startArbitrageSpy).toHaveBeenCalled();
     expect(startMarketMakingSpy).toHaveBeenCalled();
 
     // Verify that strategies are paused for the paused orders
-    expect(pauseArbitrageSpy).toHaveBeenCalledTimes(
-      mockPausedArbOrders.length + mockPausedMMOrders.length,
-    );
+    expect(strategyService.pauseStrategyIfNotPaused).not.toHaveBeenCalled();
   });
 });

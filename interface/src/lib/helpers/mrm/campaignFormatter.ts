@@ -65,6 +65,18 @@ export function formatDate(dateString: string): string {
   return date.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
+export function formatDateTime(dateString: string): string {
+  const date = new Date(dateString);
+  return date.toLocaleString('en-US', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+}
+
 export function formatType(type: string): string {
   return type.split('_').map(word =>
     word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()

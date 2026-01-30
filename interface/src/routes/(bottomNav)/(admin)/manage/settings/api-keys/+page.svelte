@@ -2,7 +2,7 @@
   import clsx from "clsx";
   import { _ } from "svelte-i18n";
   import { onMount } from "svelte";
-  import toast from "svelte-french-toast";
+  import { toast } from "svelte-sonner";
   import { invalidate } from "$app/navigation";
   import { page } from "$app/stores";
   import {
@@ -18,14 +18,24 @@
 
   let isRefreshing = false;
 
-  async function RefreshKeys(showLoading = true) {
-    if (showLoading) {
+  async function RefreshKeys(showToast = true) {
+    if (showToast) {
       isRefreshing = true;
-      setTimeout(() => {
-        invalidate("admin:settings:api-keys").finally(() => {
-          isRefreshing = false;
-        });
-      }, getRandomDelay());
+      const refreshTask = new Promise<void>((resolve, reject) => {
+        setTimeout(() => {
+          invalidate("admin:settings:api-keys")
+            .then(() => resolve())
+            .catch((error) => reject(error))
+            .finally(() => {
+              isRefreshing = false;
+            });
+        }, getRandomDelay());
+      });
+      await toast.promise(refreshTask, {
+        loading: $_("refreshing_msg"),
+        success: $_("refresh_success_msg"),
+        error: $_("refresh_failed_msg"),
+      });
     } else {
       invalidate("admin:settings:api-keys");
     }
@@ -90,7 +100,7 @@
 
     <!-- Action buttons -->
     <div class="flex items-center gap-3">
-      <AddApiKey />
+      <AddApiKey existingKeys={keys} />
       <button class="btn btn-square btn-outline" on:click={() => RefreshKeys()}>
         <span
           class={clsx(isRefreshing && "loading loading-spinner loading-sm")}

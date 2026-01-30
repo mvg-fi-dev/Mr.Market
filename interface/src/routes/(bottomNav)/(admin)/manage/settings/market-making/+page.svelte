@@ -1,5 +1,6 @@
 <script lang="ts">
   import { _ } from "svelte-i18n";
+  import { toast } from "svelte-sonner";
   import { page } from "$app/stores";
   import { invalidate } from "$app/navigation";
 
@@ -14,11 +15,21 @@
 
   let isRefreshing = false;
 
-  async function RefreshMarketMakingPairs() {
+  async function RefreshMarketMakingPairs(showToast = true) {
     isRefreshing = true;
-    await invalidate("admin:settings:market-making").finally(() => {
-      isRefreshing = false;
-    });
+    const refreshTask = () =>
+      invalidate("admin:settings:market-making").finally(() => {
+        isRefreshing = false;
+      });
+    if (showToast) {
+      await toast.promise(refreshTask, {
+        loading: $_("refreshing_msg"),
+        success: $_("refresh_success_msg"),
+        error: $_("refresh_failed_msg"),
+      });
+    } else {
+      await refreshTask();
+    }
   }
 </script>
 
@@ -58,12 +69,12 @@
       <QuickAddMarketMakingPair
         {configuredExchanges}
         existingPairs={marketMakingPairs}
-        on:refresh={RefreshMarketMakingPairs}
+        on:refresh={() => RefreshMarketMakingPairs(false)}
       />
       <AddMarketMakingPair
         {configuredExchanges}
         existingPairs={marketMakingPairs}
-        on:refresh={RefreshMarketMakingPairs}
+        on:refresh={() => RefreshMarketMakingPairs(false)}
       />
       <button
         class="btn btn-square btn-outline"
