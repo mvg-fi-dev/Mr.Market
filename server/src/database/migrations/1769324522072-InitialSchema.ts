@@ -1,10 +1,10 @@
-import { MigrationInterface, QueryRunner } from "typeorm";
+import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class InitialSchema1769324522072 implements MigrationInterface {
-    name = 'InitialSchema1769324522072'
+  name = 'InitialSchema1769324522072';
 
-    public async up(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`
             CREATE TABLE "withdrawal" (
                 "id" varchar PRIMARY KEY NOT NULL,
                 "userId" varchar NOT NULL,
@@ -32,16 +32,16 @@ export class InitialSchema1769324522072 implements MigrationInterface {
                 "updatedAt" datetime NOT NULL DEFAULT (datetime('now'))
             )
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE INDEX "IDX_2a913919534579043ea18dbe26" ON "withdrawal" ("snapshotId")
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE INDEX "IDX_b7a608334b205a9b7584a7ba30" ON "withdrawal" ("mixinTxId")
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE INDEX "IDX_4028ed4e39f5c919fc3317882b" ON "withdrawal" ("status")
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TABLE "transaction" (
                 "id" integer PRIMARY KEY AUTOINCREMENT NOT NULL,
                 "userId" varchar NOT NULL,
@@ -55,7 +55,7 @@ export class InitialSchema1769324522072 implements MigrationInterface {
                 "updatedAt" datetime NOT NULL DEFAULT (datetime('now'))
             )
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TABLE "trade" (
                 "id" integer PRIMARY KEY AUTOINCREMENT NOT NULL,
                 "userId" varchar NOT NULL,
@@ -71,23 +71,7 @@ export class InitialSchema1769324522072 implements MigrationInterface {
                 "updatedAt" datetime NOT NULL DEFAULT (datetime('now'))
             )
         `);
-        await queryRunner.query(`
-            CREATE TABLE "arbitrage_order" (
-                "orderId" varchar PRIMARY KEY NOT NULL,
-                "userId" varchar NOT NULL,
-                "pair" varchar NOT NULL,
-                "amountToTrade" varchar NOT NULL,
-                "minProfitability" varchar NOT NULL,
-                "exchangeAName" varchar NOT NULL,
-                "exchangeBName" varchar NOT NULL,
-                "balanceA" varchar,
-                "balanceB" varchar,
-                "state" varchar NOT NULL,
-                "createdAt" varchar NOT NULL,
-                "rewardAddress" varchar
-            )
-        `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TABLE "market_making_order" (
                 "orderId" varchar PRIMARY KEY NOT NULL,
                 "userId" varchar NOT NULL,
@@ -110,7 +94,7 @@ export class InitialSchema1769324522072 implements MigrationInterface {
                 "rewardAddress" varchar
             )
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TABLE "simply_grow_order" (
                 "orderId" varchar PRIMARY KEY NOT NULL,
                 "userId" varchar NOT NULL,
@@ -121,7 +105,7 @@ export class InitialSchema1769324522072 implements MigrationInterface {
                 "rewardAddress" varchar NOT NULL
             )
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TABLE "payment_state" (
                 "orderId" varchar PRIMARY KEY NOT NULL,
                 "type" varchar NOT NULL,
@@ -146,7 +130,7 @@ export class InitialSchema1769324522072 implements MigrationInterface {
                 "updatedAt" varchar NOT NULL
             )
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TABLE "mixin_user" (
                 "user_id" varchar PRIMARY KEY NOT NULL,
                 "type" varchar,
@@ -160,7 +144,7 @@ export class InitialSchema1769324522072 implements MigrationInterface {
                 "walletAddress" varchar
             )
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TABLE "contribution" (
                 "id" varchar PRIMARY KEY NOT NULL,
                 "userId" varchar NOT NULL,
@@ -176,7 +160,7 @@ export class InitialSchema1769324522072 implements MigrationInterface {
                 "mixinUserUserId" varchar
             )
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TABLE "strategy_instances" (
                 "id" integer PRIMARY KEY AUTOINCREMENT NOT NULL,
                 "strategyKey" varchar NOT NULL,
@@ -190,7 +174,7 @@ export class InitialSchema1769324522072 implements MigrationInterface {
                 "updatedAt" datetime NOT NULL DEFAULT (datetime('now'))
             )
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TABLE "spot_order" (
                 "orderId" varchar PRIMARY KEY NOT NULL,
                 "snapshotId" varchar NOT NULL,
@@ -208,7 +192,7 @@ export class InitialSchema1769324522072 implements MigrationInterface {
                 "updatedAt" varchar NOT NULL
             )
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TABLE "spotdata_trading_pairs" (
                 "id" varchar PRIMARY KEY NOT NULL,
                 "ccxt_id" varchar NOT NULL,
@@ -226,7 +210,7 @@ export class InitialSchema1769324522072 implements MigrationInterface {
                 "enable" boolean NOT NULL
             )
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TABLE "performance" (
                 "id" integer PRIMARY KEY AUTOINCREMENT NOT NULL,
                 "userId" varchar NOT NULL,
@@ -237,7 +221,7 @@ export class InitialSchema1769324522072 implements MigrationInterface {
                 "executedAt" datetime NOT NULL DEFAULT (datetime('now'))
             )
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TABLE "mixin_release_token" (
                 "orderId" varchar PRIMARY KEY NOT NULL,
                 "userId" varchar NOT NULL,
@@ -248,7 +232,7 @@ export class InitialSchema1769324522072 implements MigrationInterface {
                 "updatedAt" varchar NOT NULL
             )
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TABLE "mixin_release_history" (
                 "orderId" varchar PRIMARY KEY NOT NULL,
                 "snapshotId" varchar NOT NULL,
@@ -256,7 +240,7 @@ export class InitialSchema1769324522072 implements MigrationInterface {
                 "fee" varchar NOT NULL
             )
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TABLE "mixin_message" (
                 "message_id" varchar PRIMARY KEY NOT NULL,
                 "type" varchar NOT NULL,
@@ -274,7 +258,7 @@ export class InitialSchema1769324522072 implements MigrationInterface {
                 "updated_at" text NOT NULL
             )
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TABLE "market_making_history" (
                 "id" integer PRIMARY KEY AUTOINCREMENT NOT NULL,
                 "userId" varchar NOT NULL,
@@ -291,7 +275,7 @@ export class InitialSchema1769324522072 implements MigrationInterface {
                 "strategyInstanceId" varchar
             )
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TABLE "growdata_exchanges" (
                 "exchange_id" varchar PRIMARY KEY NOT NULL,
                 "name" varchar NOT NULL,
@@ -299,7 +283,7 @@ export class InitialSchema1769324522072 implements MigrationInterface {
                 "enable" boolean NOT NULL DEFAULT (1)
             )
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TABLE "growdata_simply_grow_tokens" (
                 "asset_id" varchar PRIMARY KEY NOT NULL,
                 "name" varchar NOT NULL,
@@ -309,7 +293,7 @@ export class InitialSchema1769324522072 implements MigrationInterface {
                 "enable" boolean NOT NULL DEFAULT (1)
             )
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TABLE "growdata_arbitrage_pairs" (
                 "id" varchar PRIMARY KEY NOT NULL,
                 "symbol" varchar NOT NULL,
@@ -326,7 +310,7 @@ export class InitialSchema1769324522072 implements MigrationInterface {
                 "enable" boolean NOT NULL DEFAULT (1)
             )
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TABLE "growdata_market_making_pairs" (
                 "id" varchar PRIMARY KEY NOT NULL,
                 "symbol" varchar NOT NULL,
@@ -343,7 +327,7 @@ export class InitialSchema1769324522072 implements MigrationInterface {
                 "enable" boolean NOT NULL DEFAULT (1)
             )
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TABLE "custom_config_entity" (
                 "config_id" integer PRIMARY KEY AUTOINCREMENT NOT NULL,
                 "max_balance_mixin_bot" varchar NOT NULL,
@@ -355,7 +339,7 @@ export class InitialSchema1769324522072 implements MigrationInterface {
                 "enable_market_making_fee" boolean NOT NULL DEFAULT (1)
             )
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TABLE "campaign" (
                 "id" varchar PRIMARY KEY NOT NULL,
                 "name" varchar NOT NULL,
@@ -371,7 +355,7 @@ export class InitialSchema1769324522072 implements MigrationInterface {
                 "updatedAt" datetime NOT NULL DEFAULT (datetime('now'))
             )
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TABLE "campaign_participation" (
                 "id" varchar PRIMARY KEY NOT NULL,
                 "campaignId" varchar NOT NULL,
@@ -384,7 +368,7 @@ export class InitialSchema1769324522072 implements MigrationInterface {
                 "updatedAt" datetime NOT NULL DEFAULT (datetime('now'))
             )
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TABLE "arbitrage_history" (
                 "id" integer PRIMARY KEY AUTOINCREMENT NOT NULL,
                 "userId" varchar NOT NULL,
@@ -401,7 +385,7 @@ export class InitialSchema1769324522072 implements MigrationInterface {
                 "strategy" varchar
             )
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TABLE "api_keys_config" (
                 "key_id" integer PRIMARY KEY AUTOINCREMENT NOT NULL,
                 "exchange" varchar NOT NULL,
@@ -411,7 +395,7 @@ export class InitialSchema1769324522072 implements MigrationInterface {
                 "api_secret" varchar NOT NULL
             )
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TABLE "admin_market_making_config" (
                 "id" integer PRIMARY KEY AUTOINCREMENT NOT NULL,
                 "exchange" varchar NOT NULL,
@@ -425,7 +409,7 @@ export class InitialSchema1769324522072 implements MigrationInterface {
                 "isEnabled" boolean NOT NULL DEFAULT (1)
             )
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TABLE "temporary_contribution" (
                 "id" varchar PRIMARY KEY NOT NULL,
                 "userId" varchar NOT NULL,
@@ -443,7 +427,7 @@ export class InitialSchema1769324522072 implements MigrationInterface {
                 CONSTRAINT "FK_ea79d9af9fdb9af67e20c66cab0" FOREIGN KEY ("mixinUserUserId") REFERENCES "mixin_user" ("user_id") ON DELETE CASCADE ON UPDATE NO ACTION
             )
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             INSERT INTO "temporary_contribution"(
                     "id",
                     "userId",
@@ -472,21 +456,21 @@ export class InitialSchema1769324522072 implements MigrationInterface {
                 "mixinUserUserId"
             FROM "contribution"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TABLE "contribution"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             ALTER TABLE "temporary_contribution"
                 RENAME TO "contribution"
         `);
-    }
+  }
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`
             ALTER TABLE "contribution"
                 RENAME TO "temporary_contribution"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TABLE "contribution" (
                 "id" varchar PRIMARY KEY NOT NULL,
                 "userId" varchar NOT NULL,
@@ -502,7 +486,7 @@ export class InitialSchema1769324522072 implements MigrationInterface {
                 "mixinUserUserId" varchar
             )
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             INSERT INTO "contribution"(
                     "id",
                     "userId",
@@ -531,99 +515,95 @@ export class InitialSchema1769324522072 implements MigrationInterface {
                 "mixinUserUserId"
             FROM "temporary_contribution"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TABLE "temporary_contribution"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TABLE "admin_market_making_config"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TABLE "api_keys_config"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TABLE "arbitrage_history"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TABLE "campaign_participation"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TABLE "campaign"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TABLE "custom_config_entity"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TABLE "growdata_market_making_pairs"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TABLE "growdata_arbitrage_pairs"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TABLE "growdata_simply_grow_tokens"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TABLE "growdata_exchanges"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TABLE "market_making_history"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TABLE "mixin_message"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TABLE "mixin_release_history"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TABLE "mixin_release_token"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TABLE "performance"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TABLE "spotdata_trading_pairs"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TABLE "spot_order"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TABLE "strategy_instances"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TABLE "contribution"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TABLE "mixin_user"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TABLE "payment_state"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TABLE "simply_grow_order"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TABLE "market_making_order"
         `);
-        await queryRunner.query(`
-            DROP TABLE "arbitrage_order"
-        `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TABLE "trade"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TABLE "transaction"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP INDEX "IDX_4028ed4e39f5c919fc3317882b"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP INDEX "IDX_b7a608334b205a9b7584a7ba30"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP INDEX "IDX_2a913919534579043ea18dbe26"
         `);
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TABLE "withdrawal"
         `);
-    }
-
+  }
 }
