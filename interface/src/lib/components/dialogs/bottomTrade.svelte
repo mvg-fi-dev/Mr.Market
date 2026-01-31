@@ -49,7 +49,17 @@
       <!-- Languages -->
         <div class="h-[240px] overflow-y-auto">
           {#each Object.values(langs) as k}
-            <button class="w-full flex justify-between py-3" on:click={()=>{locale.set(k.key)}}>
+        <button
+          class="w-full flex justify-between py-3"
+          on:click={() => {
+            try {
+              localStorage.setItem("mrm-locale", k.key);
+            } catch {
+              // ignore
+            }
+            locale.set(k.key);
+          }}
+        >
               <span class="font-medium">
                 {k.name}
               </span>

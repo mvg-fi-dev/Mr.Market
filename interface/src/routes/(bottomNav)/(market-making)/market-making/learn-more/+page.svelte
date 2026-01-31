@@ -1,54 +1,58 @@
-<div>
-  <!-- 1. What is market making? -->
-  <!-- 2. What are the benefits of market making? -->
-  <!-- 3. What is Hu-Fi? -->
-  <!-- 4. Why does market making matter? -->
-  <!-- 5. How does Mr.Market work? -->
-  <!-- 6. How to start market making with Mr.Market? -->
-  <!-- 7. Is Mr.Market safe? What techniques does Mr.Market use to protect your funds? -->
-</div>
+<script>
+  import { _ } from "svelte-i18n";
 
-<div class="carousel carousel-vertical rounded-box h-screen">
-  <div class="carousel-item h-full">
-    <img
-      src="https://img.daisyui.com/images/stock/photo-1559703248-dcaaec9fab78.webp"
-      alt="Market making introduction"
-    />
-  </div>
-  <div class="carousel-item h-full">
-    <img
-      src="https://img.daisyui.com/images/stock/photo-1565098772267-60af42b81ef2.webp"
-      alt="Benefits of market making"
-    />
-  </div>
-  <div class="carousel-item h-full">
-    <img
-      src="https://img.daisyui.com/images/stock/photo-1572635148818-ef6fd45eb394.webp"
-      alt="Hu-Fi platform overview"
-    />
-  </div>
-  <div class="carousel-item h-full">
-    <img
-      src="https://img.daisyui.com/images/stock/photo-1494253109108-2e30c049369b.webp"
-      alt="Importance of market making"
-    />
-  </div>
-  <div class="carousel-item h-full">
-    <img
-      src="https://img.daisyui.com/images/stock/photo-1550258987-190a2d41a8ba.webp"
-      alt="How Mr.Market works"
-    />
-  </div>
-  <div class="carousel-item h-full">
-    <img
-      src="https://img.daisyui.com/images/stock/photo-1559181567-c3190ca9959b.webp"
-      alt="Getting started with market making"
-    />
-  </div>
-  <div class="carousel-item h-full">
-    <img
-      src="https://img.daisyui.com/images/stock/photo-1601004890684-d8cbf643f5f2.webp"
-      alt="Security features and fund protection"
-    />
+  const faq = [
+    {
+      q: "market_making_learn_more_faq_what_is_market_making_q",
+      a: "market_making_learn_more_faq_what_is_market_making_a",
+    },
+    {
+      q: "market_making_learn_more_faq_why_it_matters_q",
+      a: "market_making_learn_more_faq_why_it_matters_a",
+    },
+    {
+      q: "market_making_learn_more_faq_benefit_project_q",
+      a: "market_making_learn_more_faq_benefit_project_a",
+    },
+    {
+      q: "market_making_learn_more_faq_what_is_mrmarket_q",
+      a: "market_making_learn_more_faq_what_is_mrmarket_a",
+    },
+    {
+      q: "market_making_learn_more_faq_get_started_q",
+      a: "market_making_learn_more_faq_get_started_a",
+    },
+    {
+      q: "market_making_learn_more_faq_risks_q",
+      a: "market_making_learn_more_faq_risks_a",
+    },
+    {
+      q: "market_making_learn_more_faq_safety_q",
+      a: "market_making_learn_more_faq_safety_a",
+    },
+  ];
+</script>
+
+<div class="bg-base-100 min-h-screen pb-24" data-testid="market-making-learn-more">
+  <div class="mx-auto w-full max-w-4xl px-4 pt-6">
+    <div class="flex flex-col gap-2">
+      <span class="text-2xl font-semibold text-base-content">{$_("market_making_learn_more_title")}</span>
+      <span class="text-sm text-base-content/70 leading-relaxed">{$_("market_making_learn_more_intro")}</span>
+    </div>
+
+    <div class="mt-6 flex flex-col gap-3">
+      <span class="text-base font-semibold text-base-content">{$_("market_making_learn_more_faq_title")}</span>
+
+      {#each faq as item}
+        <details class="collapse collapse-arrow bg-base-100 border border-base-200 rounded-2xl">
+          <summary class="collapse-title">
+            <span class="text-base font-medium text-base-content">{$_(item.q)}</span>
+          </summary>
+          <div class="collapse-content">
+            <span class="text-sm text-base-content/70 leading-relaxed">{$_(item.a)}</span>
+          </div>
+        </details>
+      {/each}
+    </div>
   </div>
 </div>

@@ -1,5 +1,9 @@
 # Execution Flow Changelog
 
+## 2026-01-31
+
+- Add localized learn-more FAQ pages for Hu-Fi and market making (EN+ZH) with Playwright coverage and persisted language selection
+
 ## 2026-01-09
 
 - Update MARKET_MAKING_FLOW.md state transitions to match actual code

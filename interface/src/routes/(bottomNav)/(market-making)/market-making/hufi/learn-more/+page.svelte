@@ -1,53 +1,43 @@
-<div>
-  <!-- 1. What is Hu-Fi? -->
-  <!-- 2. Why Hu-Fi? What problem does it solve? -->
-  <!-- 3. How does Hu-Fi work? -->
-  <!-- 4. How to join campaigns? -->
-  <!-- 5. How to create campaigns? -->
-  <!-- 6. Is Hu-Fi safe? What techniques does Hu-Fi use to protect your funds? -->
-</div>
+<script>
+  import { _ } from "svelte-i18n";
 
-<div class="carousel carousel-vertical rounded-box h-screen">
-  <div class="carousel-item h-full">
-    <img
-      src="https://img.daisyui.com/images/stock/photo-1559703248-dcaaec9fab78.webp"
-      alt=""
-    />
-  </div>
-  <div class="carousel-item h-full">
-    <img
-      src="https://img.daisyui.com/images/stock/photo-1565098772267-60af42b81ef2.webp"
-      alt=""
-    />
-  </div>
-  <div class="carousel-item h-full">
-    <img
-      src="https://img.daisyui.com/images/stock/photo-1572635148818-ef6fd45eb394.webp"
-      alt=""
-    />
-  </div>
-  <div class="carousel-item h-full">
-    <img
-      src="https://img.daisyui.com/images/stock/photo-1494253109108-2e30c049369b.webp"
-      alt=""
-    />
-  </div>
-  <div class="carousel-item h-full">
-    <img
-      src="https://img.daisyui.com/images/stock/photo-1550258987-190a2d41a8ba.webp"
-      alt=""
-    />
-  </div>
-  <div class="carousel-item h-full">
-    <img
-      src="https://img.daisyui.com/images/stock/photo-1559181567-c3190ca9959b.webp"
-      alt=""
-    />
-  </div>
-  <div class="carousel-item h-full">
-    <img
-      src="https://img.daisyui.com/images/stock/photo-1601004890684-d8cbf643f5f2.webp"
-      alt=""
-    />
+  const faq = [
+    {
+      q: "hufi_learn_more_faq_what_is_hufi_q",
+      a: "hufi_learn_more_faq_what_is_hufi_a",
+    },
+    { q: "hufi_learn_more_faq_problem_q", a: "hufi_learn_more_faq_problem_a" },
+    {
+      q: "hufi_learn_more_faq_how_it_works_q",
+      a: "hufi_learn_more_faq_how_it_works_a",
+    },
+    { q: "hufi_learn_more_faq_benefit_q", a: "hufi_learn_more_faq_benefit_a" },
+    { q: "hufi_learn_more_faq_safety_q", a: "hufi_learn_more_faq_safety_a" },
+    { q: "hufi_learn_more_faq_join_q", a: "hufi_learn_more_faq_join_a" },
+    { q: "hufi_learn_more_faq_create_q", a: "hufi_learn_more_faq_create_a" },
+  ];
+</script>
+
+<div class="bg-base-100 min-h-screen pb-24" data-testid="hufi-learn-more">
+  <div class="mx-auto w-full max-w-4xl px-4 pt-6">
+    <div class="flex flex-col gap-2">
+      <span class="text-2xl font-semibold text-base-content">{$_("hufi_learn_more_title")}</span>
+      <span class="text-sm text-base-content/70 leading-relaxed">{$_("hufi_learn_more_intro")}</span>
+    </div>
+
+    <div class="mt-6 flex flex-col gap-3">
+      <span class="text-base font-semibold text-base-content">{$_("hufi_learn_more_faq_title")}</span>
+
+      {#each faq as item, i}
+        <details class="collapse collapse-arrow bg-base-100 border border-base-200 rounded-2xl">
+          <summary class="collapse-title">
+            <span class="text-base font-medium text-base-content">{$_(item.q)}</span>
+          </summary>
+          <div class="collapse-content">
+            <span class="text-sm text-base-content/70 leading-relaxed">{$_(item.a)}</span>
+          </div>
+        </details>
+      {/each}
+    </div>
   </div>
 </div>

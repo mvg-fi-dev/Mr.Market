@@ -1,5 +1,8 @@
 import { register, init, getLocaleFromNavigator } from 'svelte-i18n';
 
+const LOCALE_STORAGE_KEY = "mrm-locale";
+const REGISTERED_LOCALES = new Set(["en-US", "zh-CN"]);
+
 export const initi18n = async () => {
   register('en-US', () => import('./en.json'));
   register('zh-CN', () => import('./zh.json'));
@@ -11,6 +14,10 @@ export const initi18n = async () => {
   // register('ar', () => import('.ar/.json'));
 
   const normalizeLocale = () => {
+    const stored = typeof localStorage !== "undefined" ? localStorage.getItem(LOCALE_STORAGE_KEY) : null;
+    if (stored && REGISTERED_LOCALES.has(stored)) {
+      return stored;
+    }
     const locale = getLocaleFromNavigator();
     if (!locale || locale.startsWith('en-')) {
       return 'en-US';

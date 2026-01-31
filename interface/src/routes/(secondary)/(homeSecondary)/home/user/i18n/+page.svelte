@@ -1,11 +1,22 @@
 <script lang="ts">
   import { locale } from "svelte-i18n";
   import { langs } from "../../../../../../i18n/i18n";
+
+  const LOCALE_STORAGE_KEY = "mrm-locale";
+
+  const setUserLocale = (k: string) => {
+    try {
+      localStorage.setItem(LOCALE_STORAGE_KEY, k);
+    } catch {
+      // ignore
+    }
+    locale.set(k);
+  };
 </script>
 
 <div class="px-6 mt-2">
   {#each Object.values(langs) as k}
-    <button class="w-full flex justify-between py-4" on:click={()=>{locale.set(k.key)}}>
+    <button class="w-full flex justify-between py-4" on:click={() => setUserLocale(k.key)}>
       <span class="font-medium">
         {k.name}
       </span>
