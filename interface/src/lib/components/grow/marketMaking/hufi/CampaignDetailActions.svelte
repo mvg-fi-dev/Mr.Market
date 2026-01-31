@@ -1,13 +1,10 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
-  import { createEventDispatcher } from "svelte";
   import type { ApiCampaign } from "$lib/helpers/mrm/campaignFormatter";
 
   export let campaign: ApiCampaign;
 
-  const dispatch = createEventDispatcher();
-
-  let showDialog = $state(false);
+  let showDialog = false;
 </script>
 
 <div
@@ -15,7 +12,7 @@
 >
   <button
     class="flex-1 btn bg-white hover:bg-gray-50 text-base-content border border-gray-200 rounded-full h-12 min-h-12 text-sm font-bold normal-case shadow-sm"
-    onclick={() => goto("/market-making/hufi/join")}
+    on:click={() => goto("/market-making/hufi/join")}
   >
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -35,7 +32,7 @@
   </button>
   <button
     class="flex-[1.5] btn bg-black hover:bg-gray-900 text-white border-none rounded-full h-12 min-h-12 text-sm font-bold normal-case shadow-lg"
-    onclick={() => (showDialog = true)}
+    on:click={() => (showDialog = true)}
   >
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -63,7 +60,7 @@
         <h2 class="text-xl font-bold">Create M-Making</h2>
         <button
           class="btn btn-sm btn-circle btn-ghost"
-          onclick={() => (showDialog = false)}
+          on:click={() => (showDialog = false)}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -146,13 +143,13 @@
         <div class="flex gap-3 pt-2">
           <button
             class="btn btn-ghost flex-1"
-            onclick={() => (showDialog = false)}
+            on:click={() => (showDialog = false)}
           >
             Cancel
           </button>
           <button
             class="btn btn-primary flex-1"
-            onclick={() => {
+            on:click={() => {
               showDialog = false;
               goto("/market-making/create");
             }}

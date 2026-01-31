@@ -140,7 +140,7 @@
           >
           <button
             class="btn btn-ghost btn-xs"
-            onclick={() => copyAddress(campaign.address)}
+            on:click={() => copyAddress(campaign.address)}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -291,7 +291,7 @@
           <span class="text-sm font-mono">{shortenAddress(campaign.launcher)}</span>
           <button
             class="btn btn-ghost btn-xs"
-            onclick={() => copyAddress(campaign.launcher)}
+            on:click={() => copyAddress(campaign.launcher)}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -316,7 +316,7 @@
           <span class="text-sm font-mono">{shortenAddress(campaign.exchange_oracle)}</span>
           <button
             class="btn btn-ghost btn-xs"
-            onclick={() => copyAddress(campaign.exchange_oracle)}
+            on:click={() => copyAddress(campaign.exchange_oracle)}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -341,7 +341,7 @@
           <span class="text-sm font-mono">{shortenAddress(campaign.recording_oracle)}</span>
           <button
             class="btn btn-ghost btn-xs"
-            onclick={() => copyAddress(campaign.recording_oracle)}
+            on:click={() => copyAddress(campaign.recording_oracle)}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -366,7 +366,7 @@
           <span class="text-sm font-mono">{shortenAddress(campaign.reputation_oracle)}</span>
           <button
             class="btn btn-ghost btn-xs"
-            onclick={() => copyAddress(campaign.reputation_oracle)}
+            on:click={() => copyAddress(campaign.reputation_oracle)}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -391,7 +391,7 @@
           <span class="text-sm font-mono">{campaign.fund_token_symbol}</span>
           <button
             class="btn btn-ghost btn-xs"
-            onclick={() => copyAddress(campaign.fund_token)}
+            on:click={() => copyAddress(campaign.fund_token)}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
