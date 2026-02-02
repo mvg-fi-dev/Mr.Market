@@ -606,5 +606,7 @@
   "status_deleted": "已删除",
   "market_making_type": "做市",
   "payment_successful": "支付成功",
+  "market_making_order_created": "您的做市订单已创建成功。",
+  "view_order_details": "查看订单详情",
   "redirecting_to_order_details": "正在跳转至订单详情..."
 }

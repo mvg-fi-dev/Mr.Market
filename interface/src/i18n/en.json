@@ -606,5 +606,7 @@
   "status_deleted": "Deleted",
   "market_making_type": "Market Making",
   "payment_successful": "Payment Successful",
+  "market_making_order_created": "Your market making order has been created successfully.",
+  "view_order_details": "View Order Details",
   "redirecting_to_order_details": "Redirecting to order details..."
 }
