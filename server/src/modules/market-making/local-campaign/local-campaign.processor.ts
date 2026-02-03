@@ -2,6 +2,7 @@ import { Process, Processor } from '@nestjs/bull';
 import { Job } from 'bull';
 import { LocalCampaignService } from './local-campaign.service';
 import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
+import BigNumber from 'bignumber.js';
 
 @Processor('local-campaigns')
 export class LocalCampaignProcessor {
@@ -44,26 +45,27 @@ export class LocalCampaignProcessor {
     }
 
     const totalContribution = participations.reduce(
-      (sum, p) => sum + Number(p.contributionAmount),
-      0,
+      (sum, p) => sum.plus(p.contributionAmount ?? 0),
+      new BigNumber(0),
     );
 
-    if (totalContribution === 0) {
+    if (totalContribution.isZero()) {
       this.logger.warn(`Total contribution is 0 for campaign ${campaignId}`);
       return;
     }
 
     for (const p of participations) {
-      const share = Number(p.contributionAmount) / totalContribution;
-      const reward = share * Number(campaign.totalReward);
+      const contribution = new BigNumber(p.contributionAmount ?? 0);
+      const share = contribution.dividedBy(totalContribution);
+      const reward = share.multipliedBy(campaign.totalReward ?? 0);
 
       await this.campaignService.updateParticipation(p.id, {
-        rewardAmount: reward,
+        rewardAmount: reward.toNumber(),
         status: 'rewarded',
       });
 
       this.logger.log(
-        `Rewarded user ${p.userId} with ${reward} ${campaign.rewardToken}`,
+        `Rewarded user ${p.userId} with ${reward.toString()} ${campaign.rewardToken}`,
       );
     }
   }
