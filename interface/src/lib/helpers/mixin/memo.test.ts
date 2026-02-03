@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { encodeMarketMakingCreateMemo, encodeSimplyGrowCreateMemo } from './memo';
+import { encodeSimplyGrowCreateMemo } from './memo';
 
 vi.mock('$env/dynamic/public', () => {
   return {
@@ -13,20 +13,6 @@ vi.mock('$env/dynamic/public', () => {
     }
   }
 });
-
-describe('Market making Memo', () => {
-  it('Generate correcnt create market making memo', () => {
-    const encodedMemo = encodeMarketMakingCreateMemo({
-      version: 1,
-      tradingType: 'Market Making',
-      action: 'create',
-      marketMakingPairId: '0776b00f-95c0-46f9-85e4-7b8e7ca51e94',
-      orderId: 'b0177350-ae29-43ec-a26e-d46f821e416e',
-    });
-    console.log(`encodedMemo: ${encodedMemo}`)
-    expect(encodedMemo).toBe('f243yJSNnb9QQ7azcKFd5tzKQS8xX62VVYkk8KWwDAAkuFVXBwvw')
-  })
-})
 
 describe('Simply Grow Memo', () => {
   it('Generate correcnt create simply grow memo', () => {

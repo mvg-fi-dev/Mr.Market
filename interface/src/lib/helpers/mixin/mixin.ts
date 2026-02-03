@@ -20,7 +20,6 @@ import {
 } from "$lib/helpers/constants";
 import {
   encodeArbitrageCreateMemo,
-  encodeMarketMakingCreateMemo,
   encodeSimplyGrowCreateMemo,
 } from "$lib/helpers/mixin/memo";
 import {
@@ -45,7 +44,7 @@ export const isMixin = () => {
   return !!(ios
     ? window?.webkit?.messageHandlers?.MixinContext
     : window?.MixinContext &&
-    typeof window?.MixinContext?.getContext === "function");
+      typeof window?.MixinContext?.getContext === "function");
 };
 
 export const getMixinContext = () => {
@@ -59,7 +58,7 @@ export const mixinShare = (
   url: string,
   title: string,
   description: string,
-  icon_url: string
+  icon_url: string,
 ) => {
   const appId = get(botId);
   if (!appId) {
@@ -76,8 +75,8 @@ export const mixinShare = (
   };
   window.open(
     `mixin://send?category=app_card&data=${encodeURIComponent(
-      btoa(JSON.stringify(data))
-    )}`
+      btoa(JSON.stringify(data)),
+    )}`,
   );
 };
 
@@ -138,7 +137,7 @@ export const mixinPay = ({
       amount: amount,
       memo: memo,
       trace: trace_id,
-    })
+    }),
   );
   return trace_id;
 };
@@ -162,10 +161,10 @@ export const mixinSafeAllOutputs = async (members: string[], token: string) => {
 
   const result = await axios.get(
     MIXIN_API_BASE_URL +
-    `/safe/outputs?members=${hashMembers(
-      members
-    )}&threshold=1&offset=0&limit=1000&&order=ASC`,
-    config
+      `/safe/outputs?members=${hashMembers(
+        members,
+      )}&threshold=1&offset=0&limit=1000&&order=ASC`,
+    config,
   );
   return result.data ? result.data.data : {};
 };
@@ -173,7 +172,7 @@ export const mixinSafeAllOutputs = async (members: string[], token: string) => {
 export const mixinSafeOutputs = async (
   members: string[],
   token: string,
-  spent: boolean = false
+  spent: boolean = false,
 ) => {
   const config = {
     headers: {
@@ -183,11 +182,12 @@ export const mixinSafeOutputs = async (
 
   const result = await axios.get(
     MIXIN_API_BASE_URL +
-    `/safe/outputs?members=${hashMembers(
-      members
-    )}&threshold=1&offset=0&limit=1000&state=${spent ? "spent" : "unspent"
-    }&order=ASC`,
-    config
+      `/safe/outputs?members=${hashMembers(
+        members,
+      )}&threshold=1&offset=0&limit=1000&state=${
+        spent ? "spent" : "unspent"
+      }&order=ASC`,
+    config,
   );
   return result.data ? result.data.data : {};
 };
@@ -200,7 +200,7 @@ export const mixinTopAssets = async () => {
 
 export const mixinAsset = async (asset_id: string) => {
   const result = await axios.get(
-    MIXIN_API_BASE_URL + `/network/assets/${asset_id}`
+    MIXIN_API_BASE_URL + `/network/assets/${asset_id}`,
   );
 
   return result.data ? result.data.data : {};
@@ -215,7 +215,7 @@ export const mixinSafeAsset = async (asset_id: string, token: string) => {
 
   const result = await axios.get(
     MIXIN_API_BASE_URL + `/safe/assets/${asset_id}`,
-    config
+    config,
   );
   return result.data ? result.data.data : {};
 };
@@ -262,7 +262,7 @@ export async function calculateAndSortUSDBalances(balances, topAssetsCache) {
 
   // Sort the balances by USD balance
   const sortedBalancesArray = Object.values(balances).sort(
-    (a, b) => b.usdBalance - a.usdBalance
+    (a, b) => b.usdBalance - a.usdBalance,
   );
   return sortedBalancesArray; // You can keep it as an array since it's already sorted
 }
@@ -271,7 +271,7 @@ export async function calculateAndSortUSDBalances(balances, topAssetsCache) {
 export function calculateTotalUSDBalance(balances) {
   return Object.values(balances).reduce(
     (acc, { usdBalance }) => acc + usdBalance,
-    0
+    0,
   );
 }
 
@@ -364,7 +364,7 @@ export const mixinAuthWrapper = async (pkce: boolean = false) => {
         await AfterMixinOauth(token);
         mixinConnectLoading.set(false);
       },
-    }
+    },
   );
 };
 
@@ -432,6 +432,7 @@ export const SpotPay = ({
   // return mixinPay({ asset_id: firstAssetID, amount, memo, trace_id: trace });
 };
 
+// Deprecated
 export const ArbitrageCreatePay = ({
   action,
   amount,
@@ -491,76 +492,6 @@ export const ArbitrageCreatePay = ({
   });
 };
 
-export const MarketMakingCreatePay = ({
-  action,
-  exchange,
-  symbol,
-  assetId,
-  firstAssetId,
-  secondAssetId,
-  marketMakingPairId,
-  amount,
-  orderId,
-  rewardAddress,
-}: {
-  action: string;
-  exchange: string;
-  symbol: string;
-  assetId: string;
-  firstAssetId: string;
-  secondAssetId: string;
-  marketMakingPairId: string;
-  amount: string;
-  orderId: string;
-  rewardAddress: string;
-}) => {
-  if (
-    !exchange ||
-    !symbol ||
-    !amount ||
-    !orderId ||
-    !assetId ||
-    !marketMakingPairId ||
-    !rewardAddress
-  ) {
-    console.error("Invalid input parameters for MarketMakingPay");
-    return;
-  }
-
-  const mixinTraceId = getUuid();
-  const memoParams = {
-    version: 1,
-    tradingType: "Market Making",
-    action,
-    marketMakingPairId,
-    orderId,
-    rewardAddress,
-  };
-  const memo = encodeMarketMakingCreateMemo(memoParams);
-  console.log(`MarketMakingPay()=> memoParams: ${JSON.stringify(memoParams)}`);
-  console.log(`MarketMakingPay()=> memo: ${memo}`);
-  if (!memo) {
-    console.error("Failed to generate Market Making memo");
-    return;
-  }
-
-  if (!firstAssetId || !secondAssetId) {
-    console.error("Failed to get asset id for Market Making");
-    return;
-  }
-
-  if (assetId != firstAssetId && assetId != secondAssetId) {
-    console.error("Incorrect payment asset");
-    return;
-  }
-
-  return mixinPay({
-    asset_id: assetId,
-    amount,
-    memo,
-    trace_id: mixinTraceId,
-  });
-};
 
 export const SimplyGrowCreatePay = ({
   assetId,
@@ -587,7 +518,7 @@ export const SimplyGrowCreatePay = ({
   };
   const memo = encodeSimplyGrowCreateMemo(memoParams);
   console.log(
-    `SimplyGrowCreatePay()=> memoParams: ${JSON.stringify(memoParams)}`
+    `SimplyGrowCreatePay()=> memoParams: ${JSON.stringify(memoParams)}`,
   );
   console.log(`SimplyGrowCreatePay()=> memo: ${memo}`);
   return mixinPay({
