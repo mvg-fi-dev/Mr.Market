@@ -7,6 +7,7 @@ import { Cache } from 'cache-manager';
 import { CustomLogger } from '../../infrastructure/logger/logger.service';
 import { Tickers } from 'ccxt';
 import { SpotdataTradingPair } from 'src/common/entities/spot-data.entity';
+import { getRFC3339Timestamp } from '../../../common/helpers/utils';
 
 describe('SpotdataService', () => {
   let service: SpotdataService;
@@ -54,7 +55,7 @@ describe('SpotdataService', () => {
       symbol: 'BTC/USDT',
       info: {},
       timestamp: Date.now(),
-      datetime: new Date().toISOString(),
+      datetime: getRFC3339Timestamp(),
       high: 0,
       low: 0,
       bid: 0,
@@ -76,7 +77,7 @@ describe('SpotdataService', () => {
       symbol: 'ETH/USDT',
       info: {},
       timestamp: Date.now(),
-      datetime: new Date().toISOString(),
+      datetime: getRFC3339Timestamp(),
       high: 0,
       low: 0,
       bid: 0,
