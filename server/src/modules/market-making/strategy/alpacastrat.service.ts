@@ -9,6 +9,7 @@ import { ArbitrageHistory } from 'src/common/entities/arbitrage-order.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createStrategyKey } from 'src/common/helpers/strategyKey';
 import { StrategyService } from './strategy.service';
+import BigNumber from 'bignumber.js';
 
 //This is still in testing: Do not use in production
 
@@ -147,26 +148,41 @@ export class AlpacaStratService {
     try {
       // Fetch spot price from Alpaca
       const alpacaTicker = await alpacaExchange.fetchTicker(pair);
-      const alpacaSpotPrice = alpacaTicker.last;
+      const alpacaSpotPrice = new BigNumber(alpacaTicker.last ?? 0);
 
       // Fetch derivative price from exchangeB
-      let derivativePrice: number;
+      let derivativePrice: BigNumber;
       if (derivativeType === 'futures') {
-        derivativePrice = await this.fetchFuturesPrice(exchangeB, pair);
+        derivativePrice = new BigNumber(
+          await this.fetchFuturesPrice(exchangeB, pair),
+        );
       } else if (derivativeType === 'options') {
-        derivativePrice = await this.fetchOptionsPrice(exchangeB, pair);
+        derivativePrice = new BigNumber(
+          await this.fetchOptionsPrice(exchangeB, pair),
+        );
       }
 
       this.logger.log(
-        `${strategyKey}: Alpaca Spot Price: ${alpacaSpotPrice}, ${derivativeType} Price on ${exchangeB.name}: ${derivativePrice}`,
+        `${strategyKey}: Alpaca Spot Price: ${alpacaSpotPrice.toString()}, ${derivativeType} Price on ${exchangeB.name}: ${derivativePrice.toString()}`,
       );
 
-      // Calculate profitability between Alpaca's spot price and the derivative price
-      const profitMargin =
-        (derivativePrice - alpacaSpotPrice) / alpacaSpotPrice;
-      this.logger.log(`Profit Margin: ${profitMargin}`);
+      if (
+        alpacaSpotPrice.isLessThanOrEqualTo(0) ||
+        derivativePrice.isLessThanOrEqualTo(0)
+      ) {
+        this.logger.warn(
+          `Skipping arbitrage check due to non-positive prices (spot=${alpacaSpotPrice.toString()}, ${derivativeType}=${derivativePrice.toString()})`,
+        );
+        return;
+      }
 
-      if (profitMargin >= minProfitability) {
+      // Calculate profitability between Alpaca's spot price and the derivative price
+      const profitMargin = derivativePrice
+        .minus(alpacaSpotPrice)
+        .dividedBy(alpacaSpotPrice);
+      this.logger.log(`Profit Margin: ${profitMargin.toString()}`);
+
+      if (profitMargin.isGreaterThanOrEqualTo(minProfitability)) {
         this.logger.log(`Arbitrage opportunity detected! Executing trades.`);
 
         // Execute buy on Alpaca (spot) and sell on the derivative market (e.g., futures)
@@ -177,12 +193,14 @@ export class AlpacaStratService {
           exchangeB,
           pair,
           amountToTrade,
-          alpacaSpotPrice,
-          derivativePrice,
+          alpacaSpotPrice.toNumber(),
+          derivativePrice.toNumber(),
         );
       } else if (
-        (alpacaSpotPrice - derivativePrice) / derivativePrice >=
-        minProfitability
+        alpacaSpotPrice
+          .minus(derivativePrice)
+          .dividedBy(derivativePrice)
+          .isGreaterThanOrEqualTo(minProfitability)
       ) {
         this.logger.log(
           `Reverse arbitrage opportunity detected! Executing trades.`,
@@ -196,8 +214,8 @@ export class AlpacaStratService {
           alpacaExchange,
           pair,
           amountToTrade,
-          derivativePrice,
-          alpacaSpotPrice,
+          derivativePrice.toNumber(),
+          alpacaSpotPrice.toNumber(),
         );
       } else {
         this.logger.log(`No arbitrage opportunity found.`);
@@ -290,7 +308,9 @@ export class AlpacaStratService {
     _sellOrderId: string,
     amount: number,
   ) {
-    const profitLoss = sellPrice * amount - buyPrice * amount;
+    const profitLoss = new BigNumber(sellPrice)
+      .multipliedBy(amount)
+      .minus(new BigNumber(buyPrice).multipliedBy(amount));
 
     const arbitrageOrder = this.arbitrageHistoryRepository.create({
       userId,
@@ -301,7 +321,7 @@ export class AlpacaStratService {
       amount: amount.toString(),
       buyPrice: buyPrice.toString(),
       sellPrice: sellPrice.toString(),
-      profit: profitLoss,
+      profit: profitLoss.toNumber(),
       executedAt: new Date(),
     });
 
@@ -314,19 +334,27 @@ export class AlpacaStratService {
     amount: number,
     side: 'buy' | 'sell',
   ): number {
-    let totalVolume = 0;
-    let totalPriceVolume = 0;
+    let totalVolume = new BigNumber(0);
+    let totalPriceVolume = new BigNumber(0);
+    const amountToTrade = new BigNumber(amount);
     const orders = side === 'buy' ? orderBook.asks : orderBook.bids;
 
     for (const [price, volume] of orders) {
-      const volumeToUse = Math.min(volume, amount - totalVolume);
-      totalPriceVolume += price * volumeToUse;
-      totalVolume += volumeToUse;
+      const volumeToUse = BigNumber.min(
+        new BigNumber(volume),
+        amountToTrade.minus(totalVolume),
+      );
+      totalPriceVolume = totalPriceVolume.plus(
+        new BigNumber(price).multipliedBy(volumeToUse),
+      );
+      totalVolume = totalVolume.plus(volumeToUse);
 
-      if (totalVolume >= amount) break;
+      if (totalVolume.isGreaterThanOrEqualTo(amountToTrade)) break;
     }
 
-    return totalPriceVolume / totalVolume;
+    return totalVolume.isZero()
+      ? 0
+      : totalPriceVolume.dividedBy(totalVolume).toNumber();
   }
 
   // Checks if all orders for the strategy are filled and cleans up

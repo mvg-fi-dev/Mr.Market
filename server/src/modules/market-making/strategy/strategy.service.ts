@@ -1,4 +1,5 @@
 import * as ccxt from 'ccxt';
+import BigNumber from 'bignumber.js';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
@@ -315,7 +316,7 @@ export class StrategyService {
 
       // Track our "target maker price" across trades.
       // We'll set it after the *first* trade is established (based on midPrice).
-      let currentMakerPrice: number | null = null;
+      let currentMakerPrice: BigNumber | null = null;
 
       const executeTrade = async () => {
         if (tradesExecuted >= numTrades) {
@@ -330,11 +331,11 @@ export class StrategyService {
           if (!orderBook.bids.length || !orderBook.asks.length) {
             throw new Error(`Order book data is incomplete for ${symbol}`);
           }
-          const bestBid = orderBook.bids[0][0];
-          const bestAsk = orderBook.asks[0][0];
+          const bestBid = new BigNumber(orderBook.bids[0][0]);
+          const bestAsk = new BigNumber(orderBook.asks[0][0]);
 
           this.logger.log(
-            `Best bid: ${bestBid}, best ask: ${bestAsk} for ${symbol}`,
+            `Best bid: ${bestBid.toString()}, best ask: ${bestAsk.toString()} for ${symbol}`,
           );
 
           // 2. Decide maker / taker accounts
@@ -347,25 +348,38 @@ export class StrategyService {
 
           // 3. Randomize the trade amount ±5% around baseTradeAmount
           //    Range: [0.95 * baseTradeAmount, 1.05 * baseTradeAmount]
-          const randomFactor = 1 + (Math.random() * 0.1 - 0.05);
-          const amount = baseTradeAmount * randomFactor;
+          const randomFactor = new BigNumber(1)
+            .plus(new BigNumber(Math.random()).multipliedBy(0.1))
+            .minus(0.05);
+          const amount = new BigNumber(baseTradeAmount).multipliedBy(
+            randomFactor,
+          );
 
           // 4. Determine the maker price
           //    - If first trade, base it on the midPrice with a small increment factor.
           //    - After each success, push the price up by 'pricePushRate' (e.g. +1%).
           if (currentMakerPrice == null) {
             // For the first trade, pick a price in the spread
-            const midPrice = (bestBid + bestAsk) / 2;
-            const baseFactor = 1 + baseIncrementPercentage / 100;
-            currentMakerPrice = midPrice * baseFactor;
+            const midPrice = bestBid.plus(bestAsk).dividedBy(2);
+            const baseFactor = new BigNumber(1).plus(
+              new BigNumber(baseIncrementPercentage).dividedBy(100),
+            );
+            currentMakerPrice = midPrice.multipliedBy(baseFactor);
           } else {
             // For subsequent trades, push the price up slowly
             // Example: If pricePushRate = 1, it goes up by 1% each successful trade
-            currentMakerPrice *= 1 + pricePushRate / 100;
+            currentMakerPrice = currentMakerPrice.multipliedBy(
+              new BigNumber(1).plus(
+                new BigNumber(pricePushRate).dividedBy(100),
+              ),
+            );
           }
 
           // Ensure we do NOT exceed the bestAsk - small offset
-          const makerPrice = Math.min(currentMakerPrice, bestAsk - 0.000001);
+          const makerPrice = BigNumber.min(
+            currentMakerPrice,
+            bestAsk.minus(0.000001),
+          );
 
           this.logger.log(
             `Maker placing limit BUY: ${amount.toFixed(6)} ${symbol} ` +
@@ -379,8 +393,8 @@ export class StrategyService {
               symbol,
               'limit',
               'buy',
-              amount,
-              makerPrice,
+              amount.toNumber(),
+              makerPrice.toNumber(),
               { postOnly: true },
             );
           } catch (error) {
@@ -399,8 +413,8 @@ export class StrategyService {
             symbol,
             'limit',
             'sell',
-            amount,
-            makerPrice,
+            amount.toNumber(),
+            makerPrice.toNumber(),
           );
 
           // 8. Check final statuses (optional but recommended)
@@ -418,7 +432,7 @@ export class StrategyService {
             makerResult.status === 'filled'
           ) {
             this.logger.log(
-              `Maker order on ${makerExchange.id} filled successfully at ${makerPrice}`,
+              `Maker order on ${makerExchange.id} filled successfully at ${makerPrice.toString()}`,
             );
           } else {
             this.logger.warn(
@@ -431,7 +445,7 @@ export class StrategyService {
             takerResult.status === 'filled'
           ) {
             this.logger.log(
-              `Taker order on ${takerExchange.id} filled successfully at ${makerPrice}`,
+              `Taker order on ${takerExchange.id} filled successfully at ${makerPrice.toString()}`,
             );
           } else {
             this.logger.warn(
@@ -723,10 +737,12 @@ export class StrategyService {
     );
 
     // 3. Fetch the current market price from the selected price exchange
-    const priceSource = await this.getPriceSource(
-      priceExchange.id, // use priceExchange for data
-      pair,
-      priceSourceType,
+    const priceSource = new BigNumber(
+      await this.getPriceSource(
+        priceExchange.id, // use priceExchange for data
+        pair,
+        priceSourceType,
+      ),
     );
 
     // 4. Cancel all existing orders on the execution exchange, but still use the same strategyKey
@@ -765,34 +781,48 @@ export class StrategyService {
       where: { strategyKey },
     });
 
-    let currentOrderAmount = baseOrderAmount;
+    let currentOrderAmount = new BigNumber(baseOrderAmount);
 
     for (let layer = 1; layer <= numberOfLayers; layer++) {
       if (layer > 1) {
         if (amountChangeType === 'fixed') {
-          currentOrderAmount += amountChangePerLayer;
+          currentOrderAmount = currentOrderAmount.plus(amountChangePerLayer);
         } else if (amountChangeType === 'percentage') {
-          currentOrderAmount +=
-            currentOrderAmount * (amountChangePerLayer / 100);
+          currentOrderAmount = currentOrderAmount.plus(
+            currentOrderAmount.multipliedBy(
+              new BigNumber(amountChangePerLayer).dividedBy(100),
+            ),
+          );
         }
       }
 
-      const layerBidSpreadPercentage = bidSpread * layer;
-      const layerAskSpreadPercentage = askSpread * layer;
+      const layerBidSpreadPercentage = new BigNumber(bidSpread).multipliedBy(
+        layer,
+      );
+      const layerAskSpreadPercentage = new BigNumber(askSpread).multipliedBy(
+        layer,
+      );
 
-      const buyPrice = priceSource * (1 - layerBidSpreadPercentage);
-      const sellPrice = priceSource * (1 + layerAskSpreadPercentage);
+      const buyPrice = priceSource.multipliedBy(
+        new BigNumber(1).minus(layerBidSpreadPercentage),
+      );
+      const sellPrice = priceSource.multipliedBy(
+        new BigNumber(1).plus(layerAskSpreadPercentage),
+      );
 
       // 5. Place buy orders on the execution exchange, if below the ceiling
-      if (ceilingPrice === undefined || priceSource <= ceilingPrice) {
+      if (
+        ceilingPrice === undefined ||
+        priceSource.isLessThanOrEqualTo(ceilingPrice)
+      ) {
         const {
           adjustedAmount: adjustedBuyAmount,
           adjustedPrice: adjustedBuyPrice,
         } = await this.adjustOrderParameters(
           executionExchange,
           pair,
-          currentOrderAmount,
-          buyPrice,
+          currentOrderAmount.toNumber(),
+          buyPrice.toNumber(),
         );
         if (!adjustedBuyAmount || !adjustedBuyPrice) {
           throw new Error(
@@ -806,8 +836,8 @@ export class StrategyService {
           exchange: executionExchangeName,
           symbol: pair,
           side: 'buy',
-          amount: parseFloat(adjustedBuyAmount),
-          price: parseFloat(adjustedBuyPrice),
+          amount: new BigNumber(adjustedBuyAmount).toNumber(),
+          price: new BigNumber(adjustedBuyPrice).toNumber(),
         });
 
         // Persist
@@ -830,20 +860,23 @@ export class StrategyService {
         await this.orderRepository.save(orderEntity);
       } else {
         this.logger.log(
-          `Skipping buy order for ${pair} as price source ${priceSource} exceeds ceiling ${ceilingPrice}.`,
-        );
+            `Skipping buy order for ${pair} as price source ${priceSource.toString()} exceeds ceiling ${ceilingPrice}.`,
+          );
       }
 
       // 6. Place sell orders on the execution exchange, if above the floor
-      if (floorPrice === undefined || priceSource >= floorPrice) {
+      if (
+        floorPrice === undefined ||
+        priceSource.isGreaterThanOrEqualTo(floorPrice)
+      ) {
         const {
           adjustedAmount: adjustedSellAmount,
           adjustedPrice: adjustedSellPrice,
         } = await this.adjustOrderParameters(
           executionExchange,
           pair,
-          currentOrderAmount,
-          sellPrice,
+          currentOrderAmount.toNumber(),
+          sellPrice.toNumber(),
         );
 
         const sellOrder = await this.tradeService.executeLimitTrade({
@@ -852,8 +885,8 @@ export class StrategyService {
           exchange: executionExchangeName,
           symbol: pair,
           side: 'sell',
-          amount: parseFloat(adjustedSellAmount),
-          price: parseFloat(adjustedSellPrice),
+          amount: new BigNumber(adjustedSellAmount).toNumber(),
+          price: new BigNumber(adjustedSellPrice).toNumber(),
         });
         const orderEntity = this.orderRepository.create({
           userId,
@@ -874,8 +907,8 @@ export class StrategyService {
         await this.orderRepository.save(orderEntity);
       } else {
         this.logger.log(
-          `Skipping sell order for ${pair} as price source ${priceSource} is below floor ${floorPrice}.`,
-        );
+            `Skipping sell order for ${pair} as price source ${priceSource.toString()} is below floor ${floorPrice}.`,
+          );
       }
     }
   }
@@ -946,7 +979,10 @@ export class StrategyService {
     const orderBook = await exchange.fetchOrderBook(pair);
     switch (priceSourceType) {
       case PriceSourceType.MID_PRICE:
-        return (orderBook.bids[0][0] + orderBook.asks[0][0]) / 2;
+        return new BigNumber(orderBook.bids[0][0])
+          .plus(orderBook.asks[0][0])
+          .dividedBy(2)
+          .toNumber();
       case PriceSourceType.BEST_ASK:
         return orderBook.asks[0][0];
       case PriceSourceType.BEST_BID:
@@ -988,10 +1024,23 @@ export class StrategyService {
         'sell',
       );
 
-      if ((vwapB - vwapA) / vwapA >= minProfitability) {
+      if (vwapA.isLessThanOrEqualTo(0) || vwapB.isLessThanOrEqualTo(0)) {
+        this.logger.warn(
+          `Skipping VWAP arbitrage check due to non-positive VWAP values (A=${vwapA.toString()}, B=${vwapB.toString()})`,
+        );
+        return;
+      }
+
+      const minProfitabilityBn = new BigNumber(minProfitability);
+      if (
+        vwapB
+          .minus(vwapA)
+          .dividedBy(vwapA)
+          .isGreaterThanOrEqualTo(minProfitabilityBn)
+      ) {
         // Execute trades
         this.logger.log(
-          `User ${userId}, Client ${clientId}: Arbitrage opportunity for ${pair} (VWAP): Buy on ${exchangeA.name} at ${vwapA}, sell on ${exchangeB.name} at ${vwapB}`,
+          `User ${userId}, Client ${clientId}: Arbitrage opportunity for ${pair} (VWAP): Buy on ${exchangeA.name} at ${vwapA.toString()}, sell on ${exchangeB.name} at ${vwapB.toString()}`,
         );
         await this.executeArbitrageTradeWithLimitOrders(
           exchangeA,
@@ -1000,13 +1049,18 @@ export class StrategyService {
           amountToTrade,
           userId,
           clientId,
-          vwapA,
-          vwapB,
+          vwapA.toNumber(),
+          vwapB.toNumber(),
         );
-      } else if ((vwapA - vwapB) / vwapB >= minProfitability) {
+      } else if (
+        vwapA
+          .minus(vwapB)
+          .dividedBy(vwapB)
+          .isGreaterThanOrEqualTo(minProfitabilityBn)
+      ) {
         // Execute trades in reverse direction
         this.logger.log(
-          `User ${userId}, Client ${clientId}: Arbitrage opportunity for ${pair} (VWAP): Buy on ${exchangeB.name} at ${vwapB}, sell on ${exchangeA.name} at ${vwapA}`,
+          `User ${userId}, Client ${clientId}: Arbitrage opportunity for ${pair} (VWAP): Buy on ${exchangeB.name} at ${vwapB.toString()}, sell on ${exchangeA.name} at ${vwapA.toString()}`,
         );
         await this.executeArbitrageTradeWithLimitOrders(
           exchangeB,
@@ -1015,8 +1069,8 @@ export class StrategyService {
           amountToTrade,
           userId,
           clientId,
-          vwapB,
-          vwapA,
+          vwapB.toNumber(),
+          vwapA.toNumber(),
         );
       }
     } else {
@@ -1086,12 +1140,14 @@ export class StrategyService {
 
       // Calculate fees for both orders
       // This example assumes fees are returned with the order info and are in the quote currency
-      const buyFee = buyOrder.fee ? buyOrder.fee.cost : 0; // Adjust based on your fee structure
-      const sellFee = sellOrder.fee ? sellOrder.fee.cost : 0;
+      const buyFee = new BigNumber(buyOrder.fee?.cost ?? 0); // Adjust based on your fee structure
+      const sellFee = new BigNumber(sellOrder.fee?.cost ?? 0);
 
       // Calculate profit/loss, adjusting for fees
-      const profitLoss =
-        sellPrice * amount - sellFee - (buyPrice * amount + buyFee);
+      const profitLoss = new BigNumber(sellPrice)
+        .multipliedBy(amount)
+        .minus(sellFee)
+        .minus(new BigNumber(buyPrice).multipliedBy(amount).plus(buyFee));
 
       // Save the arbitrage order details
       const arbitrageOrder = this.arbitrageHistoryRepository.create({
@@ -1103,21 +1159,21 @@ export class StrategyService {
         amount: amount.toString(),
         buyPrice: buyPrice.toString(),
         sellPrice: sellPrice.toString(),
-        profit: profitLoss,
+        profit: profitLoss.toNumber(),
         executedAt: new Date(),
       });
 
       await this.arbitrageHistoryRepository.save(arbitrageOrder);
       // Log and record the trade execution and performance
       this.logger.log(
-        `Arbitrage trade executed with limit orders for user ${userId}, client ${clientId}: Buy on ${exchangeA.id} at ${buyPrice}, sell on ${exchangeB.id} at ${sellPrice}, Profit/Loss: ${profitLoss}`,
-      );
+          `Arbitrage trade executed with limit orders for user ${userId}, client ${clientId}: Buy on ${exchangeA.id} at ${buyPrice}, sell on ${exchangeB.id} at ${sellPrice}, Profit/Loss: ${profitLoss.toString()}`,
+        );
 
       await this.performanceService.recordPerformance({
         userId,
         clientId,
         strategyType: 'arbitrage',
-        profitLoss,
+        profitLoss: profitLoss.toNumber(),
         additionalMetrics: {
           buyExchange: exchangeA.id,
           sellExchange: exchangeB.id,
@@ -1126,8 +1182,8 @@ export class StrategyService {
           executedAmount: amount,
           buyOrderId: buyOrder.id,
           sellOrderId: sellOrder.id,
-          buyFee,
-          sellFee,
+          buyFee: buyFee.toNumber(),
+          sellFee: sellFee.toNumber(),
         },
         executedAt: new Date(),
       });
@@ -1142,9 +1198,10 @@ export class StrategyService {
     orderBook: ccxt.OrderBook,
     amountToTrade: number,
     direction: 'buy' | 'sell',
-  ): number {
-    let volumeAccumulated = 0;
-    let volumePriceProductSum = 0;
+  ): BigNumber {
+    let volumeAccumulated = new BigNumber(0);
+    let volumePriceProductSum = new BigNumber(0);
+    const amountToTradeBn = new BigNumber(amountToTrade);
     let orderList = [];
 
     // Determine whether to use asks or bids based on the trade direction
@@ -1157,15 +1214,20 @@ export class StrategyService {
     }
 
     for (const [price, volume] of orderList) {
-      const volumeToUse = Math.min(volume, amountToTrade - volumeAccumulated);
-      volumePriceProductSum += volumeToUse * price;
-      volumeAccumulated += volumeToUse;
-      if (volumeAccumulated >= amountToTrade) break;
+      const volumeToUse = BigNumber.min(
+        new BigNumber(volume),
+        amountToTradeBn.minus(volumeAccumulated),
+      );
+      volumePriceProductSum = volumePriceProductSum.plus(
+        new BigNumber(price).multipliedBy(volumeToUse),
+      );
+      volumeAccumulated = volumeAccumulated.plus(volumeToUse);
+      if (volumeAccumulated.isGreaterThanOrEqualTo(amountToTradeBn)) break;
     }
 
-    return volumeAccumulated > 0
-      ? volumePriceProductSum / volumeAccumulated
-      : 0;
+    return volumeAccumulated.isGreaterThan(0)
+      ? volumePriceProductSum.dividedBy(volumeAccumulated)
+      : new BigNumber(0);
   }
 
   public async checkAndCleanFilledOrders(
