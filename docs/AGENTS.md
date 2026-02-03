@@ -16,3 +16,11 @@ avoid using uppercase class for text, always use capitalize class instead.
 ## ENV
 
 never read .env file, never read .env file, never read .env file
+
+## Calculation
+
+Always use bignumber.js for numberic related calculation
+
+## Time
+
+Always use getRFC3339Timestamp() for string timestamp
