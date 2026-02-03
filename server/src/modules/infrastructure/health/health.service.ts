@@ -4,11 +4,10 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import * as ccxt from 'ccxt';
-import { CustomLogger } from '../logger/logger.service';
-import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager } from 'typeorm';
-import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
+import { InjectQueue } from '@nestjs/bull';
+import { CustomLogger } from '../logger/logger.service';
+import { getRFC3339Timestamp } from '../../../common/helpers/utils';
 import { ExchangeInitService } from '../exchange-init/exchange-init.service';
 
 type HEALTH_STATE = 'alive' | 'dead';
@@ -19,7 +18,6 @@ export class HealthService {
   private readonly logger = new CustomLogger(HealthService.name);
 
   constructor(
-    @InjectEntityManager() private entityManager: EntityManager,
     @InjectQueue('snapshots') private snapshotsQueue: Queue,
     private exchangeInitService: ExchangeInitService,
   ) {
@@ -185,7 +183,7 @@ export class HealthService {
       return {
         status,
         healthy: status === 'healthy',
-        timestamp: new Date().toISOString(),
+        timestamp: getRFC3339Timestamp(),
         queue: {
           name: 'snapshots',
           isPaused,
@@ -220,7 +218,7 @@ export class HealthService {
       return {
         status: 'critical',
         healthy: false,
-        timestamp: new Date().toISOString(),
+        timestamp: getRFC3339Timestamp(),
         error: error.message,
         issues: ['Failed to retrieve queue status'],
       };
