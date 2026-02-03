@@ -12,6 +12,16 @@ Payment Verification → Withdraw to Exchange → Withdrawal Confirmation →
 Join Campaign → Start Strategy → Execute Market Making Loop
 ```
 
+## Snapshot Processing Route
+
+This is the actual processing path when a new snapshot is found:
+
+1. `SnapshotsProcessor.pollSnapshotsCron()` enqueues `snapshots/process_snapshot` for each new snapshot.
+2. `SnapshotsProcessor.handleProcessSnapshot()` calls `SnapshotsService.handleSnapshot(snapshot)`.
+3. `SnapshotsService.handleSnapshot()` validates amount + memo, decodes memo, and routes by trading type.
+4. For Market Making + Create, it enqueues `market-making/process_market_making_snapshots`.
+5. `MarketMakingOrderProcessor.handleProcessMMSnapshot()` creates/updates `MarketMakingPaymentState` and queues `check_payment_complete`.
+
 ## The 9 Stages
 
 ### Stage 1: Snapshot Polling
@@ -21,13 +31,13 @@ Join Campaign → Start Strategy → Execute Market Making Loop
 ```typescript
 @Cron('*/3 * * * * *')
 async pollSnapshotsCron() {
-  // 1. Fetch new snapshots from Mixin API
-  const { snapshots, newSnapshots } = await this.snapshotsService.fetchSnapshots();
+  const { snapshots, newSnapshots, newestTimestamp } =
+    await this.snapshotsService.fetchSnapshots();
 
-  // 2. Create processing task for each snapshot
   for (const snapshot of newSnapshots) {
     await this.snapshotsQueue.add('process_snapshot', snapshot, {
       jobId: snapshot.snapshot_id, // Deduplication
+      removeOnComplete: true,
     });
   }
 }
@@ -45,25 +55,42 @@ async pollSnapshotsCron() {
 
 ```typescript
 async handleSnapshot(snapshot: SafeSnapshot) {
-  // 1. Check if it's incoming payment (amount > 0)
-  if (BigNumber(snapshot.amount).isLessThanOrEqualTo(0)) {
-    return; // Ignore outgoing
+  const amountValue = BigNumber(snapshot.amount);
+  if (!amountValue.isFinite() || amountValue.isLessThanOrEqualTo(0)) return;
+  if (!snapshot.memo || snapshot.memo.length === 0) return;
+
+  const hexDecodedMemo = Buffer.from(snapshot.memo, 'hex').toString('utf-8');
+  const { payload, version, tradingTypeKey, action } =
+    memoPreDecode(hexDecodedMemo);
+
+  if (!payload || version !== MemoVersion.Current) {
+    await this.transactionService.refund(snapshot);
+    return;
   }
 
-  // 2. Parse memo
-  const { version, tradingTypeKey, payload } = decodeMemo(memo);
-
-  // 3. Route based on trading type
-  if (tradingTypeKey === 1) { // Market making
-    const mmDetails = decodeMarketMakingCreateMemo(payload);
-
-    // Push to market-making queue
-    await this.marketMakingQueue.add('process_mm_snapshot', {
-      snapshotId: snapshot.snapshot_id,
-      orderId: mmDetails.orderId,
-      marketMakingPairId: mmDetails.marketMakingPairId,
-      snapshot,
-    });
+  switch (tradingTypeKey) {
+    case TradingTypeKey.MarketMaking:
+      if (action === MarketMakingMemoActionKey.Create) {
+        const mmDetails = decodeMarketMakingCreateMemo(payload);
+        // intent checks + expiry checks omitted for brevity
+        await this.marketMakingQueue.add(
+          'process_market_making_snapshots',
+          {
+            snapshotId: snapshot.snapshot_id,
+            orderId: mmDetails.orderId,
+            marketMakingPairId: mmDetails.marketMakingPairId,
+            memoDetails: mmDetails,
+            snapshot,
+          },
+          {
+            jobId: `mixin_snapshot_${snapshot.snapshot_id}`,
+            attempts: 3,
+            backoff: { type: 'exponential', delay: 5000 },
+            removeOnComplete: false,
+          },
+        );
+      }
+      break;
   }
 }
 ```
@@ -89,61 +116,74 @@ Tracks 4 types of assets:
 4. **Quote Fee** (withdrawal fee for quote)
 
 ```typescript
-@Process('process_mm_snapshot')
-async handleProcessMMSnapshot(job: Job) {
+@Process('process_market_making_snapshots')
+async handleProcessMMSnapshot(job: Job<ProcessSnapshotJobData>) {
   const { snapshotId, orderId, marketMakingPairId, snapshot } = job.data;
 
-  // Step 1: Validate trading pair
   const pairConfig = await this.growDataRepository.findMarketMakingPairById(
-    marketMakingPairId
+    marketMakingPairId,
   );
 
-  // Step 2: Calculate required fees
   const feeInfo = await this.feeService.calculateMoveFundsFee(
     pairConfig.exchange_id,
     pairConfig.symbol,
-    'deposit_to_exchange'
+    'deposit_to_exchange',
   );
 
-   // Step 3: Find or create PaymentState
-   let paymentState = await this.paymentStateRepository.findOne({
-     where: { orderId }
-   });
+  let paymentState = await this.paymentStateRepository.findOne({
+    where: { orderId },
+  });
 
-   if (!paymentState) {
-     paymentState = this.paymentStateRepository.create({
-       orderId,
-       userId: snapshot.opponent_id,
-       type: 'market_making',
-       symbol: pairConfig.symbol,
+  if (!paymentState) {
+    paymentState = this.paymentStateRepository.create({
+      orderId,
+      userId: snapshot.opponent_id,
+      type: 'market_making',
+      symbol: pairConfig.symbol,
       baseAssetId: pairConfig.base_asset_id,
       baseAssetAmount: '0',
+      baseAssetSnapshotId: null,
       quoteAssetId: pairConfig.quote_asset_id,
       quoteAssetAmount: '0',
-      // ... fee fields
-       state: 'payment_pending',
-     });
-   }
-
-  // Step 4: Update amount based on received asset type
-  if (receivedAssetId === pairConfig.base_asset_id) {
-    paymentState.baseAssetAmount = BigNumber(paymentState.baseAssetAmount)
-      .plus(receivedAmount)
-      .toString();
-  } else if (receivedAssetId === pairConfig.quote_asset_id) {
-    paymentState.quoteAssetAmount = BigNumber(paymentState.quoteAssetAmount)
-      .plus(receivedAmount)
-      .toString();
+      quoteAssetSnapshotId: null,
+      baseFeeAssetId: feeInfo.base_fee_id,
+      baseFeeAssetAmount: '0',
+      baseFeeAssetSnapshotId: null,
+      quoteFeeAssetId: feeInfo.quote_fee_id,
+      quoteFeeAssetAmount: '0',
+      quoteFeeAssetSnapshotId: null,
+      requiredBaseWithdrawalFee: feeInfo.base_fee_amount,
+      requiredQuoteWithdrawalFee: feeInfo.quote_fee_amount,
+      requiredStrategyFeePercentage: feeInfo.market_making_fee_percentage,
+      state: 'payment_pending',
+      createdAt: getRFC3339Timestamp(),
+      updatedAt: getRFC3339Timestamp(),
+    });
   }
-  // ... handle fee assets
 
-  await this.paymentStateRepository.save(paymentState);
+  // ... update amounts based on received asset
 
-  // Step 5: Queue payment completion check
-  await job.queue.add('check_payment_complete', {
-    orderId,
-    marketMakingPairId,
-  }, { delay: 5000 });
+  if (updated) {
+    paymentState.updatedAt = getRFC3339Timestamp();
+    await this.paymentStateRepository.save(paymentState);
+  }
+
+  const checkJobId = `check_payment_${orderId}`;
+  const existingCheckJob = await (job.queue as any).getJob(checkJobId);
+  if (!existingCheckJob) {
+    await (job.queue as any).add(
+      'check_payment_complete',
+      { orderId, marketMakingPairId } as CheckPaymentJobData,
+      {
+        jobId: checkJobId,
+        delay: 5000,
+        attempts: this.MAX_PAYMENT_RETRIES,
+        backoff: { type: 'fixed', delay: 10000 },
+        removeOnComplete: true,
+        removeOnFail: true,
+      },
+    );
+  }
 }
 ```
 
@@ -153,62 +193,95 @@ async handleProcessMMSnapshot(job: Job) {
 
 ```typescript
 @Process('check_payment_complete')
-async handleCheckPaymentComplete(job: Job) {
-  const { orderId, retryCount = 0 } = job.data;
+async handleCheckPaymentComplete(job: Job<CheckPaymentJobData>) {
+  const { orderId, marketMakingPairId } = job.data;
+  const attemptsMade = job.attemptsMade ?? 0;
+  const maxAttempts = job.opts.attempts ?? this.MAX_PAYMENT_RETRIES;
+  const attemptNumber = BigNumber.min(
+    new BigNumber(attemptsMade).plus(1),
+    new BigNumber(maxAttempts),
+  ).toNumber();
 
   const paymentState = await this.paymentStateRepository.findOne({
-    where: { orderId }
+    where: { orderId },
   });
 
-  // Check if all assets received
+  const pairConfig = await this.growDataRepository.findMarketMakingPairById(
+    marketMakingPairId,
+  );
+
   const hasBase = BigNumber(paymentState.baseAssetAmount).isGreaterThan(0);
   const hasQuote = BigNumber(paymentState.quoteAssetAmount).isGreaterThan(0);
-  const hasBaseFee = BigNumber(paymentState.baseFeeAssetAmount)
-    .isGreaterThanOrEqualTo(paymentState.requiredBaseWithdrawalFee);
-  const hasQuoteFee = BigNumber(paymentState.quoteFeeAssetAmount)
-    .isGreaterThanOrEqualTo(paymentState.requiredQuoteWithdrawalFee);
+  const baseAssetAmount = BigNumber(paymentState.baseAssetAmount);
+  const quoteAssetAmount = BigNumber(paymentState.quoteAssetAmount);
+  const baseFeeAssetAmount = BigNumber(paymentState.baseFeeAssetAmount);
+  const quoteFeeAssetAmount = BigNumber(paymentState.quoteFeeAssetAmount);
+  const requiredBaseFee = BigNumber(
+    paymentState.requiredBaseWithdrawalFee || 0,
+  );
+  const requiredQuoteFee = BigNumber(
+    paymentState.requiredQuoteWithdrawalFee || 0,
+  );
 
-  // If incomplete, retry or timeout
-  if (!hasBase || !hasQuote || !hasBaseFee || !hasQuoteFee) {
+  const baseFeePaidAmount =
+    paymentState.baseFeeAssetId === paymentState.baseAssetId
+      ? baseAssetAmount
+      : paymentState.baseFeeAssetId === paymentState.quoteAssetId
+      ? quoteAssetAmount
+      : baseFeeAssetAmount;
+  const quoteFeePaidAmount =
+    paymentState.quoteFeeAssetId === paymentState.quoteAssetId
+      ? quoteAssetAmount
+      : paymentState.quoteFeeAssetId === paymentState.baseAssetId
+      ? baseAssetAmount
+      : quoteFeeAssetAmount;
+
+  const hasBaseFee =
+    requiredBaseFee.isZero() ||
+    baseFeePaidAmount.isGreaterThanOrEqualTo(requiredBaseFee);
+  const hasQuoteFee =
+    requiredQuoteFee.isZero() ||
+    quoteFeePaidAmount.isGreaterThanOrEqualTo(requiredQuoteFee);
+
+  if (!hasBase || !hasQuote) {
     const elapsed = Date.now() - new Date(paymentState.createdAt).getTime();
-
-    if (elapsed > 10 * 60 * 1000) { // 10 minutes timeout
+    if (elapsed > this.PAYMENT_TIMEOUT_MS || attemptNumber >= maxAttempts) {
       await this.userOrdersService.updateMarketMakingOrderState(orderId, 'failed');
+      await this.refundMarketMakingPendingOrder(
+        orderId,
+        paymentState,
+        'payment timeout or retries exceeded',
+      );
       return;
     }
+    throw new Error(`Payment incomplete for ${orderId}`);
+  }
 
-    // Retry after 10 seconds
-    await job.queue.add('check_payment_complete', {
+  if (!hasBaseFee || !hasQuoteFee) {
+    await this.userOrdersService.updateMarketMakingOrderState(orderId, 'failed');
+    await this.refundMarketMakingPendingOrder(
       orderId,
-      retryCount: retryCount + 1,
-    }, { delay: 10000 });
+      paymentState,
+      'insufficient fees',
+    );
     return;
   }
 
-  // All payments complete
+  await this.marketMakingOrderIntentRepository.update(
+    { orderId },
+    { state: 'completed', updatedAt: getRFC3339Timestamp() },
+  );
+
   paymentState.state = 'payment_complete';
+  paymentState.updatedAt = getRFC3339Timestamp();
   await this.paymentStateRepository.save(paymentState);
 
-  // Create MarketMakingOrder after payment completion
-  const existingOrder = await this.marketMakingRepository.findOne({
-    where: { orderId }
-  });
-  if (!existingOrder) {
-    const mmOrder = this.marketMakingRepository.create({
-      orderId,
-      userId: paymentState.userId,
-      pair: pairConfig.symbol,
-      exchangeName: pairConfig.exchange_id,
-      state: 'payment_complete',
-    });
-    await this.marketMakingRepository.save(mmOrder);
-  }
-
-  // Queue withdrawal
-  await job.queue.add('withdraw_to_exchange', {
+  await this.userOrdersService.updateMarketMakingOrderState(
     orderId,
-    marketMakingPairId,
-  });
+    'payment_complete',
+  );
+
+  // Withdrawal queueing is currently disabled in code.
 }
 ```
 
@@ -225,25 +298,33 @@ async handleCheckPaymentComplete(job: Job) {
 
 ```typescript
 @Process('withdraw_to_exchange')
-async handleWithdrawToExchange(job: Job) {
+async handleWithdrawToExchange(job: Job<WithdrawJobData>) {
   const { orderId, marketMakingPairId } = job.data;
 
   await this.userOrdersService.updateMarketMakingOrderState(orderId, 'withdrawing');
 
+  const paymentState = await this.paymentStateRepository.findOne({
+    where: { orderId },
+  });
+
+  const pairConfig = await this.growDataRepository.findMarketMakingPairById(
+    marketMakingPairId,
+  );
+
   // Step 1: Get exchange API key
   const apiKey = await this.exchangeService.findFirstAPIKeyByExchange(
-    pairConfig.exchange_id
+    pairConfig.exchange_id,
   );
 
   // Step 2: Get accurate network identifiers
   const [baseNetwork, quoteNetwork] = await Promise.all([
     this.networkMappingService.getNetworkForAsset(
       paymentState.baseAssetId,
-      pairConfig.base_symbol
+      pairConfig.base_symbol,
     ),
     this.networkMappingService.getNetworkForAsset(
       paymentState.quoteAssetId,
-      pairConfig.quote_symbol
+      pairConfig.quote_symbol,
     ),
   ]);
 
@@ -255,63 +336,80 @@ async handleWithdrawToExchange(job: Job) {
     network: baseNetwork,
   });
 
-  // Step 4: Execute Mixin withdrawals
-  const baseWithdrawalResult = await this.withdrawalService.executeWithdrawal(
-    paymentState.baseAssetId,
-    baseDepositResult.address,
-    baseDepositResult.memo || `MM:${orderId}:base`,
-    paymentState.baseAssetAmount
-  );
-
-  await this.userOrdersService.updateMarketMakingOrderState(
-    orderId,
-    'withdrawal_confirmed'
-  );
-
-  // Step 5: Queue withdrawal confirmation monitoring
-  await this.withdrawalConfirmationQueue.add('monitor_mm_withdrawal', {
-    orderId,
-    baseWithdrawalTxId: baseWithdrawalResult[0]?.request_id,
-    quoteWithdrawalTxId: quoteWithdrawalResult[0]?.request_id,
+  const quoteDepositResult = await this.exchangeService.getDepositAddress({
+    exchange: pairConfig.exchange_id,
+    apiKeyId: apiKey.key_id,
+    symbol: pairConfig.quote_symbol,
+    network: quoteNetwork,
   });
+
+  // Withdrawal execution is disabled; refund instead.
+  await this.refundMarketMakingPendingOrder(
+    orderId,
+    paymentState,
+    'validation mode: withdrawal disabled',
+  );
+
+  await this.userOrdersService.updateMarketMakingOrderState(orderId, 'failed');
 }
 ```
+
+Note: withdrawal execution is disabled in current code; the flow refunds and marks the order failed, so Stage 6 only applies when withdrawals are enabled.
 
 **NetworkMappingService** automatically determines the correct network (BTC, ERC20, TRC20, etc.) based on Mixin's chain_id.
 
 ### Stage 6: Withdrawal Confirmation Monitoring
 
-**File**: `src/modules/mixin/withdrawal/withdrawal-confirmation.worker.ts`
+**File**: `src/modules/market-making/user-orders/market-making.processor.ts`
 
 ```typescript
-@Process('monitor_mm_withdrawal')
-async handleMonitorMMWithdrawal(job: Job) {
+@Process('monitor_mixin_withdrawal')
+async handleMonitorMMWithdrawal(
+  job: Job<{
+    orderId: string;
+    marketMakingPairId: string;
+    baseWithdrawalTxId?: string;
+    quoteWithdrawalTxId?: string;
+    startedAt?: number;
+  }>,
+) {
   const { orderId, baseWithdrawalTxId, quoteWithdrawalTxId } = job.data;
-
-  // Check Mixin snapshot for confirmation
-  const baseSnapshot = await mixinClientService.client.safe.fetchSafeSnapshot(baseWithdrawalTxId);
-  const quoteSnapshot = await mixinClientService.client.safe.fetchSafeSnapshot(quoteWithdrawalTxId);
-
-  // Confirmed if: 1+ confirmations AND has transaction hash
-  const baseConfirmed = baseSnapshot.confirmations >= 1 && !!baseSnapshot.transaction_hash;
-  const quoteConfirmed = quoteSnapshot.confirmations >= 1 && !!quoteSnapshot.transaction_hash;
-
-  // When both confirmed, queue campaign join
-  if (baseConfirmed && quoteConfirmed) {
-    await marketMakingQueue.add('join_campaign', { orderId });
-  } else {
-    // Retry after 30 seconds (max 30 minutes)
-    await job.queue.add('monitor_mm_withdrawal', job.data, {
-      delay: 30000,
-    });
+  const startedAt = job.data.startedAt ?? Date.now();
+  if (!job.data.startedAt) {
+    await job.update({ ...job.data, startedAt });
   }
+
+  const baseConfirmed = baseWithdrawalTxId
+    ? await this.checkWithdrawalConfirmation(baseWithdrawalTxId)
+    : false;
+  const quoteConfirmed = quoteWithdrawalTxId
+    ? await this.checkWithdrawalConfirmation(quoteWithdrawalTxId)
+    : false;
+
+  const elapsed = Date.now() - startedAt;
+  if (elapsed > this.WITHDRAWAL_TIMEOUT_MS) {
+    await this.userOrdersService.updateMarketMakingOrderState(orderId, 'failed');
+    return;
+  }
+
+  if (baseConfirmed && quoteConfirmed) {
+    await (job.queue as any).add(
+      'join_campaign',
+      { orderId },
+      { jobId: `join_campaign_${orderId}`, removeOnComplete: false },
+    );
+    return;
+  }
+
+  throw new Error('Withdrawals not fully confirmed yet');
 }
 ```
 
 **Key Points**:
 
-- Retries every 30 seconds for up to 60 attempts (30 minutes max)
-- Confirmation requires both snapshot.confirmations >= 1 AND transaction_hash present
+- Retries via Bull backoff (configured at enqueue time)
+- Times out when elapsed > WITHDRAWAL_TIMEOUT_MS
+- Confirmation uses checkWithdrawalConfirmation for both base and quote
 
 ### Stage 7: Join Campaign
 
@@ -509,8 +607,8 @@ Stores user strategy configuration:
 | Queue Name                 | Job Types                                                                                                                          | Processor                    |
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
 | `snapshots`                | `process_snapshot`                                                                                                                 | SnapshotsProcessor           |
-| `market-making`            | `process_mm_snapshot`<br>`check_payment_complete`<br>`withdraw_to_exchange`<br>`join_campaign`<br>`start_mm`<br>`execute_mm_cycle` | MarketMakingOrderProcessor   |
-| `withdrawal-confirmations` | `monitor_mm_withdrawal`                                                                                                            | WithdrawalConfirmationWorker |
+| `market-making`            | `process_market_making_snapshots`<br>`check_payment_complete`<br>`withdraw_to_exchange`<br>`join_campaign`<br>`start_mm`<br>`execute_mm_cycle` | MarketMakingOrderProcessor   |
+| `withdrawal-confirmations` | `monitor_mixin_withdrawal`                                                                                                            | WithdrawalConfirmationWorker |
 
 ## State Transitions
 
@@ -549,7 +647,7 @@ T=2s      SnapshotsProcessor polls snapshot
 
 T=3s      SnapshotsService parses memo
           └─ tradingTypeKey = 1 (Market Making)
-          └─ Queue: process_mm_snapshot
+          └─ Queue: process_market_making_snapshots
 
 T=4s      MarketMakingOrderProcessor handles
           ├─ Validate trading pair ✅
@@ -579,7 +677,7 @@ T=75s     withdraw_to_exchange executes
           ├─ ExchangeService: Get deposit address ✅
           ├─ WithdrawalService: Withdraw 0.1 BTC ✅
           ├─ WithdrawalService: Withdraw 5000 USDT ✅
-          └─ Queue: monitor_mm_withdrawal
+          └─ Queue: monitor_mixin_withdrawal
 
 T=5m      WithdrawalConfirmationWorker confirms
           ├─ Mixin withdrawal confirmed ✅
