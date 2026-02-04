@@ -1,5 +1,9 @@
 # Execution Flow Changelog
 
+## 2026-02-04
+
+- Show chain icons on market-making create-new trading pair selection
+
 ## 2026-02-03
 
 - Remove interface-side market making memo generator so intent API remains the memo source of truth
