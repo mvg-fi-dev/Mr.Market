@@ -17,6 +17,7 @@ describe('CustomConfigRepository', () => {
           provide: getRepositoryToken(CustomConfigEntity),
           useValue: {
             findOne: jest.fn(),
+            find: jest.fn(),
             save: jest.fn(),
           },
         },
@@ -50,10 +51,10 @@ describe('CustomConfigRepository', () => {
     });
 
     it('should handle config not found', async () => {
-      jest.spyOn(mockRepository, 'findOne').mockResolvedValue(null);
+      jest.spyOn(mockRepository, 'find').mockResolvedValue([]);
 
       await expect(customConfigRepository.readSpotFee()).rejects.toThrow(
-        new Error(`Configuration with ID 0 not found.`),
+        new Error('No configuration found in database.'),
       );
     });
   });

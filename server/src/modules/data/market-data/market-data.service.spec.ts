@@ -4,7 +4,7 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { CustomLogger } from '../../infrastructure/logger/logger.service';
 import { ExchangeInitService } from '../../infrastructure/exchange-init/exchange-init.service';
 
-jest.mock('../logger/logger.service');
+jest.mock('../../infrastructure/logger/logger.service');
 
 const mockCacheManager = () => ({
   get: jest.fn(),

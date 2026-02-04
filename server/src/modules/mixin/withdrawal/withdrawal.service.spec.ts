@@ -5,6 +5,7 @@ import { Queue } from 'bull';
 import { WithdrawalService } from './withdrawal.service';
 import { Withdrawal } from 'src/common/entities/withdrawal.entity';
 import { SafeSnapshot } from '@mixin.dev/mixin-node-sdk';
+import { MixinClientService } from '../client/mixin-client.service';
 
 describe('WithdrawalService', () => {
   let service: WithdrawalService;
@@ -34,6 +35,28 @@ describe('WithdrawalService', () => {
         {
           provide: 'BullQueue_withdrawals',
           useValue: mockQueue,
+        },
+        {
+          provide: MixinClientService,
+          useValue: {
+            client: {
+              network: {
+                fetchAsset: jest.fn(),
+              },
+              safe: {
+                fetchAsset: jest.fn(),
+                fetchFee: jest.fn(),
+                fetchAssets: jest.fn(),
+              },
+              utxo: {
+                safeOutputs: jest.fn(),
+                ghostKey: jest.fn(),
+                verifyTransaction: jest.fn(),
+                sendTransactions: jest.fn(),
+              },
+            },
+            spendKey: 'test-spend-key',
+          },
         },
       ],
     }).compile();
