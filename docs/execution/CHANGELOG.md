@@ -1,5 +1,9 @@
 # Execution Flow Changelog
 
+## 2026-02-04
+
+- Add default ceiling/floor price when creating market making orders on payment completion and show payment success dialog after polling
+
 ## 2026-02-03
 
 - Remove interface-side market making memo generator so intent API remains the memo source of truth

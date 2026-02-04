@@ -518,6 +518,8 @@ export class MarketMakingOrderProcessor {
           priceSourceType: PriceSourceType.MID_PRICE,
           amountChangePerLayer: '0',
           amountChangeType: 'fixed',
+          ceilingPrice: '0',
+          floorPrice: '0',
         });
         await this.marketMakingRepository.save(mmOrder);
       }

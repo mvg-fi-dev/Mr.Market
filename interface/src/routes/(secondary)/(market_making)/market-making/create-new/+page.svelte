@@ -153,6 +153,11 @@
                 const res = await getMarketMakingPaymentState(orderId);
                 if (res?.data?.state === "payment_complete") {
                     paymentResults.set(orderId, { state: "success" });
+                    if (isPageActive) {
+                        showSuccessDialog = true;
+                        successOrderId = orderId;
+                        isPaying = false;
+                    }
                     stopPaymentPolling(orderId);
                     stopPaymentTimeout(orderId);
                     return;
@@ -180,6 +185,8 @@
             return;
         }
 
+        showSuccessDialog = false;
+        successOrderId = "";
         isPaying = true;
 
         // Use fee info from API

@@ -1,1 +1,2 @@
-apply docs/AGENTS.md as CLAUDE.md when editing
+- Add default ceilingPrice/floorPrice when creating market making order after payment completion to satisfy NOT NULL schema requirements.
+- Show market making payment success dialog when payment state transitions to payment_complete in create-new flow, and reset dialog state when starting a new payment.
