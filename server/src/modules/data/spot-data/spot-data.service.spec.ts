@@ -72,6 +72,8 @@ describe('SpotdataService', () => {
       close: 0,
       previousClose: 0,
       average: 0,
+      indexPrice: 0,
+      markPrice: 0,
     },
     'ETH/USDT': {
       symbol: 'ETH/USDT',
@@ -94,6 +96,8 @@ describe('SpotdataService', () => {
       close: 0,
       previousClose: 0,
       average: 0,
+      indexPrice: 0,
+      markPrice: 0,
     },
   };
 

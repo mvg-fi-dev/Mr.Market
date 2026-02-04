@@ -7,6 +7,7 @@ import { MessageRepository } from './message.repository';
 import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
 import { MixinMessage } from 'src/common/entities/mixin-message.entity';
 import { getRFC3339Timestamp } from '../../../common/helpers/utils';
+import { MixinClientService } from '../client/mixin-client.service';
 
 jest.mock('src/modules/mixin/user/user.service');
 jest.mock('./message.repository');
@@ -25,6 +26,25 @@ describe('MessageService', () => {
         MessageRepository,
         CustomLogger,
         ConfigService,
+        {
+          provide: MixinClientService,
+          useValue: {
+            client: {
+              blaze: {
+                loop: jest.fn(),
+              },
+              user: {
+                fetch: jest.fn(),
+              },
+              message: {
+                sendText: jest.fn(),
+              },
+              conversation: {
+                fetch: jest.fn(),
+              },
+            },
+          },
+        },
       ],
     }).compile();
 

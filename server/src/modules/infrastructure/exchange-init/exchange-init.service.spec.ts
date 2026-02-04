@@ -70,11 +70,11 @@ describe('ExchangeinitService', () => {
   });
 
   it('refreshes exchanges when API keys change', async () => {
-    await new Promise(setImmediate);
+    await Promise.resolve();
     expect(initializeExchangeConfigsSpy).toHaveBeenCalledTimes(1);
 
     jest.advanceTimersByTime(10 * 1000);
-    await new Promise(setImmediate);
+    await Promise.resolve();
 
     expect(initializeExchangeConfigsSpy).toHaveBeenCalledTimes(2);
   });

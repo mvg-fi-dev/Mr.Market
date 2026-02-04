@@ -80,9 +80,9 @@ describe('TradeService', () => {
         symbol: 'BTC/USDT',
         type: 'market',
         side: 'buy',
-        amount: 1,
+        amount: '1',
         status: 'closed',
-        price: 30000,
+        price: '30000',
         orderId: 'order123',
       });
     });
@@ -160,8 +160,8 @@ describe('TradeService', () => {
         symbol: 'BTC/USDT',
         side: 'buy',
         type: 'limit',
-        amount: 1,
-        price: 30000,
+        amount: '1',
+        price: '30000',
         status: 'open',
         orderId: 'order123',
       });

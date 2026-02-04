@@ -2,6 +2,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { FeeService } from './fee.service';
 import { ExchangeInitService } from '../../infrastructure/exchange-init/exchange-init.service';
 import { ConfigService } from '@nestjs/config';
+import { MixinClientService } from '../../mixin/client/mixin-client.service';
+import { CustomConfigService } from '../../infrastructure/custom-config/custom-config.service';
+import { GrowdataRepository } from 'src/modules/data/grow-data/grow-data.repository';
 
 // Mock the Mixin SDK clients
 const mockClient = {
@@ -23,15 +26,23 @@ describe('FeeService', () => {
   let exchangeInitService: ExchangeInitService;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let configService: ConfigService;
+  let testingModule: TestingModule;
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
+    testingModule = await Test.createTestingModule({
       providers: [
         FeeService,
         {
           provide: ExchangeInitService,
           useValue: {
             getExchange: jest.fn(),
+          },
+        },
+        {
+          provide: MixinClientService,
+          useValue: {
+            client: mockClient,
+            spendKey: 'test-spend-key',
           },
         },
         {
@@ -48,12 +59,24 @@ describe('FeeService', () => {
             }),
           },
         },
+        {
+          provide: CustomConfigService,
+          useValue: {
+            readMarketMakingFee: jest.fn().mockResolvedValue('0.001'),
+          },
+        },
+        {
+          provide: GrowdataRepository,
+          useValue: {
+            findMarketMakingPairByExchangeAndSymbol: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
-    service = module.get<FeeService>(FeeService);
-    exchangeInitService = module.get<ExchangeInitService>(ExchangeInitService);
-    configService = module.get<ConfigService>(ConfigService);
+    service = testingModule.get<FeeService>(FeeService);
+    exchangeInitService = testingModule.get<ExchangeInitService>(ExchangeInitService);
+    configService = testingModule.get<ConfigService>(ConfigService);
   });
 
   afterEach(() => {
@@ -80,20 +103,33 @@ describe('FeeService', () => {
       symbol: 'USDT',
     };
 
+    const mockTradingPair = {
+      base_asset_id: baseAssetId,
+      quote_asset_id: quoteAssetId,
+    };
+
     beforeEach(() => {
       mockClient.network.searchAssets.mockImplementation((query) => {
         if (query === 'BTC') return [mockBaseAsset];
         if (query === 'USDT') return [mockQuoteAsset];
         return [];
       });
+      mockClient.safe.fetchAsset.mockImplementation((assetId) => {
+        if (assetId === baseAssetId) return mockBaseAsset;
+        if (assetId === quoteAssetId) return mockQuoteAsset;
+        return undefined;
+      });
+      const repo = testingModule.get(GrowdataRepository) as {
+        findMarketMakingPairByExchangeAndSymbol: jest.Mock;
+      };
+      repo.findMarketMakingPairByExchangeAndSymbol.mockResolvedValue(
+        mockTradingPair,
+      );
     });
 
     it('should calculate fees for deposit_to_exchange', async () => {
       const direction = 'deposit_to_exchange';
       const exchangeName = 'binance';
-
-      mockClient.safe.fetchAsset.mockResolvedValueOnce(mockBaseAsset);
-      mockClient.safe.fetchAsset.mockResolvedValueOnce(mockQuoteAsset);
 
       mockClient.safe.fetchFee.mockImplementation((assetId) => {
         if (assetId === baseAssetId)
@@ -109,19 +145,24 @@ describe('FeeService', () => {
         direction,
       );
 
-      expect(mockClient.network.searchAssets).toHaveBeenCalledWith('BTC');
-      expect(mockClient.network.searchAssets).toHaveBeenCalledWith('USDT');
-      expect(mockClient.safe.fetchFee).toHaveBeenCalledWith(baseAssetId);
-      expect(mockClient.safe.fetchFee).toHaveBeenCalledWith(quoteAssetId);
+      expect(mockClient.safe.fetchFee).toHaveBeenCalledWith(baseAssetId, '');
+      expect(mockClient.safe.fetchFee).toHaveBeenCalledWith(quoteAssetId, '');
 
       expect(result).toEqual({
         base_asset_id: baseAssetId,
         quote_asset_id: quoteAssetId,
-        base_asset_fee: '0.0001',
-        quote_asset_fee: '5',
-        creation_fee: 1,
-        mixin_deposit_fee: 0,
-        direction,
+        base_fee_id: baseAssetId,
+        quote_fee_id: quoteAssetId,
+        base_fee_amount: '0.0001',
+        quote_fee_amount: '5',
+        base_fee_symbol: 'BTC',
+        quote_fee_symbol: 'USDT',
+        base_fee_price_usd: undefined,
+        quote_fee_price_usd: undefined,
+        base_asset_price_usd: undefined,
+        quote_asset_price_usd: undefined,
+        market_making_fee_percentage: '0.001',
+        direction: 'mixin->exchange',
       });
     });
 
@@ -132,8 +173,8 @@ describe('FeeService', () => {
       const mockExchange = {
         has: { fetchTransactionFees: true },
         fetchTransactionFees: jest.fn().mockResolvedValue({
-          BTC: { withdraw: 0.0005 },
-          USDT: { withdraw: 10 },
+          [baseAssetId]: { withdraw: 0.0005 },
+          [quoteAssetId]: { withdraw: 10 },
         }),
       };
 
@@ -155,18 +196,18 @@ describe('FeeService', () => {
         exchangeName,
       );
       expect(mockExchange.fetchTransactionFees).toHaveBeenCalledWith([
-        'BTC',
-        'USDT',
+        baseAssetId,
+        quoteAssetId,
       ]);
 
       expect(result).toEqual({
+        symbol: pair,
         base_asset_id: baseAssetId,
         quote_asset_id: quoteAssetId,
         base_asset_fee: 0.0005,
         quote_asset_fee: 10,
-        creation_fee: 1,
-        mixin_deposit_fee: 6,
-        direction,
+        mixin_deposit_fee: '6',
+        direction: 'exchange->mixin',
       });
     });
 
@@ -198,8 +239,8 @@ describe('FeeService', () => {
       const mockExchange = {
         has: { fetchTransactionFees: false },
         currencies: {
-          LTC: { fee: 0.001 },
-          DOGE: { fee: 1 },
+          [ltcAssetId]: { fee: 0.001 },
+          [dogeAssetId]: { fee: 1 },
         },
       };
 
@@ -211,13 +252,26 @@ describe('FeeService', () => {
       // Dogecoin -> 0.1
       // Total = 0.2
 
+      const repo = testingModule.get(GrowdataRepository) as {
+        findMarketMakingPairByExchangeAndSymbol: jest.Mock;
+      };
+      repo.findMarketMakingPairByExchangeAndSymbol.mockResolvedValue({
+        base_asset_id: ltcAssetId,
+        quote_asset_id: dogeAssetId,
+      });
+      mockClient.safe.fetchAsset.mockImplementation((assetId) => {
+        if (assetId === ltcAssetId) return mockLTC;
+        if (assetId === dogeAssetId) return mockDoge;
+        return undefined;
+      });
+
       const result = await service.calculateMoveFundsFee(
         exchangeName,
         pairSimple,
         direction,
       );
 
-      expect(result.mixin_deposit_fee).toBe(0.2);
+      expect(result.mixin_deposit_fee).toBe('0.2');
       expect(result.base_asset_fee).toBe(0.001);
       expect(result.quote_asset_fee).toBe(1);
     });
@@ -229,8 +283,8 @@ describe('FeeService', () => {
       const mockExchange = {
         has: { fetchTransactionFees: true },
         fetchTransactionFees: jest.fn().mockResolvedValue({
-          BTC: { withdraw: 0.0004 },
-          USDT: { withdraw: 8 },
+          [baseAssetId]: { withdraw: 0.0004 },
+          [quoteAssetId]: { withdraw: 8 },
         }),
       };
 
@@ -245,13 +299,12 @@ describe('FeeService', () => {
       );
 
       expect(result).toEqual({
+        symbol: pair,
         base_asset_id: baseAssetId,
         quote_asset_id: quoteAssetId,
         base_asset_fee: 0.0004,
         quote_asset_fee: 8,
-        creation_fee: 1,
-        mixin_deposit_fee: 0,
-        direction,
+        direction: 'exchange->external',
       });
     });
 
