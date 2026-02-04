@@ -26,7 +26,7 @@ run-migrations:
 .PHONY: run-migrations
 
 run-seeder:
-	@echo "Running seender..."
+	@echo "Running seeder..."
 	@cd server && bun run migration:seed
 .PHONY: run-seeder
 
@@ -38,6 +38,9 @@ start-server:
 start-dev:
 	$(MAKE) -j 2 start-client start-server
 .PHONY: start-dev
+
+dev: install run-migrations run-seeder start-dev
+.PHONY: dev
 
 start-server-docker:
 	@echo "Starting server in docker..."
