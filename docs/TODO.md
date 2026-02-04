@@ -10,8 +10,8 @@
 
 ### Connect payment state to confirm payment page
 - [x] 1. after user clicked pay button in create-new market making page, should start loading and fetch payment status from backend
-2. after payment status fetched, should show payment successful, and redirect to order details page
-3. order details page should fetch order details from backend, and show order details (connect ui to backend)
+- [x] 2. after payment status fetched, should show payment successful, and redirect to order details page
+- [x] 3. order details page should fetch order details from backend, and show order details (connect ui to backend)
 
 ### Create market making UI
 - [] 1. when select trading pair, there should be an small icon that represents the chain of the asset
