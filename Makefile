@@ -42,8 +42,6 @@ start-dev:
 	$(MAKE) -j 2 start-interface start-server
 .PHONY: start-dev
 
-#
-
 start-server-docker:
 	@echo "Starting server in docker..."
 	@cd server && docker-compose up
@@ -51,6 +49,8 @@ start-server-docker:
 
 one-shot: install run-migrations run-seeder start-dev
 .PHONY: one-shot
+
+#
 
 test-interface-unit:
 	@echo "Running interface unit tests..."
