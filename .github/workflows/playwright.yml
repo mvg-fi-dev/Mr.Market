@@ -68,7 +68,7 @@ jobs:
         working-directory: ./interface
 
       - name: Run Playwright tests
-        run: bun x playwright test --project='chromium'
+        run: bun x playwright test --config ./playwright.config.ts --project=chromium
         working-directory: ./interface
         env:
           PUBLIC_HUFI_BACKEND_URL: "http://localhost:3000"
