@@ -9,21 +9,6 @@ jobs:
   test:
     timeout-minutes: 60
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:latest
-        env:
-          POSTGRES_DB: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_USER: postgres
-        ports:
-          - 5432:5432
-        # Set health checks to wait until postgres has started
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     steps:
       - name: Checkout code
@@ -47,20 +32,12 @@ jobs:
       - name: Run DB Migration
         run: cd server && bun run migration:run
         env:
-          POSTGRES_PORT: 5432
-          POSTGRES_HOST: localhost
-          POSTGRES_DATABASE: postgres
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
+          DATABASE_PATH: data/mr_market.db
 
       - name: Run DB seeder
         run: cd server && bun run migration:seed
         env:
-          POSTGRES_PORT: 5432
-          POSTGRES_HOST: localhost
-          POSTGRES_DATABASE: postgres
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
+          DATABASE_PATH: data/mr_market.db
 
       - name: Wait for localhost:3000 to become available
         run: |
@@ -82,11 +59,7 @@ jobs:
               exit 1
           fi
         env:
-          POSTGRES_PORT: 5432
-          POSTGRES_HOST: localhost
-          POSTGRES_DATABASE: postgres
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
+          DATABASE_PATH: data/mr_market.db
           JWT_SECRET: 6b23439e8fee67c5da38b61b8779e9f41a5e3e36efe723c6299dd2111896def6
           ADMIN_PASSWORD: 123123
 
@@ -99,11 +72,6 @@ jobs:
         working-directory: ./interface
         env:
           PUBLIC_HUFI_BACKEND_URL: "http://localhost:3000"
-          POSTGRES_PORT: 5432
-          POSTGRES_HOST: localhost
-          POSTGRES_DATABASE: postgres
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
           JWT_SECRET: 6b23439e8fee67c5da38b61b8779e9f41a5e3e36efe723c6299dd2111896def6
           ADMIN_PASSWORD: 123123
 
