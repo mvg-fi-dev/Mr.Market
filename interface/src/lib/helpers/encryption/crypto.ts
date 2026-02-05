@@ -1,13 +1,30 @@
-import _sodium from 'libsodium-wrappers';
+import { browser } from "$app/environment";
 import * as nacl from 'tweetnacl';
+
+let sodiumPromise: Promise<any> | null = null;
+
+const loadSodium = async () => {
+  if (!browser) {
+    throw new Error("libsodium is browser-only");
+  }
+
+  if (!sodiumPromise) {
+    sodiumPromise = import("libsodium-wrappers").then(
+      (module) => module.default ?? module,
+    );
+  }
+
+  const sodium = await sodiumPromise;
+  await sodium.ready;
+  return sodium;
+};
 
 /**
  * Generates a new key pair for anonymous public key encryption.
  * @returns {Promise<Record<'publicKey' | 'privateKey', string>>} Base64 encoded public and private keys.
  */
 export const generateKeyPair = async (): Promise<{ publicKey: string; privateKey: string }> => {
-  await _sodium.ready;
-  const sodium = _sodium;
+  const sodium = await loadSodium();
   const keyPair = sodium.crypto_box_keypair();
   return {
     publicKey: sodium.to_base64(keyPair.publicKey, sodium.base64_variants.ORIGINAL),
@@ -23,8 +40,7 @@ export const generateKeyPair = async (): Promise<{ publicKey: string; privateKey
  * @returns {Promise<string>} Base64 encoded encrypted message.
  */
 export const encrypt = async (message: string, publicKey: string): Promise<string> => {
-  await _sodium.ready;
-  const sodium = _sodium;
+  const sodium = await loadSodium();
 
   const publicKeyBytes = sodium.from_base64(publicKey, sodium.base64_variants.ORIGINAL);
   const ciphertext = sodium.crypto_box_seal(message, publicKeyBytes);
@@ -41,8 +57,7 @@ export const encryptSecret = encrypt;
  * @returns {Promise<string | null>} The decrypted plaintext string, or null if decryption fails.
  */
 export const decrypt = async (encryptedMessage: string, privateKey: string): Promise<string | null> => {
-  await _sodium.ready;
-  const sodium = _sodium;
+  const sodium = await loadSodium();
 
   try {
     const ciphertext = sodium.from_base64(encryptedMessage, sodium.base64_variants.ORIGINAL);

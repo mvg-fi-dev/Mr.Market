@@ -1,8 +1,8 @@
-import { expect, test, describe } from "vitest";
-import { generateKeyPair, encrypt, encryptSecret, decrypt } from "./crypto";
+import { expect, test, describe, vi } from "vitest";
 
 describe("Crypto Helpers", () => {
   test("generateKeyPair should return valid keys", async () => {
+    const { generateKeyPair } = await import("./crypto");
     const keys = await generateKeyPair();
     expect(keys.publicKey).toBeDefined();
     expect(keys.privateKey).toBeDefined();
@@ -14,6 +14,7 @@ describe("Crypto Helpers", () => {
 
   test("encrypt should return encrypted string", async () => {
     // Generate a valid keypair first to test against real keys
+    const { generateKeyPair, encrypt, decrypt } = await import("./crypto");
     const keys = await generateKeyPair();
     const publicKey = keys.publicKey;
     const message = "Hello, World!";
@@ -28,7 +29,20 @@ describe("Crypto Helpers", () => {
     expect(decrypted).toBe(message);
   });
 
-  test("encryptSecret should be the same as encrypt", () => {
+  test("encryptSecret should be the same as encrypt", async () => {
+    const { encrypt, encryptSecret } = await import("./crypto");
     expect(encryptSecret).toBe(encrypt);
+  });
+
+  test("encrypt should reject on server-only environment", async () => {
+    vi.resetModules();
+    vi.doMock("$app/environment", () => ({ browser: false }));
+    const { encrypt } = await import("./crypto");
+
+    await expect(encrypt("hello", "invalid-key")).rejects.toThrow(
+      "libsodium is browser-only",
+    );
+
+    vi.doUnmock("$app/environment");
   });
 });
