@@ -3,6 +3,7 @@
 ## 2026-02-04
 
 - Add default ceiling/floor price when creating market making orders on payment completion and show payment success dialog after polling
+- Store chain metadata for market-making pairs in grow data
 
 ## 2026-02-03
 

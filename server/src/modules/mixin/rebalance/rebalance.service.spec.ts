@@ -1,12 +1,16 @@
-const mockConfigService = {
-  get: jest.fn((key: string) => {
-    if (key === 'rebalance.run') return 'true';
-  }),
-};
+import { RebalanceService } from './rebalance.service';
 
-describe('Rebalancing from exchange to mixin', () => {
-});
+jest.mock('src/modules/infrastructure/logger/logger.service');
 
-describe('Rebalancing from Mixin to exchange', () => {
+describe('RebalanceService', () => {
+  it('constructs with required dependencies', () => {
+    const service = new RebalanceService(
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
 
+    expect(service).toBeInstanceOf(RebalanceService);
+  });
 });

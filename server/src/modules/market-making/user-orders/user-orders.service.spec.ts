@@ -13,12 +13,14 @@ import {
   SimplyGrowOrder,
 } from 'src/common/entities/user-orders.entity';
 import { MarketMakingPaymentState } from 'src/common/entities/payment-state.entity';
+import { MarketMakingOrderIntent } from 'src/common/entities/market-making-order-intent.entity';
+import { GrowdataRepository } from 'src/modules/data/grow-data/grow-data.repository';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MarketMakingHistory } from 'src/common/entities/market-making-order.entity';
 import { ArbitrageHistory } from 'src/common/entities/arbitrage-order.entity';
 
-jest.mock('../logger/logger.service');
+jest.mock('../../infrastructure/logger/logger.service');
 jest.mock('../strategy/strategy.service');
 
 describe('UserOrdersService', () => {
@@ -26,9 +28,10 @@ describe('UserOrdersService', () => {
   let strategyService: StrategyService;
   let marketMakingRepository: Repository<MarketMakingOrder>;
   let simplyGrowRepository: Repository<SimplyGrowOrder>;
+  let testingModule: TestingModule;
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
+    testingModule = await Test.createTestingModule({
       providers: [
         UserOrdersService,
         CustomLogger,
@@ -47,6 +50,10 @@ describe('UserOrdersService', () => {
           useClass: Repository,
         },
         {
+          provide: getRepositoryToken(MarketMakingOrderIntent),
+          useClass: Repository,
+        },
+        {
           provide: getRepositoryToken(MarketMakingHistory),
           useClass: Repository,
         },
@@ -54,15 +61,23 @@ describe('UserOrdersService', () => {
           provide: getRepositoryToken(ArbitrageHistory),
           useClass: Repository,
         },
+        {
+          provide: 'BullQueue_market-making',
+          useValue: { add: jest.fn() },
+        },
+        {
+          provide: GrowdataRepository,
+          useValue: {},
+        },
       ],
     }).compile();
 
-    service = module.get<UserOrdersService>(UserOrdersService);
-    strategyService = module.get<StrategyService>(StrategyService);
-    marketMakingRepository = module.get<Repository<MarketMakingOrder>>(
+    service = testingModule.get<UserOrdersService>(UserOrdersService);
+    strategyService = testingModule.get<StrategyService>(StrategyService);
+    marketMakingRepository = testingModule.get<Repository<MarketMakingOrder>>(
       getRepositoryToken(MarketMakingOrder),
     );
-    simplyGrowRepository = module.get<Repository<SimplyGrowOrder>>(
+    simplyGrowRepository = testingModule.get<Repository<SimplyGrowOrder>>(
       getRepositoryToken(SimplyGrowOrder),
     );
     jest.clearAllMocks();
@@ -203,18 +218,21 @@ describe('UserOrdersService', () => {
         return [];
       });
 
-    // Mock strategy service methods to simulate starting and pausing strategies
-    const startMarketMakingSpy = jest
-      .spyOn(strategyService, 'startMarketMakingIfNotStarted')
-      .mockImplementation(async () => {});
+    const queueAddSpy = jest.spyOn(
+      testingModule.get('BullQueue_market-making'),
+      'add',
+    );
 
     // Execute the method under test
     await service.updateExecutionBasedOnOrders();
 
-    // Verify that strategies are started for the active orders
-    expect(startMarketMakingSpy).toHaveBeenCalled();
-
-    // Verify that strategies are paused for the paused orders
-    expect(strategyService.pauseStrategyIfNotPaused).not.toHaveBeenCalled();
+    expect(queueAddSpy).toHaveBeenCalledWith('start_mm', {
+      userId: 'user1',
+      orderId: 'mm1',
+    });
+    expect(queueAddSpy).toHaveBeenCalledWith('stop_mm', {
+      userId: 'user1',
+      orderId: 'mm1',
+    });
   });
 });

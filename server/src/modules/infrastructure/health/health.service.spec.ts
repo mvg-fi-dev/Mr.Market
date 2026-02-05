@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { HealthService } from './health.service';
 import { CustomLogger } from '../logger/logger.service';
 import { getEntityManagerToken } from '@nestjs/typeorm';
+import { ExchangeInitService } from '../exchange-init/exchange-init.service';
 
 const mockEntityManager = {
   // Mock methods as needed, for example:
@@ -12,40 +13,71 @@ describe('HealthService', () => {
   let service: HealthService;
 
   beforeEach(async () => {
-    jest.clearAllMocks(); // Ensures clean state between tests
+    jest.clearAllMocks();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         HealthService,
         CustomLogger,
         {
-          provide: getEntityManagerToken(), // This is how you get the correct token for EntityManager
-          useValue: mockEntityManager, // Use the mock you defined above
+          provide: getEntityManagerToken(),
+          useValue: mockEntityManager,
+        },
+        {
+          provide: 'BullQueue_snapshots',
+          useValue: {
+            getWaitingCount: jest.fn(),
+            getActiveCount: jest.fn(),
+            getCompletedCount: jest.fn(),
+            getFailedCount: jest.fn(),
+            getDelayedCount: jest.fn(),
+            isPaused: jest.fn(),
+            getActive: jest.fn(),
+            getFailed: jest.fn(),
+            getCompleted: jest.fn(),
+            client: {
+              get: jest.fn(),
+            },
+          },
+        },
+        {
+          provide: ExchangeInitService,
+          useValue: {
+            getExchange: jest.fn(),
+          },
         },
       ],
     }).compile();
 
     service = module.get<HealthService>(HealthService);
 
-    ['bitfinex', 'mexc', 'binance'].forEach((exchangeName) => {
-      const exchangeMock = service['exchanges'].get(exchangeName);
-      if (exchangeMock) {
-        switch (exchangeMock.id) {
-          case 'binance':
-            exchangeMock.fetchBalance = jest
-              .fn()
-              .mockResolvedValue({ total: 100 });
-            break;
-          case 'mexc':
-            exchangeMock.fetchBalance = jest.fn().mockResolvedValue(undefined);
-            break;
-          case 'bitfinex':
-            exchangeMock.fetchBalance = jest
-              .fn()
-              .mockRejectedValue(new Error('Exchange bitfinex is dead'));
-        }
-      }
-    });
+    const bitfinex = {
+      id: 'bitfinex',
+      name: 'Bitfinex',
+      fetchBalance: jest.fn(),
+    } as any;
+    const mexc = {
+      id: 'mexc',
+      name: 'MEXC Global',
+      fetchBalance: jest.fn(),
+    } as any;
+    const binance = {
+      id: 'binance',
+      name: 'Binance',
+      fetchBalance: jest.fn(),
+    } as any;
+    service['exchanges'].set('bitfinex', bitfinex);
+    service['exchanges'].set('mexc', mexc);
+    service['exchanges'].set('binance', binance);
+
+    bitfinex.fetchBalance.mockRejectedValue(new Error('Exchange bitfinex is dead'));
+    mexc.fetchBalance.mockResolvedValue(undefined);
+    binance.fetchBalance.mockResolvedValue({ total: 100 });
+
+    const exchangeInitService = module.get<ExchangeInitService>(ExchangeInitService);
+    exchangeInitService.getExchange = jest.fn((exchangeName: string) =>
+      service['exchanges'].get(exchangeName),
+    );
   });
   describe('getAllHealth', () => {
     it('should throw error and not handle any additional exchange if any exchange fetch fail', async () => {

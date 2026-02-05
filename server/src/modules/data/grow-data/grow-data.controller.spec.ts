@@ -33,7 +33,7 @@ describe('GrowdataController', () => {
         exchanges: [],
         simply_grow: { tokens: [] },
         arbitrage: { pairs: [] },
-        market_making: { pairs: [] },
+        market_making: { pairs: [], exchanges: [] },
       };
       jest.spyOn(service, 'getGrowData').mockResolvedValue(mockGrowData);
 

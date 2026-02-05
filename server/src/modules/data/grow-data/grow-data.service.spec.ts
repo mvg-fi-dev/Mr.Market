@@ -4,6 +4,7 @@ import { GrowdataService } from './grow-data.service';
 import { GrowdataRepository } from './grow-data.repository';
 import { Cache } from 'cache-manager';
 import { CustomLogger } from '../../infrastructure/logger/logger.service';
+import { MixinClientService } from '../../mixin/client/mixin-client.service';
 
 describe('GrowdataService', () => {
   let service: GrowdataService;
@@ -16,13 +17,14 @@ describe('GrowdataService', () => {
       providers: [
         GrowdataService,
         {
-          provide: 'MixinClientService',
+          provide: MixinClientService,
           useValue: {
             client: {
               safe: {
                 fetchAssets: jest.fn(),
               },
             },
+            spendKey: 'test-spend-key',
           },
         },
         {
@@ -119,7 +121,7 @@ describe('GrowdataService', () => {
         { asset_id: 'asset-1', price_usd: '100' },
         { asset_id: 'asset-2', price_usd: '200' },
       ];
-      const mixinClientService = module.get('MixinClientService') as any;
+      const mixinClientService = module.get(MixinClientService) as any;
       mixinClientService.client.safe.fetchAssets.mockResolvedValue(assets);
 
       const result = await (service as any).fetchExternalPriceData(assetIds);
@@ -135,7 +137,7 @@ describe('GrowdataService', () => {
     });
 
     it('should return empty map and log error on failure', async () => {
-      const mixinClientService = module.get('MixinClientService') as any;
+      const mixinClientService = module.get(MixinClientService) as any;
       mixinClientService.client.safe.fetchAssets.mockRejectedValue(
         new Error('Network error'),
       );

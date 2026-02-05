@@ -8,6 +8,9 @@
 6. after join campaign, or no campain to join, the market making handler can start mm right away
 7. user call stop endpoint or initialize withdrawal, can be handled correctly by backend on time
 
+### Track created market making order
+1. Implement a comprehensive order tracking & market making execution system, including order status updates, execution logs, and error handling. So that users can monitor the status of their market making orders.
+
 ### Connect payment state to confirm payment page
 - [x] 1. after user clicked pay button in create-new market making page, should start loading and fetch payment status from backend
 - [x] 2. after payment status fetched, should show payment successful, and redirect to order details page
@@ -28,6 +31,7 @@
 - [x] 2. Admin add trading pairs
 - [x] 3. Admin add exchanges
 - [] 4.
+
 
 ## Hufi 
 

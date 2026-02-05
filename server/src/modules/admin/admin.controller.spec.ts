@@ -122,6 +122,7 @@ describe('AdminController', () => {
     const exchangeDto: GrowdataExchangeDto = {
       exchange_id: 'binance',
       name: 'Binance',
+      icon_url: '',
       enable: true,
     };
     await controller.addExchange(exchangeDto);
@@ -164,6 +165,7 @@ describe('AdminController', () => {
       max_sell_amount: '1000',
       base_asset_id: '7e04727a-6f8b-499a-92d0-18bf4ef013bb',
       quote_asset_id: 'ccde90fe-d611-4fc8-afb4-3388e96fbb02',
+      custom_fee_rate: '0.001',
       enable: true,
     };
 
