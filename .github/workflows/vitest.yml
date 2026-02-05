@@ -7,9 +7,6 @@ on:
 jobs:
   test:
     timeout-minutes: 60
-    defaults:
-      run:
-        working-directory: ./interface
     runs-on: ubuntu-latest
 
     steps:
@@ -22,8 +19,8 @@ jobs:
         with:
           bun-version: latest
       - name: Install dependencies
-        run: bun install
+        run: make install-interface
       - name: Sync SvelteKit
-        run: bun x svelte-kit sync
+        run: cd interface && bun x svelte-kit sync
       - name: Execute Unit tests
-        run: bun run test:unit
+        run: make test-interface-unit

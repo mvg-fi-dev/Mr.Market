@@ -7,9 +7,6 @@ on:
 jobs:
   test:
     timeout-minutes: 60
-    defaults:
-      run:
-        working-directory: ./server
     runs-on: ubuntu-latest
 
     steps:
@@ -22,6 +19,6 @@ jobs:
         with:
           bun-version: latest
       - name: Install dependencies
-        run: bun install
+        run: make install-server
       - name: Execute Unit tests
-        run: bun run test
+        run: make test-server-unit
