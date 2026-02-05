@@ -9,10 +9,10 @@
 </script>
 
 <div
-  class="fixed bottom-0 left-0 right-0 p-5 bg-white border-t border-gray-100 flex gap-4 pb-8 z-20 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]"
+  class="fixed bottom-0 left-0 right-0 p-5 bg-base-100 border-t border-gray-100 flex gap-4 pb-8 z-20 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]"
 >
   <button
-    class="flex-1 btn bg-white hover:bg-gray-50 text-base-content border border-gray-200 rounded-full h-12 min-h-12 text-sm font-bold normal-case shadow-sm"
+    class="flex-1 btn bg-base-100 hover:bg-base-200 text-base-content border border-gray-200 rounded-full h-12 min-h-12 text-sm font-bold normal-case shadow-sm"
     on:click={() => goto("/market-making/hufi/join")}
   >
     <svg
@@ -32,7 +32,7 @@
     {$_("hufi_campaign_join_direct")}
   </button>
   <button
-    class="flex-[1.5] btn bg-black hover:bg-gray-900 text-white border-none rounded-full h-12 min-h-12 text-sm font-bold normal-case shadow-lg"
+    class="flex-[1.5] btn bg-base-content hover:bg-base-content/90 text-base-100 border-none rounded-full h-12 min-h-12 text-sm font-bold normal-case shadow-lg"
     data-testid="hufi-create-button"
     on:click={() => (showDialog = true)}
   >
@@ -55,19 +55,16 @@
 </div>
 
 <!-- Create Market-Making Dialog -->
-{#if showDialog}
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-    <div
-      class="bg-white rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl"
-      data-testid="hufi-create-dialog"
-    >
-      <div class="flex justify-between items-center mb-6">
-        <h2 class="text-xl font-bold">{$_("hufi_campaign_create_mmaking")}</h2>
-        <button
-          class="btn btn-sm btn-circle btn-ghost"
-          on:click={() => (showDialog = false)}
-          aria-label="Close dialog"
-        >
+<dialog
+  id="hufi_create_dialog"
+  class="modal modal-bottom sm:modal-middle"
+  class:modal-open={showDialog}
+>
+  <div class="modal-box space-y-3 pt-0" data-testid="hufi-create-dialog">
+    <div class="sticky top-0 bg-opacity-100 bg-base-100 z-10 pt-4">
+      <div class="flex justify-between items-center">
+        <span class="font-semibold">{$_("hufi_campaign_create_mmaking")}</span>
+        <button on:click={() => (showDialog = false)} aria-label="Close dialog">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             class="w-6 h-6"
@@ -84,46 +81,51 @@
           </svg>
         </button>
       </div>
+    </div>
 
-      <div class="space-y-5">
-        <div class="bg-gray-50 rounded-lg p-4 space-y-3">
-          <div class="flex justify-between items-center">
-            <span class="text-sm text-gray-600">{$_("exchange")}</span>
-            <span class="text-sm font-semibold capitalize">{campaign.exchange_name}</span>
-          </div>
-          <div class="flex justify-between items-center">
-            <span class="text-sm text-gray-600">{$_("trading_pair")}</span>
-            <span class="text-sm font-semibold">{campaign.symbol}</span>
-          </div>
+    <div class="space-y-4">
+      <div class="bg-gray-50 rounded-lg p-4 space-y-3">
+        <div class="flex justify-between items-center">
+          <span class="text-sm text-gray-600">{$_("exchange")}</span>
+          <span class="text-sm font-semibold capitalize">{campaign.exchange_name}</span>
         </div>
-
-        <div class="bg-blue-50 border border-blue-100 text-sm text-blue-700 rounded-lg p-3">
-          {$_("hufi_campaign_create_new_notice")}
+        <div class="flex justify-between items-center">
+          <span class="text-sm text-gray-600">{$_("trading_pair")}</span>
+          <span class="text-sm font-semibold">{campaign.symbol}</span>
         </div>
+      </div>
 
-        <div class="flex gap-3 pt-2">
-          <button
-            class="btn btn-ghost flex-1"
-            on:click={() => (showDialog = false)}
-          >
-            {$_("cancel")}
-          </button>
-          <button
-            class="btn btn-primary flex-1"
-            data-testid="hufi-create-continue"
-            on:click={() => {
-              showDialog = false;
-              const params = new URLSearchParams({
-                exchange: campaign.exchange_name,
-                trading_pair: campaign.symbol,
-              });
-              goto(`/market-making/create-new?${params.toString()}`);
-            }}
-          >
+      <div class="bg-blue-50 border border-blue-100 text-sm text-blue-700 rounded-lg p-3">
+        {$_("hufi_campaign_create_new_notice")}
+      </div>
+
+      <div class="flex gap-3 pt-2 pb-2">
+        <button
+          class="btn btn-ghost btn-md flex-1 rounded-full"
+          on:click={() => (showDialog = false)}
+        >
+          {$_("cancel")}
+        </button>
+        <button
+          class="btn btn-md flex-1 rounded-full bg-base-content hover:bg-base-content/90 focus:bg-base-content/90 no-animation"
+          data-testid="hufi-create-continue"
+          on:click={() => {
+            showDialog = false;
+            const params = new URLSearchParams({
+              exchange: campaign.exchange_name,
+              trading_pair: campaign.symbol,
+            });
+            goto(`/market-making/create-new?${params.toString()}`);
+          }}
+        >
+          <span class="text-base-100 font-semibold">
             {$_("continue_to_trading_pair")}
-          </button>
-        </div>
+          </span>
+        </button>
       </div>
     </div>
   </div>
-{/if}
+  <form method="dialog" class="modal-backdrop">
+    <button on:click={() => (showDialog = false)}></button>
+  </form>
+</dialog>
