@@ -21,6 +21,8 @@ test('create market making', async ({ page }) => {
 
   await expect(page.getByTestId('amount-input-0')).toBeVisible();
   await expect(page.getByTestId('amount-input-1')).toBeVisible();
+  await expect(page.getByTestId('amount-balance-connect-0')).toBeVisible();
+  await expect(page.getByTestId('amount-balance-connect-1')).toBeVisible();
 
   await page.getByTestId('amount-input-0').fill('0.00000001');
   await page.getByTestId('amount-input-1').fill('0.00000001');

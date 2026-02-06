@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   mapMixinAssetsToBalances,
   formatBalancesForUser,
+  calculateTotalUSDBalance,
 } from "$lib/helpers/mixin/mixin";
 
 describe("Mixin WebView assets", () => {
@@ -61,5 +62,63 @@ describe("Mixin WebView assets", () => {
     ]);
     expect(result.totalUSDBalance).toBe(250);
     expect(result.totalBTCBalance).toBeCloseTo(0.005);
+  });
+
+  it("calculates total USD balance without float drift", () => {
+    const total = calculateTotalUSDBalance([
+      { usdBalance: 0.1 },
+      { usdBalance: 0.2 },
+    ]);
+
+    expect(total).toBe(0.3);
+  });
+
+  it("uses cached price for WebView assets missing price_usd", async () => {
+    const assets = [
+      {
+        asset_id: "asset-1",
+        balance: "2",
+        symbol: "AAA",
+      },
+      {
+        asset_id: "asset-2",
+        symbol: "BBB",
+      },
+    ];
+
+    const topAssetsCache = {
+      "asset-1": { price_usd: "3", symbol: "AAA" },
+      "asset-2": { price_usd: "5", symbol: "BBB" },
+    };
+
+    const result = await mapMixinAssetsToBalances(assets, {
+      asset_id: "btc-asset",
+      price_usd: "10000",
+    }, topAssetsCache);
+
+    expect(result.balances).toEqual([
+      {
+        asset_id: "asset-1",
+        balance: 2,
+        usdBalance: 6,
+        details: {
+          asset_id: "asset-1",
+          balance: "2",
+          symbol: "AAA",
+          price_usd: "3",
+        },
+      },
+      {
+        asset_id: "asset-2",
+        balance: 0,
+        usdBalance: 0,
+        details: {
+          asset_id: "asset-2",
+          symbol: "BBB",
+          price_usd: "5",
+        },
+      },
+    ]);
+    expect(result.totalUSDBalance).toBe(6);
   });
 });

@@ -1,5 +1,6 @@
 // @ts-nocheck
 import axios from "axios";
+import BigNumber from "bignumber.js";
 import { get } from "svelte/store";
 import authorize from "$lib/helpers/mixin/mixin-oauth";
 import { getOauth } from "$lib/helpers/mrm/auth";
@@ -254,7 +255,9 @@ export function groupAndSumUTXOs(outputs) {
     if (!acc[asset_id]) {
       acc[asset_id] = { balance: 0, asset_id };
     }
-    acc[asset_id].balance += parseFloat(amount);
+    acc[asset_id].balance = new BigNumber(acc[asset_id].balance)
+      .plus(amount)
+      .toNumber();
     return acc;
   }, {});
   return balances;
@@ -263,8 +266,9 @@ export function groupAndSumUTXOs(outputs) {
 export async function calculateAndSortUSDBalances(balances, topAssetsCache) {
   for (const asset_id in balances) {
     const assetDetails = await getAssetDetails(asset_id, topAssetsCache);
-    balances[asset_id].usdBalance =
-      balances[asset_id].balance * parseFloat(assetDetails.price_usd);
+    balances[asset_id].usdBalance = new BigNumber(balances[asset_id].balance)
+      .multipliedBy(assetDetails.price_usd || "0")
+      .toNumber();
     balances[asset_id].details = assetDetails;
   }
 
@@ -275,21 +279,38 @@ export async function calculateAndSortUSDBalances(balances, topAssetsCache) {
   return sortedBalancesArray; // You can keep it as an array since it's already sorted
 }
 
-export async function mapMixinAssetsToBalances(assets, btcDetails) {
-  const balances = assets.map((asset) => ({
-    asset_id: asset.asset_id,
-    balance: parseFloat(asset.balance),
-    usdBalance: parseFloat(asset.balance) * parseFloat(asset.price_usd || "0"),
-    details: asset,
-  }));
+export async function mapMixinAssetsToBalances(
+  assets,
+  btcDetails,
+  topAssetsCache = {},
+) {
+  const balances = assets.map((asset) => {
+    const cachedAsset = topAssetsCache?.[asset.asset_id] || {};
+    const balanceValue = asset.balance ?? "0";
+    const priceUsd = asset.price_usd ?? cachedAsset.price_usd ?? "0";
+    const details = {
+      ...asset,
+      price_usd: priceUsd,
+    };
+
+    return {
+      asset_id: asset.asset_id,
+      balance: new BigNumber(balanceValue).toNumber(),
+      usdBalance: new BigNumber(balanceValue)
+        .multipliedBy(priceUsd)
+        .toNumber(),
+      details,
+    };
+  });
 
   const sortedBalancesArray = balances.sort(
     (a, b) => b.usdBalance - a.usdBalance,
   );
 
   const totalUSDBalance = calculateTotalUSDBalance(sortedBalancesArray);
-  const totalBTCBalance =
-    totalUSDBalance / parseFloat(btcDetails.price_usd || "1");
+  const totalBTCBalance = new BigNumber(totalUSDBalance)
+    .dividedBy(btcDetails.price_usd || "1")
+    .toNumber();
 
   return {
     balances: sortedBalancesArray,
@@ -304,16 +325,17 @@ export async function formatBalancesForUser(assets, btcDetails) {
 
 // Step 5: Calculate total USD balance
 export function calculateTotalUSDBalance(balances) {
-  return Object.values(balances).reduce(
-    (acc, { usdBalance }) => acc + usdBalance,
-    0,
-  );
+  return Object.values(balances).reduce((acc, { usdBalance }) => {
+    return new BigNumber(acc).plus(usdBalance).toNumber();
+  }, 0);
 }
 
 // Step 6: Calculate total BTC balance
 async function calculateTotalBTCBalance(totalUSDBalance) {
   const btcDetails = await getAssetDetails(BTC_UUID, get(topAssetsCache));
-  return totalUSDBalance / parseFloat(btcDetails.price_usd);
+  return new BigNumber(totalUSDBalance)
+    .dividedBy(btcDetails.price_usd || "1")
+    .toNumber();
 }
 
 const getUserBalances = async (user_id: string, token: string) => {
@@ -325,7 +347,7 @@ const getUserBalances = async (user_id: string, token: string) => {
     );
     const btcDetails = await getAssetDetails(BTC_UUID, topAssetsCache);
     const { balances, totalUSDBalance, totalBTCBalance } =
-      await mapMixinAssetsToBalances(webViewAssets, btcDetails);
+      await mapMixinAssetsToBalances(webViewAssets, btcDetails, topAssetsCache);
     userAssets.set({ balances, totalUSDBalance, totalBTCBalance });
     return { balances, totalUSDBalance, totalBTCBalance };
   }

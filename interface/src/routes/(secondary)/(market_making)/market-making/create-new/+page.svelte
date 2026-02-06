@@ -28,6 +28,9 @@
     import { botId } from "$lib/stores/home";
     import { get } from "svelte/store";
     import { user } from "$lib/stores/wallet";
+    import { mixinConnected } from "$lib/stores/home";
+    import { userAssets } from "$lib/stores/wallet";
+    import { getAssetBalanceBySymbol } from "$lib/helpers/mrm/marketMakingBalance";
 
     import type { GrowInfo } from "$lib/types/hufi/grow";
     import {
@@ -159,6 +162,8 @@
     $: quoteAmount = $dPage.url.searchParams.get("quote_amount");
     $: baseSymbol = tradingPair ? tradingPair.split("/")[0] : null;
     $: quoteSymbol = tradingPair ? tradingPair.split("/")[1] : null;
+    $: baseWalletBalance = getAssetBalanceBySymbol($userAssets, baseSymbol);
+    $: quoteWalletBalance = getAssetBalanceBySymbol($userAssets, quoteSymbol);
     $: baseIcon = baseSymbol
         ? findCoinIconBySymbol(baseSymbol) || emptyToken
         : emptyToken;
@@ -368,6 +373,9 @@
                     {showQuote}
                     {basePrice}
                     {quotePrice}
+                    isConnected={$mixinConnected}
+                    baseBalance={baseWalletBalance}
+                    quoteBalance={quoteWalletBalance}
                     bind:baseAmount={baseAmountInput}
                     bind:quoteAmount={quoteAmountInput}
                 />

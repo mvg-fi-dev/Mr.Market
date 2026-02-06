@@ -57,3 +57,4 @@
 
 - [] 10. HuFi Learn more page should introduce each types of campaigns
 - [] 11. HuFi campaigns page should have a filter button put on top of the page, allowing user open dialog to filter campaigns (by campaign type, create/end date, DESC or ASC, reward amount)
+- [] 12. For different types of campaigns, should have different types of actions in details page

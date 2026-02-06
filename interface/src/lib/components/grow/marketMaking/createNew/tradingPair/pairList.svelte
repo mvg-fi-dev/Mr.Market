@@ -9,7 +9,7 @@
     export let onSelect: (symbol: string) => void = () => {};
 </script>
 
-<div class="flex-1 w-full px-6 overflow-y-auto space-y-3">
+<div class="flex-1 w-full px-6 overflow-y-auto space-y-3 max-h-[50vh]">
     {#each pairs as pair, index (pair.id || pair.symbol)}
         <ChooseTradingPairSmallBtn
             {pair}

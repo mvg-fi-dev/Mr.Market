@@ -321,7 +321,9 @@
                             class="btn btn-xl flex-1 rounded-full bg-base-100 border border-base-300"
                             on:click={requestAdding}
                         >
-                            {$_("hufi_campaign_request_adding")}
+                            <span class="text-normal">
+                                {$_("hufi_campaign_request_adding")}
+                            </span>
                         </button>
                         <button
                             class="btn btn-xl flex-1 rounded-full bg-base-content hover:bg-base-content/90 focus:bg-base-content/90 no-animation"
