@@ -4,6 +4,10 @@
 
 - Switch Playwright workflow to SQLite and remove Postgres service
 
+## 2026-02-06
+
+- Adjust Mixin snapshot polling interval and clarify view-only exchange mode when no API keys
+
 ## 2026-02-04
 
 - Add default ceiling/floor price when creating market making orders on payment completion and show payment success dialog after polling

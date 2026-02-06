@@ -29,10 +29,10 @@
 
 ### Admin page
 - [] 1. Add a setup guide for initialization that is step by step, allowing admin to have basic understanding of how setting works, and makes it easier to set up all the things
+- [] 2. Support sorting and filter in manage market making pairs/spot trading pairs
 
 ### Admin exchanges management
 1. should design a way to merge /exchanges and /api-keys. so user don't get confused when adding exchange. api keys should be managed in the same place as exchanges, should be in the dropdown of the added exchange management page
-
 
 ### E2e Test
 - [x] 1. Create market making UI
