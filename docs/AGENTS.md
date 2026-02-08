@@ -1,4 +1,5 @@
-## Docs When creating docs, use English, keep it simple stupid, don't overcomplicate it, only write 1 doc for each feature, and make sure it's easy to understand. If have different docs for different topics, join them to a file.
+## Docs 
+When creating docs, use English, keep it simple stupid, don't overcomplicate it, only write 1 doc for each feature, and make sure it's easy to understand. If have different docs for different topics, join them to a file.
 
 When the code is updated, update the related docs as well.
 
@@ -29,11 +30,5 @@ never add CLAUDE.md to project directory
 ## Svelte
 use svelte 4 syntax, never use svelte 5 syntax
 
-
 ## Commit message
-Don't add 
-```
-Ultraworked with [Sisyphus](https://github.com/code-yeongyu/oh-my-opencode)
-Co-authored-by: Sisyphus <clio-agent@sisyphuslabs.ai>
-```
-don't add sisyphus or any other agent related information to commit message
+Don't add sisyphus or calude or any other agent related information to commit message
