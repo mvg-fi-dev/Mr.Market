@@ -1,5 +1,12 @@
 # Execution Flow Changelog
 
+## 2026-02-12
+
+- Add comprehensive `MIXIN_CLI_SKILL.md` guide covering installation, keystore setup, command groups, workflows, troubleshooting, and security practices
+- Update `MIXIN_CLI_SKILL.md` to Safe-first transaction flows and deprecate top-level `transfer` usage for new integrations
+- Restore `MARKET_MAKING_FLOW.md` as the backend runtime flow reference
+- Add `docs/tests/MARKET_MAKING.MD` for end-to-end market making lifecycle testing guidance
+
 ## 2026-02-11
 
 - Add tick-driven core foundation with `TickComponent` contract and `ClockTickCoordinatorService` registration/scheduling
