@@ -1,6 +1,6 @@
 import { Injectable, OnModuleDestroy, OnModuleInit, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { StrategyOrderIntentEntity } from 'src/common/entities/strategy-order-intent.entity';
+import { StrategyOrderIntentEntity } from 'src/common/entities/market-making/strategy-order-intent.entity';
 import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
 import { StrategyOrderIntent } from './strategy-intent.types';
 import { StrategyIntentExecutionService } from './strategy-intent-execution.service';

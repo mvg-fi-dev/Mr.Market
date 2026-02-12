@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import { SpotdataTradingPair } from 'src/common/entities/spot-data.entity';
+import { SpotdataTradingPair } from 'src/common/entities/data/spot-data.entity';
 
 @Injectable()
 export class SpotdataRepository {

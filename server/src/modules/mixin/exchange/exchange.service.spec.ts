@@ -1,5 +1,5 @@
 import { ExchangeService } from './exchange.service';
-import { APIKeysConfig } from 'src/common/entities/api-keys.entity';
+import { APIKeysConfig } from 'src/common/entities/admin/api-keys.entity';
 import { ConfigService } from '@nestjs/config';
 
 jest.mock('src/common/helpers/crypto', () => ({

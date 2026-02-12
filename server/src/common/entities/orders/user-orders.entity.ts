@@ -1,6 +1,9 @@
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 import { PriceSourceType } from 'src/common/enum/pricesourcetype';
-import type { MarketMakingStates, SimplyGrowStates } from '../types/orders/states';
+import type {
+  MarketMakingStates,
+  SimplyGrowStates,
+} from '../../types/orders/states';
 
 @Entity()
 export class MarketMakingOrder {

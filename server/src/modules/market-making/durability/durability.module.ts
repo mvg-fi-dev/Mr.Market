@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConsumerReceipt } from 'src/common/entities/consumer-receipt.entity';
-import { OutboxEvent } from 'src/common/entities/outbox-event.entity';
+import { ConsumerReceipt } from 'src/common/entities/system/consumer-receipt.entity';
+import { OutboxEvent } from 'src/common/entities/system/outbox-event.entity';
 import { DurabilityService } from './durability.service';
 
 @Module({

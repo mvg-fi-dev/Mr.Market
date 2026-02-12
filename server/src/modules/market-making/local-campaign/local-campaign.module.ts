@@ -3,8 +3,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bull';
 import { LocalCampaignService } from './local-campaign.service';
 import { LocalCampaignController } from './local-campaign.controller';
-import { Campaign } from 'src/common/entities/campaign.entity';
-import { CampaignParticipation } from 'src/common/entities/campaign-participation.entity';
+import { Campaign } from 'src/common/entities/campaign/campaign.entity';
+import { CampaignParticipation } from 'src/common/entities/campaign/campaign-participation.entity';
 import { LocalCampaignProcessor } from './local-campaign.processor';
 
 @Module({

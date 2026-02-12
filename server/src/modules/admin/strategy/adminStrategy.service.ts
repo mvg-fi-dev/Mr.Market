@@ -12,9 +12,9 @@ import {
   getTokenSymbolByContractAddress,
 } from 'src/common/helpers/blockchain-utils';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Contribution } from 'src/common/entities/contribution.entity';
+import { Contribution } from 'src/common/entities/campaign/contribution.entity';
 import { Repository } from 'typeorm';
-import { MixinUser } from 'src/common/entities/mixin-user.entity';
+import { MixinUser } from 'src/common/entities/mixin/mixin-user.entity';
 import { Web3Service } from '../../web3/web3.service';
 import { ethers } from 'ethers';
 

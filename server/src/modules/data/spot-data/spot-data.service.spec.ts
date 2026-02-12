@@ -6,7 +6,7 @@ import { MarketdataService } from '../market-data/market-data.service';
 import type { Cache } from 'cache-manager';
 import { CustomLogger } from '../../infrastructure/logger/logger.service';
 import { Tickers } from 'ccxt';
-import { SpotdataTradingPair } from 'src/common/entities/spot-data.entity';
+import { SpotdataTradingPair } from 'src/common/entities/data/spot-data.entity';
 import { getRFC3339Timestamp } from '../../../common/helpers/utils';
 
 describe('SpotdataService', () => {

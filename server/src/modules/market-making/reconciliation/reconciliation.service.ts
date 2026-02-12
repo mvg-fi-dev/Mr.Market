@@ -3,12 +3,12 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import BigNumber from 'bignumber.js';
 import { Repository } from 'typeorm';
-import { BalanceReadModel } from 'src/common/entities/balance-read-model.entity';
+import { BalanceReadModel } from 'src/common/entities/ledger/balance-read-model.entity';
 import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
 import { ExchangeOrderTrackerService } from '../trackers/exchange-order-tracker.service';
-import { RewardLedger } from 'src/common/entities/reward-ledger.entity';
-import { RewardAllocation } from 'src/common/entities/reward-allocation.entity';
-import { StrategyOrderIntentEntity } from 'src/common/entities/strategy-order-intent.entity';
+import { RewardLedger } from 'src/common/entities/ledger/reward-ledger.entity';
+import { RewardAllocation } from 'src/common/entities/ledger/reward-allocation.entity';
+import { StrategyOrderIntentEntity } from 'src/common/entities/market-making/strategy-order-intent.entity';
 
 type ReconciliationReport = {
   checked: number;

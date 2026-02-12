@@ -2,7 +2,7 @@ import type { Cache } from 'cache-manager';
 import { Inject, Injectable } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
-import { SpotdataTradingPair } from 'src/common/entities/spot-data.entity';
+import { SpotdataTradingPair } from 'src/common/entities/data/spot-data.entity';
 import { SpotdataRepository } from 'src/modules/data/spot-data/spot-data.repository';
 import { MarketdataService } from 'src/modules/data/market-data/market-data.service';
 

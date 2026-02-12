@@ -1,7 +1,7 @@
 import { Repository } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { CustomConfigEntity } from 'src/common/entities/custom-config.entity';
+import { CustomConfigEntity } from 'src/common/entities/admin/custom-config.entity';
 
 @Injectable()
 export class CustomConfigRepository {

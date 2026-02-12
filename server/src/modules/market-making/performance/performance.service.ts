@@ -1,7 +1,7 @@
 import { Repository } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Performance } from 'src/common/entities/performance.entity';
+import { Performance } from 'src/common/entities/market-making/performance.entity';
 
 @Injectable()
 export class PerformanceService {

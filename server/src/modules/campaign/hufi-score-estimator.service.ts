@@ -3,8 +3,8 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import BigNumber from 'bignumber.js';
 import { Between, Repository } from 'typeorm';
-import { HufiScoreSnapshot } from 'src/common/entities/hufi-score-snapshot.entity';
-import { MarketMakingHistory } from 'src/common/entities/market-making-order.entity';
+import { HufiScoreSnapshot } from 'src/common/entities/campaign/hufi-score-snapshot.entity';
+import { MarketMakingHistory } from 'src/common/entities/market-making/market-making-order.entity';
 import { getRFC3339Timestamp } from 'src/common/helpers/utils';
 
 @Injectable()

@@ -2,12 +2,12 @@ import { Repository } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { SpotOrderStatus } from 'src/common/types/orders/states';
-import { SpotOrder } from 'src/common/entities/spot-order.entity';
-import { APIKeysConfig } from 'src/common/entities/api-keys.entity';
+import { SpotOrder } from 'src/common/entities/orders/spot-order.entity';
+import { APIKeysConfig } from 'src/common/entities/admin/api-keys.entity';
 import {
   MixinReleaseHistory,
   MixinReleaseToken,
-} from 'src/common/entities/mixin-release.entity';
+} from 'src/common/entities/mixin/mixin-release.entity';
 
 @Injectable()
 export class ExchangeRepository {

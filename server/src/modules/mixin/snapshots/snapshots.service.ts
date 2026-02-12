@@ -20,7 +20,7 @@ import type { Queue } from 'bull';
 import { InjectQueue } from '@nestjs/bull';
 import { MixinClientService } from '../client/mixin-client.service';
 import { TransactionService } from '../transaction/transaction.service';
-import { MarketMakingOrderIntent } from 'src/common/entities/market-making-order-intent.entity';
+import { MarketMakingOrderIntent } from 'src/common/entities/market-making/market-making-order-intent.entity';
 import { getRFC3339Timestamp } from 'src/common/helpers/utils';
 
 @Injectable()

@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { RewardLedger } from 'src/common/entities/reward-ledger.entity';
+import { RewardLedger } from 'src/common/entities/ledger/reward-ledger.entity';
 import { TransactionService } from 'src/modules/mixin/transaction/transaction.service';
 
 @Injectable()

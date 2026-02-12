@@ -5,8 +5,8 @@ import {
   ManyToOne,
   CreateDateColumn,
 } from 'typeorm';
-import { StrategyInstance } from './strategy-instances.entity';
-import { MixinUser } from './mixin-user.entity';
+import { StrategyInstance } from '../market-making/strategy-instances.entity';
+import { MixinUser } from '../mixin/mixin-user.entity';
 
 @Entity()
 export class Contribution {

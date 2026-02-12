@@ -21,8 +21,8 @@ import {
   MixinReleaseToken,
 } from 'src/common/types/exchange/mixinRelease';
 import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
-import { SpotOrder } from 'src/common/entities/spot-order.entity';
-import { APIKeysConfig } from 'src/common/entities/api-keys.entity';
+import { SpotOrder } from 'src/common/entities/orders/spot-order.entity';
+import { APIKeysConfig } from 'src/common/entities/admin/api-keys.entity';
 import { ExchangeDepositDto, ExchangeWithdrawalDto } from './exchange.dto';
 import { AggregatedBalances } from 'src/common/types/rebalance/map';
 import { ConfigService } from '@nestjs/config';

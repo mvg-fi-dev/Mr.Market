@@ -23,7 +23,7 @@ import {
   PureMarketMakingStrategyDto,
   StopVolumeStrategyDto,
 } from './strategy.dto';
-import { StrategyInstance } from 'src/common/entities/strategy-instances.entity';
+import { StrategyInstance } from 'src/common/entities/market-making/strategy-instances.entity';
 import { AdminStrategyService } from '../../admin/strategy/adminStrategy.service';
 
 @ApiTags('Trading Engine')

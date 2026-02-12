@@ -4,7 +4,7 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { SpotdataService } from 'src/modules/data/spot-data/spot-data.service';
 import { SpotdataController } from 'src/modules/data/spot-data/spot-data.controller';
 import { SpotdataRepository } from 'src/modules/data/spot-data/spot-data.repository';
-import { SpotdataTradingPair } from 'src/common/entities/spot-data.entity';
+import { SpotdataTradingPair } from 'src/common/entities/data/spot-data.entity';
 import { MarketdataModule } from '../market-data/market-data.module';
 
 @Module({

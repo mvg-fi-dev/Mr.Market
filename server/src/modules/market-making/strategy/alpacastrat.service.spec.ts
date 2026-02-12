@@ -3,8 +3,8 @@ import { AlpacaStratService } from 'src/modules/market-making/strategy/alpacastr
 import { ExchangeInitService } from 'src/modules/infrastructure/exchange-init/exchange-init.service';
 import { StrategyService } from './strategy.service';
 import { Repository } from 'typeorm';
-import { MarketMakingHistory } from 'src/common/entities/market-making-order.entity';
-import { ArbitrageHistory } from 'src/common/entities/arbitrage-order.entity';
+import { MarketMakingHistory } from 'src/common/entities/market-making/market-making-order.entity';
+import { ArbitrageHistory } from 'src/common/entities/market-making/arbitrage-order.entity';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
 import * as ccxt from 'ccxt';

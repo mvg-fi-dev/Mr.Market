@@ -17,7 +17,7 @@ import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
 import { PriceSourceType } from 'src/common/enum/pricesourcetype';
 import { createStrategyKey } from 'src/common/helpers/strategyKey';
 import { ExchangeInitService } from 'src/modules/infrastructure/exchange-init/exchange-init.service';
-import { StrategyInstance } from 'src/common/entities/strategy-instances.entity';
+import { StrategyInstance } from 'src/common/entities/market-making/strategy-instances.entity';
 import { TickComponent } from '../tick/tick-component.interface';
 import { getRFC3339Timestamp } from 'src/common/helpers/utils';
 import { ClockTickCoordinatorService } from '../tick/clock-tick-coordinator.service';

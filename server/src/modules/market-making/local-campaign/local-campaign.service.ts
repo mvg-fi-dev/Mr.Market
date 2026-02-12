@@ -3,8 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { InjectQueue } from '@nestjs/bull';
 import type { Queue } from 'bull';
-import { Campaign } from 'src/common/entities/campaign.entity';
-import { CampaignParticipation } from 'src/common/entities/campaign-participation.entity';
+import { Campaign } from 'src/common/entities/campaign/campaign.entity';
+import { CampaignParticipation } from 'src/common/entities/campaign/campaign-participation.entity';
 import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
 
 @Injectable()

@@ -10,7 +10,7 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
 import { ExchangeService } from 'src/modules/mixin/exchange/exchange.service';
-import { APIKeysConfig } from 'src/common/entities/api-keys.entity';
+import { APIKeysConfig } from 'src/common/entities/admin/api-keys.entity';
 
 @Injectable({ scope: Scope.DEFAULT })
 export class ExchangeInitService {

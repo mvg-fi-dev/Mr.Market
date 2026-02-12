@@ -9,11 +9,11 @@ import { MixinClientModule } from 'src/modules/mixin/client/mixin-client.module'
 import {
   MarketMakingOrder,
   SimplyGrowOrder,
-} from 'src/common/entities/user-orders.entity';
-import { MarketMakingPaymentState } from 'src/common/entities/payment-state.entity';
-import { MarketMakingOrderIntent } from 'src/common/entities/market-making-order-intent.entity';
-import { MarketMakingHistory } from 'src/common/entities/market-making-order.entity';
-import { ArbitrageHistory } from 'src/common/entities/arbitrage-order.entity';
+} from 'src/common/entities/orders/user-orders.entity';
+import { MarketMakingPaymentState } from 'src/common/entities/orders/payment-state.entity';
+import { MarketMakingOrderIntent } from 'src/common/entities/market-making/market-making-order-intent.entity';
+import { MarketMakingHistory } from 'src/common/entities/market-making/market-making-order.entity';
+import { ArbitrageHistory } from 'src/common/entities/market-making/arbitrage-order.entity';
 import { FeeModule } from '../fee/fee.module';
 import { GrowdataModule } from 'src/modules/data/grow-data/grow-data.module';
 import { SnapshotsModule } from 'src/modules/mixin/snapshots/snapshots.module';

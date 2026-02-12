@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { RewardAllocation } from 'src/common/entities/reward-allocation.entity';
-import { RewardLedger } from 'src/common/entities/reward-ledger.entity';
-import { ShareLedgerEntry } from 'src/common/entities/share-ledger-entry.entity';
+import { RewardAllocation } from 'src/common/entities/ledger/reward-allocation.entity';
+import { RewardLedger } from 'src/common/entities/ledger/reward-ledger.entity';
+import { ShareLedgerEntry } from 'src/common/entities/ledger/share-ledger-entry.entity';
 import { LedgerModule } from '../ledger/ledger.module';
 import { RewardPipelineService } from './reward-pipeline.service';
 import { ShareLedgerService } from './share-ledger.service';

@@ -1,9 +1,9 @@
 import { InternalServerErrorException } from '@nestjs/common';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Test, TestingModule } from '@nestjs/testing';
-import { ArbitrageHistory } from 'src/common/entities/arbitrage-order.entity';
-import { MarketMakingHistory } from 'src/common/entities/market-making-order.entity';
-import { StrategyInstance } from 'src/common/entities/strategy-instances.entity';
+import { ArbitrageHistory } from 'src/common/entities/market-making/arbitrage-order.entity';
+import { MarketMakingHistory } from 'src/common/entities/market-making/market-making-order.entity';
+import { StrategyInstance } from 'src/common/entities/market-making/strategy-instances.entity';
 import { PriceSourceType } from 'src/common/enum/pricesourcetype';
 import { ExchangeInitService } from 'src/modules/infrastructure/exchange-init/exchange-init.service';
 import { PerformanceService } from '../performance/performance.service';

@@ -5,13 +5,13 @@ import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
 import { DataSource, Repository } from 'typeorm';
-import { CustomConfigEntity } from '../../common/entities/custom-config.entity';
+import { CustomConfigEntity } from '../../common/entities/admin/custom-config.entity';
 import {
   GrowdataExchange,
   GrowdataMarketMakingPair,
   GrowdataArbitragePair,
   GrowdataSimplyGrowToken,
-} from '../../common/entities/grow-data.entity';
+} from '../../common/entities/data/grow-data.entity';
 import {
   defaultExchanges,
   defaultMarketMakingPairs,
@@ -19,7 +19,7 @@ import {
   defaultSpotdataTradingPairs,
   defaultCustomConfig,
 } from './defaultSeedValues';
-import { SpotdataTradingPair } from '../../common/entities/spot-data.entity';
+import { SpotdataTradingPair } from '../../common/entities/data/spot-data.entity';
 
 async function connectToDatabase() {
   dotenv.config();

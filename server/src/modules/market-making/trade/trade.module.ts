@@ -3,7 +3,7 @@ import { TradeService } from './trade.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TradeController } from './trade.controller';
 import { TradeRepository } from './trade.repository';
-import { Trade } from 'src/common/entities/trade.entity';
+import { Trade } from 'src/common/entities/orders/trade.entity';
 @Module({
   imports: [TypeOrmModule.forFeature([Trade])],
   controllers: [TradeController],

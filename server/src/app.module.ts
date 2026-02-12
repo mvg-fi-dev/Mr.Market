@@ -21,68 +21,67 @@ import { CustomLogger } from './modules/infrastructure/logger/logger.service';
 import { MixinModule } from './modules/mixin/mixin.module';
 import { EventListenersModule } from './modules/mixin/listeners/events.module';
 
-import { Trade } from './common/entities/trade.entity';
-import { Transaction } from './common/entities/transaction.entity';
-import { Performance } from './common/entities/performance.entity';
+import { Trade } from './common/entities/orders/trade.entity';
+import { Performance } from './common/entities/market-making/performance.entity';
 
-import { SpotOrder } from './common/entities/spot-order.entity';
-import { APIKeysConfig } from './common/entities/api-keys.entity';
-import { CustomConfigEntity } from './common/entities/custom-config.entity';
+import { SpotOrder } from './common/entities/orders/spot-order.entity';
+import { APIKeysConfig } from './common/entities/admin/api-keys.entity';
+import { CustomConfigEntity } from './common/entities/admin/custom-config.entity';
 import {
   MixinReleaseToken,
   MixinReleaseHistory,
-} from './common/entities/mixin-release.entity';
-import { MixinMessage } from 'src/common/entities/mixin-message.entity';
-import { MixinUser } from 'src/common/entities/mixin-user.entity';
+} from './common/entities/mixin/mixin-release.entity';
+import { MixinMessage } from 'src/common/entities/mixin/mixin-message.entity';
+import { MixinUser } from 'src/common/entities/mixin/mixin-user.entity';
 import {
   MarketMakingOrder,
   SimplyGrowOrder,
-} from './common/entities/user-orders.entity';
+} from './common/entities/orders/user-orders.entity';
 import {
   MarketMakingPaymentState,
   PaymentState,
-} from './common/entities/payment-state.entity';
+} from './common/entities/orders/payment-state.entity';
 import { AuthModule } from './modules/auth/auth.module';
 import { ExchangeInitModule } from './modules/infrastructure/exchange-init/exchange-init.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { CampaignModule } from './modules/campaign/campaign.module';
 import { Web3Module } from './modules/web3/web3.module';
-import { StrategyInstance } from './common/entities/strategy-instances.entity';
-import { ArbitrageHistory } from './common/entities/arbitrage-order.entity';
-import { MarketMakingHistory } from './common/entities/market-making-order.entity';
-import { Contribution } from './common/entities/contribution.entity';
+import { StrategyInstance } from './common/entities/market-making/strategy-instances.entity';
+import { ArbitrageHistory } from './common/entities/market-making/arbitrage-order.entity';
+import { MarketMakingHistory } from './common/entities/market-making/market-making-order.entity';
+import { Contribution } from './common/entities/campaign/contribution.entity';
 import { GrowdataModule } from './modules/data/grow-data/grow-data.module';
-import { MarketMakingOrderIntent } from './common/entities/market-making-order-intent.entity';
+import { MarketMakingOrderIntent } from './common/entities/market-making/market-making-order-intent.entity';
 import {
   GrowdataArbitragePair,
   GrowdataExchange,
   GrowdataMarketMakingPair,
   GrowdataSimplyGrowToken,
-} from './common/entities/grow-data.entity';
+} from './common/entities/data/grow-data.entity';
 import { AdminController } from './modules/admin/admin.controller';
-import { SpotdataTradingPair } from './common/entities/spot-data.entity';
+import { SpotdataTradingPair } from './common/entities/data/spot-data.entity';
 import { SpotdataModule } from './modules/data/spot-data/spot-data.module';
 import { MetricsModule } from './modules/market-making/metrics/metrics.module';
-import { Withdrawal } from './common/entities/withdrawal.entity';
-import { Campaign } from './common/entities/campaign.entity';
-import { CampaignParticipation } from './common/entities/campaign-participation.entity';
+import { Withdrawal } from './common/entities/mixin/withdrawal.entity';
+import { Campaign } from './common/entities/campaign/campaign.entity';
+import { CampaignParticipation } from './common/entities/campaign/campaign-participation.entity';
 import { LocalCampaignModule } from './modules/market-making/local-campaign/local-campaign.module';
 import { TickModule } from './modules/market-making/tick/tick.module';
 import { LedgerModule } from './modules/market-making/ledger/ledger.module';
-import { LedgerEntry } from './common/entities/ledger-entry.entity';
-import { BalanceReadModel } from './common/entities/balance-read-model.entity';
-import { OutboxEvent } from './common/entities/outbox-event.entity';
-import { ConsumerReceipt } from './common/entities/consumer-receipt.entity';
+import { LedgerEntry } from './common/entities/ledger/ledger-entry.entity';
+import { BalanceReadModel } from './common/entities/ledger/balance-read-model.entity';
+import { OutboxEvent } from './common/entities/system/outbox-event.entity';
+import { ConsumerReceipt } from './common/entities/system/consumer-receipt.entity';
 import { DurabilityModule } from './modules/market-making/durability/durability.module';
 import { TrackersModule } from './modules/market-making/trackers/trackers.module';
 import { ReconciliationModule } from './modules/market-making/reconciliation/reconciliation.module';
 import { RewardsModule } from './modules/market-making/rewards/rewards.module';
-import { RewardLedger } from './common/entities/reward-ledger.entity';
-import { RewardAllocation } from './common/entities/reward-allocation.entity';
+import { RewardLedger } from './common/entities/ledger/reward-ledger.entity';
+import { RewardAllocation } from './common/entities/ledger/reward-allocation.entity';
 import { OrchestrationModule } from './modules/market-making/orchestration/orchestration.module';
-import { ShareLedgerEntry } from './common/entities/share-ledger-entry.entity';
-import { HufiScoreSnapshot } from './common/entities/hufi-score-snapshot.entity';
-import { StrategyOrderIntentEntity } from './common/entities/strategy-order-intent.entity';
+import { ShareLedgerEntry } from './common/entities/ledger/share-ledger-entry.entity';
+import { HufiScoreSnapshot } from './common/entities/campaign/hufi-score-snapshot.entity';
+import { StrategyOrderIntentEntity } from './common/entities/market-making/strategy-order-intent.entity';
 
 dotenv.config();
 
@@ -108,7 +107,6 @@ dotenv.config();
         MarketMakingHistory,
         StrategyInstance,
         Performance,
-        Transaction,
         SpotOrder,
         APIKeysConfig,
         CustomConfigEntity,

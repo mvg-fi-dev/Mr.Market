@@ -5,7 +5,7 @@ import {
   GrowdataSimplyGrowToken,
   GrowdataArbitragePair,
   GrowdataMarketMakingPair,
-} from 'src/common/entities/grow-data.entity';
+} from 'src/common/entities/data/grow-data.entity';
 import { GrowdataRepository } from 'src/modules/data/grow-data/grow-data.repository';
 import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
 import {

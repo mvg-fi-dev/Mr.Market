@@ -6,7 +6,7 @@ import {
   GrowdataSimplyGrowToken,
   GrowdataArbitragePair,
   GrowdataMarketMakingPair,
-} from 'src/common/entities/grow-data.entity';
+} from 'src/common/entities/data/grow-data.entity';
 
 @Injectable()
 export class GrowdataRepository {

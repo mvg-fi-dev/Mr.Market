@@ -10,15 +10,15 @@ import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
 import {
   MarketMakingOrder,
   SimplyGrowOrder,
-} from 'src/common/entities/user-orders.entity';
-import { MarketMakingPaymentState } from 'src/common/entities/payment-state.entity';
-import { MarketMakingOrderIntent } from 'src/common/entities/market-making-order-intent.entity';
+} from 'src/common/entities/orders/user-orders.entity';
+import { MarketMakingPaymentState } from 'src/common/entities/orders/payment-state.entity';
+import { MarketMakingOrderIntent } from 'src/common/entities/market-making/market-making-order-intent.entity';
 import type {
   MarketMakingStates,
   SimplyGrowStates,
 } from 'src/common/types/orders/states';
-import { MarketMakingHistory } from 'src/common/entities/market-making-order.entity';
-import { ArbitrageHistory } from 'src/common/entities/arbitrage-order.entity';
+import { MarketMakingHistory } from 'src/common/entities/market-making/market-making-order.entity';
+import { ArbitrageHistory } from 'src/common/entities/market-making/arbitrage-order.entity';
 import { GrowdataRepository } from 'src/modules/data/grow-data/grow-data.repository';
 import { encodeMarketMakingCreateMemo } from 'src/common/helpers/mixin/memo';
 

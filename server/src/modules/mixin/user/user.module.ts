@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { MixinUser } from 'src/common/entities/mixin-user.entity';
+import { MixinUser } from 'src/common/entities/mixin/mixin-user.entity';
 import { UserService } from 'src/modules/mixin/user/user.service';
 import { UserRepository } from './user.repository';
 import { UserController } from './user.controller';

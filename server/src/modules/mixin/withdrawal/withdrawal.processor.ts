@@ -5,7 +5,7 @@ import { Process, Processor } from '@nestjs/bull';
 import BigNumber from 'bignumber.js';
 import { WithdrawalService } from './withdrawal.service';
 import { WalletService } from '../wallet/wallet.service';
-import { Withdrawal } from 'src/common/entities/withdrawal.entity';
+import { Withdrawal } from 'src/common/entities/mixin/withdrawal.entity';
 import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
 import { BalanceLedgerService } from 'src/modules/market-making/ledger/balance-ledger.service';
 

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { MarketMakingHistory } from 'src/common/entities/market-making-order.entity';
+import { MarketMakingHistory } from 'src/common/entities/market-making/market-making-order.entity';
 import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
 import { Repository } from 'typeorm';
 

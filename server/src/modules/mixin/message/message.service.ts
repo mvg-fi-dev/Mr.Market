@@ -2,7 +2,7 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { MessageRepository } from './message.repository';
 import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
 import { UserService } from 'src/modules/mixin/user/user.service';
-import { MixinMessage } from 'src/common/entities/mixin-message.entity';
+import { MixinMessage } from 'src/common/entities/mixin/mixin-message.entity';
 import {
   KeystoreClientReturnType,
   UserResponse,

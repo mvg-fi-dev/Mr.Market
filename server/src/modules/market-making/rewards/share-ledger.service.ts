@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import BigNumber from 'bignumber.js';
 import { randomUUID } from 'crypto';
 import { Repository } from 'typeorm';
-import { ShareLedgerEntry } from 'src/common/entities/share-ledger-entry.entity';
+import { ShareLedgerEntry } from 'src/common/entities/ledger/share-ledger-entry.entity';
 import { getRFC3339Timestamp } from 'src/common/helpers/utils';
 
 type WeightedShare = {

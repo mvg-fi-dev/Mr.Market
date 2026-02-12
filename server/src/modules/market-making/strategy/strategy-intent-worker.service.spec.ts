@@ -1,6 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { StrategyIntentWorkerService } from './strategy-intent-worker.service';
-import { StrategyOrderIntentEntity } from 'src/common/entities/strategy-order-intent.entity';
+import { StrategyOrderIntentEntity } from 'src/common/entities/market-making/strategy-order-intent.entity';
 
 const wait = async (ms: number) =>
   await new Promise((resolve) => setTimeout(resolve, ms));

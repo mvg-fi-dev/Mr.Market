@@ -4,7 +4,7 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { MixinClientService } from 'src/modules/mixin/client/mixin-client.service';
 import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
 import { GrowdataRepository } from 'src/modules/data/grow-data/grow-data.repository';
-import { GrowdataMarketMakingPair } from 'src/common/entities/grow-data.entity';
+import { GrowdataMarketMakingPair } from 'src/common/entities/data/grow-data.entity';
 
 @Injectable()
 export class GrowdataService {

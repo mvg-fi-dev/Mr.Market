@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Body, Param } from '@nestjs/common';
 import { LocalCampaignService } from './local-campaign.service';
-import { Campaign } from 'src/common/entities/campaign.entity';
+import { Campaign } from 'src/common/entities/campaign/campaign.entity';
 import { ApiTags } from '@nestjs/swagger';
 
 @ApiTags('Campaigns')

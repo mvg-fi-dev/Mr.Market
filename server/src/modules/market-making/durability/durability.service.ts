@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
 import { Repository } from 'typeorm';
-import { ConsumerReceipt } from 'src/common/entities/consumer-receipt.entity';
-import { OutboxEvent } from 'src/common/entities/outbox-event.entity';
+import { ConsumerReceipt } from 'src/common/entities/system/consumer-receipt.entity';
+import { OutboxEvent } from 'src/common/entities/system/outbox-event.entity';
 import { getRFC3339Timestamp } from 'src/common/helpers/utils';
 
 type AppendOutboxCommand = {

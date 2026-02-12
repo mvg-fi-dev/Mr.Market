@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Not, Repository } from 'typeorm';
 import { getRFC3339Timestamp } from 'src/common/helpers/utils';
-import { StrategyOrderIntentEntity } from 'src/common/entities/strategy-order-intent.entity';
+import { StrategyOrderIntentEntity } from 'src/common/entities/market-making/strategy-order-intent.entity';
 import { StrategyIntentStatus, StrategyOrderIntent } from './strategy-intent.types';
 
 @Injectable()

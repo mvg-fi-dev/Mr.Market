@@ -3,8 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import BigNumber from 'bignumber.js';
 import { randomUUID } from 'crypto';
 import { DataSource, Repository } from 'typeorm';
-import { BalanceReadModel } from 'src/common/entities/balance-read-model.entity';
-import { LedgerEntry, LedgerEntryType } from 'src/common/entities/ledger-entry.entity';
+import { BalanceReadModel } from 'src/common/entities/ledger/balance-read-model.entity';
+import { LedgerEntry, LedgerEntryType } from 'src/common/entities/ledger/ledger-entry.entity';
 import { getRFC3339Timestamp } from 'src/common/helpers/utils';
 import { DurabilityService } from '../durability/durability.service';
 

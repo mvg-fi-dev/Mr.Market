@@ -5,7 +5,7 @@ import { MessageService } from './message.service';
 import { UserService } from 'src/modules/mixin/user/user.service';
 import { MessageRepository } from './message.repository';
 import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
-import { MixinMessage } from 'src/common/entities/mixin-message.entity';
+import { MixinMessage } from 'src/common/entities/mixin/mixin-message.entity';
 import { getRFC3339Timestamp } from '../../../common/helpers/utils';
 import { MixinClientService } from '../client/mixin-client.service';
 

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Withdrawal } from 'src/common/entities/withdrawal.entity';
+import { Withdrawal } from 'src/common/entities/mixin/withdrawal.entity';
 import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
 import { SafeSnapshot, SequencerTransactionRequest } from '@mixin.dev/mixin-node-sdk';
 import { InjectQueue } from '@nestjs/bull';

@@ -3,7 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { InjectQueue } from '@nestjs/bull';
 import { Module, OnApplicationBootstrap } from '@nestjs/common';
-import { Withdrawal } from 'src/common/entities/withdrawal.entity';
+import { Withdrawal } from 'src/common/entities/mixin/withdrawal.entity';
 import { WithdrawalService } from './withdrawal.service';
 import { WithdrawalProcessor } from './withdrawal.processor';
 import { WithdrawalConfirmationWorker } from './withdrawal-confirmation.worker';

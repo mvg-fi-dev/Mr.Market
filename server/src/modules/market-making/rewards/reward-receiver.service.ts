@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { RewardLedger } from 'src/common/entities/reward-ledger.entity';
+import { RewardLedger } from 'src/common/entities/ledger/reward-ledger.entity';
 import { Web3Service } from 'src/modules/web3/web3.service';
 import { getRFC3339Timestamp } from 'src/common/helpers/utils';
 

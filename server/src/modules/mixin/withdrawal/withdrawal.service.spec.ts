@@ -3,7 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import type { Queue } from 'bull';
 import { WithdrawalService } from './withdrawal.service';
-import { Withdrawal } from 'src/common/entities/withdrawal.entity';
+import { Withdrawal } from 'src/common/entities/mixin/withdrawal.entity';
 import { SafeSnapshot } from '@mixin.dev/mixin-node-sdk';
 import { MixinClientService } from '../client/mixin-client.service';
 

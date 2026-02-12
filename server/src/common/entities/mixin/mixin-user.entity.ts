@@ -1,5 +1,5 @@
 import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
-import { Contribution } from './contribution.entity';
+import { Contribution } from '../campaign/contribution.entity';
 
 @Entity()
 export class MixinUser {

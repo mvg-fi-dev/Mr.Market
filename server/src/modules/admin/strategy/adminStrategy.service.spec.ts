@@ -12,8 +12,8 @@ import { PriceSourceType } from 'src/common/enum/pricesourcetype';
 import { ExchangeInitService } from '../../infrastructure/exchange-init/exchange-init.service';
 import { Web3Service } from '../../web3/web3.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Contribution } from 'src/common/entities/contribution.entity';
-import { MixinUser } from 'src/common/entities/mixin-user.entity';
+import { Contribution } from 'src/common/entities/campaign/contribution.entity';
+import { MixinUser } from 'src/common/entities/mixin/mixin-user.entity';
 
 describe('AdminStrategyService', () => {
   let service: AdminStrategyService;

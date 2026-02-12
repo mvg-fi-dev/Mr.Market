@@ -3,7 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import createMockCustomConfigEntity from './custom-config.fixture';
 import { CustomConfigRepository } from './custom-config.repository';
 import { Repository } from 'typeorm';
-import { CustomConfigEntity } from '../../../common/entities/custom-config.entity';
+import { CustomConfigEntity } from '../../../common/entities/admin/custom-config.entity';
 
 describe('CustomConfigRepository', () => {
   let customConfigRepository: CustomConfigRepository;
