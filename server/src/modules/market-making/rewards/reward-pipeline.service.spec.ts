@@ -9,6 +9,7 @@ describe('RewardPipelineService', () => {
       create: jest.fn((payload) => payload),
       save: jest.fn(async (payload) => {
         rewardRows.push(payload);
+
         return payload;
       }),
       findOneBy: jest.fn(async ({ txHash }) => {
@@ -23,15 +24,20 @@ describe('RewardPipelineService', () => {
         const index = allocationRows.findIndex(
           (row) => row.allocationId === payload.allocationId,
         );
+
         if (index >= 0) {
           allocationRows[index] = { ...allocationRows[index], ...payload };
+
           return allocationRows[index];
         }
         allocationRows.push(payload);
+
         return payload;
       }),
       find: jest.fn(async ({ where }) => {
-        return allocationRows.filter((row) => row.rewardTxHash === where.rewardTxHash);
+        return allocationRows.filter(
+          (row) => row.rewardTxHash === where.rewardTxHash,
+        );
       }),
     };
 
@@ -75,6 +81,7 @@ describe('RewardPipelineService', () => {
       create: jest.fn((payload) => payload),
       save: jest.fn(async (payload) => {
         rewardRows.push(payload);
+
         return payload;
       }),
       findOneBy: jest.fn(async ({ txHash }) => {
@@ -87,10 +94,13 @@ describe('RewardPipelineService', () => {
       create: jest.fn((payload) => payload),
       save: jest.fn(async (payload) => {
         allocationRows.push(payload);
+
         return payload;
       }),
       find: jest.fn(async ({ where }) => {
-        return allocationRows.filter((row) => row.rewardTxHash === where.rewardTxHash);
+        return allocationRows.filter(
+          (row) => row.rewardTxHash === where.rewardTxHash,
+        );
       }),
     };
 
@@ -118,6 +128,7 @@ describe('RewardPipelineService', () => {
     expect(allocationRows).toHaveLength(3);
     const amounts = allocationRows.map((row) => row.amount);
     const total = amounts.reduce((acc, v) => Number(acc) + Number(v), 0);
+
     expect(Number(total.toFixed(8))).toBe(1);
     expect(Number(allocationRows[0].amount)).toBeGreaterThanOrEqual(
       Number(allocationRows[1].amount),

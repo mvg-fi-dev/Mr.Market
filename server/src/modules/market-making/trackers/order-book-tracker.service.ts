@@ -1,4 +1,10 @@
-import { Injectable, OnModuleDestroy, OnModuleInit, Optional } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleDestroy,
+  OnModuleInit,
+  Optional,
+} from '@nestjs/common';
+
 import { ClockTickCoordinatorService } from '../tick/clock-tick-coordinator.service';
 import { TickComponent } from '../tick/tick-component.interface';
 
@@ -50,9 +56,14 @@ export class OrderBookTrackerService
     return true;
   }
 
-  queueSnapshot(exchange: string, pair: string, snapshot: OrderBookState): void {
+  queueSnapshot(
+    exchange: string,
+    pair: string,
+    snapshot: OrderBookState,
+  ): void {
     const key = this.toKey(exchange, pair);
     const queue = this.snapshotQueue.get(key) || [];
+
     queue.push(snapshot);
     this.snapshotQueue.set(key, queue);
   }
@@ -60,6 +71,7 @@ export class OrderBookTrackerService
   queueDelta(exchange: string, pair: string, delta: OrderBookDelta): void {
     const key = this.toKey(exchange, pair);
     const queue = this.deltaQueue.get(key) || [];
+
     queue.push(delta);
     this.deltaQueue.set(key, queue);
   }
@@ -80,6 +92,7 @@ export class OrderBookTrackerService
 
       if (snapshots.length > 0) {
         const lastSnapshot = snapshots[snapshots.length - 1];
+
         this.books.set(key, {
           bids: [...lastSnapshot.bids],
           asks: [...lastSnapshot.asks],
@@ -89,6 +102,7 @@ export class OrderBookTrackerService
 
       for (const delta of deltas) {
         const existing = this.books.get(key);
+
         if (!existing || delta.sequence <= existing.sequence) {
           continue;
         }
@@ -110,6 +124,7 @@ export class OrderBookTrackerService
     isBid: boolean,
   ): BookLevel[] {
     const map = new Map<number, number>();
+
     current.forEach(([price, qty]) => map.set(price, qty));
     updates.forEach(([price, qty]) => {
       if (qty <= 0) {
@@ -122,6 +137,7 @@ export class OrderBookTrackerService
     const sorted = [...map.entries()].sort((a, b) =>
       isBid ? b[0] - a[0] : a[0] - b[0],
     );
+
     return sorted.map(([price, qty]) => [price, qty]);
   }
 

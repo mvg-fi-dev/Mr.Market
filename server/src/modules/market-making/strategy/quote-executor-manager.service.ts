@@ -30,10 +30,13 @@ type QuoteLevel = {
 export class QuoteExecutorManagerService {
   buildQuotes(input: BuildQuotesInput): QuoteLevel[] {
     const mid = new BigNumber(input.midPrice);
-    const inventoryDelta =
-      new BigNumber(input.currentBaseRatio).minus(input.inventoryTargetBaseRatio);
+    const inventoryDelta = new BigNumber(input.currentBaseRatio).minus(
+      input.inventoryTargetBaseRatio,
+    );
     const skewAdjust = inventoryDelta.multipliedBy(input.inventorySkewFactor);
-    const makerBias = new BigNumber(input.makerHeavyBiasBps || 0).dividedBy(10_000);
+    const makerBias = new BigNumber(input.makerHeavyBiasBps || 0).dividedBy(
+      10_000,
+    );
 
     const quotes: QuoteLevel[] = [];
     let currentQty = new BigNumber(input.orderAmount);
@@ -66,9 +69,11 @@ export class QuoteExecutorManagerService {
       const sellPrice = mid.multipliedBy(new BigNumber(1).plus(askSpread));
 
       const skipBuy =
-        input.hangingOrdersEnabled && layer <= input.existingOpenOrdersBySide.buy;
+        input.hangingOrdersEnabled &&
+        layer <= input.existingOpenOrdersBySide.buy;
       const skipSell =
-        input.hangingOrdersEnabled && layer <= input.existingOpenOrdersBySide.sell;
+        input.hangingOrdersEnabled &&
+        layer <= input.existingOpenOrdersBySide.sell;
 
       quotes.push({
         layer,

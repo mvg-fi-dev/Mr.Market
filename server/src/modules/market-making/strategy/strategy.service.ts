@@ -5,27 +5,28 @@ import {
   Optional,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as ccxt from 'ccxt';
-import BigNumber from 'bignumber.js';
 import { InjectRepository } from '@nestjs/typeorm';
+import BigNumber from 'bignumber.js';
+import * as ccxt from 'ccxt';
+import { StrategyInstance } from 'src/common/entities/market-making/strategy-instances.entity';
+import { PriceSourceType } from 'src/common/enum/pricesourcetype';
+import { createStrategyKey } from 'src/common/helpers/strategyKey';
+import { getRFC3339Timestamp } from 'src/common/helpers/utils';
+import { ExchangeInitService } from 'src/modules/infrastructure/exchange-init/exchange-init.service';
+import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
 import { Repository } from 'typeorm';
+
+import { ClockTickCoordinatorService } from '../tick/clock-tick-coordinator.service';
+import { TickComponent } from '../tick/tick-component.interface';
+import { ExchangeOrderTrackerService } from '../trackers/exchange-order-tracker.service';
+import { QuoteExecutorManagerService } from './quote-executor-manager.service';
 import {
   ArbitrageStrategyDto,
   PureMarketMakingStrategyDto,
 } from './strategy.dto';
-import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
-import { PriceSourceType } from 'src/common/enum/pricesourcetype';
-import { createStrategyKey } from 'src/common/helpers/strategyKey';
-import { ExchangeInitService } from 'src/modules/infrastructure/exchange-init/exchange-init.service';
-import { StrategyInstance } from 'src/common/entities/market-making/strategy-instances.entity';
-import { TickComponent } from '../tick/tick-component.interface';
-import { getRFC3339Timestamp } from 'src/common/helpers/utils';
-import { ClockTickCoordinatorService } from '../tick/clock-tick-coordinator.service';
 import { StrategyOrderIntent } from './strategy-intent.types';
 import { StrategyIntentExecutionService } from './strategy-intent-execution.service';
 import { StrategyIntentStoreService } from './strategy-intent-store.service';
-import { QuoteExecutorManagerService } from './quote-executor-manager.service';
-import { ExchangeOrderTrackerService } from '../trackers/exchange-order-tracker.service';
 
 type StrategyType = 'arbitrage' | 'pureMarketMaking' | 'volume';
 
@@ -36,7 +37,10 @@ type StrategyRuntimeSession = {
   clientId: string;
   cadenceMs: number;
   nextRunAtMs: number;
-  params: ArbitrageStrategyDto | PureMarketMakingStrategyDto | Record<string, any>;
+  params:
+    | ArbitrageStrategyDto
+    | PureMarketMakingStrategyDto
+    | Record<string, any>;
 };
 
 @Injectable()
@@ -45,7 +49,10 @@ export class StrategyService
 {
   private readonly logger = new CustomLogger(StrategyService.name);
   private readonly sessions = new Map<string, StrategyRuntimeSession>();
-  private readonly latestIntentsByStrategy = new Map<string, StrategyOrderIntent[]>();
+  private readonly latestIntentsByStrategy = new Map<
+    string,
+    StrategyOrderIntent[]
+  >();
 
   constructor(
     private readonly exchangeInitService: ExchangeInitService,
@@ -83,7 +90,10 @@ export class StrategyService
         strategyType: strategy.strategyType as StrategyType,
         userId: strategy.userId,
         clientId: strategy.clientId,
-        cadenceMs: this.getCadenceMs(strategy.parameters, strategy.strategyType),
+        cadenceMs: this.getCadenceMs(
+          strategy.parameters,
+          strategy.strategyType,
+        ),
         nextRunAtMs: nowMs,
         params: strategy.parameters,
       });
@@ -146,6 +156,7 @@ export class StrategyService
         strategyInstance.parameters.checkIntervalSeconds,
         strategyInstance.parameters.maxOpenOrders,
       );
+
       return;
     }
 
@@ -153,6 +164,7 @@ export class StrategyService
       await this.executePureMarketMakingStrategy(
         strategyInstance.parameters as PureMarketMakingStrategyDto,
       );
+
       return;
     }
 
@@ -168,6 +180,7 @@ export class StrategyService
         strategyInstance.parameters.clientId,
         strategyInstance.parameters.pricePushRate,
       );
+
       return;
     }
 
@@ -187,6 +200,7 @@ export class StrategyService
     });
 
     const cadenceMs = Math.max(1000, Number(checkIntervalSeconds || 10) * 1000);
+
     await this.upsertStrategyInstance(
       strategyKey,
       userId,
@@ -214,7 +228,11 @@ export class StrategyService
       client_id: clientId,
     });
 
-    const cadenceMs = Math.max(1000, Number(strategyParamsDto.orderRefreshTime));
+    const cadenceMs = Math.max(
+      1000,
+      Number(strategyParamsDto.orderRefreshTime),
+    );
+
     await this.upsertStrategyInstance(
       strategyKey,
       userId,
@@ -278,6 +296,7 @@ export class StrategyService
     };
 
     const cadenceMs = Math.max(1000, Number(baseIntervalTime || 10) * 1000);
+
     await this.upsertStrategyInstance(
       strategyKey,
       userId,
@@ -352,7 +371,11 @@ export class StrategyService
     const orderBookB = await exchangeB.fetchOrderBook(pair);
 
     const vwapA = this.calculateVWAPForAmount(orderBookA, amountToTrade, 'buy');
-    const vwapB = this.calculateVWAPForAmount(orderBookB, amountToTrade, 'sell');
+    const vwapB = this.calculateVWAPForAmount(
+      orderBookB,
+      amountToTrade,
+      'sell',
+    );
 
     if (vwapA.isLessThanOrEqualTo(0) || vwapB.isLessThanOrEqualTo(0)) {
       return;
@@ -487,6 +510,7 @@ export class StrategyService
           updatedAt: new Date(),
         },
       );
+
       return;
     }
 
@@ -518,6 +542,7 @@ export class StrategyService
         : parameters.exchangeName || parameters.exchangeAName;
     const exchange = this.exchangeInitService.getExchange(exchangeName);
     const ticker = await exchange.fetchTicker(pair);
+
     return Number(ticker.last || 0);
   }
 
@@ -526,7 +551,10 @@ export class StrategyService
     strategyType: string,
   ): number {
     if (strategyType === 'arbitrage') {
-      return Math.max(1000, Number(parameters?.checkIntervalSeconds || 10) * 1000);
+      return Math.max(
+        1000,
+        Number(parameters?.checkIntervalSeconds || 10) * 1000,
+      );
     }
 
     if (strategyType === 'pureMarketMaking') {
@@ -546,14 +574,21 @@ export class StrategyService
         session.params as PureMarketMakingStrategyDto,
         ts,
       );
+
       await this.publishIntents(session.strategyKey, intents);
+
       return;
     }
 
     if (session.strategyType === 'arbitrage') {
       const params = session.params as ArbitrageStrategyDto;
-      const exchangeA = this.exchangeInitService.getExchange(params.exchangeAName);
-      const exchangeB = this.exchangeInitService.getExchange(params.exchangeBName);
+      const exchangeA = this.exchangeInitService.getExchange(
+        params.exchangeAName,
+      );
+      const exchangeB = this.exchangeInitService.getExchange(
+        params.exchangeBName,
+      );
+
       await this.evaluateArbitrageOpportunityVWAP(exchangeA, exchangeB, params);
     }
   }
@@ -569,7 +604,11 @@ export class StrategyService
       ? this.exchangeInitService.getExchange(params.oracleExchangeName)
       : exchange;
     const priceSource = new BigNumber(
-      await this.getPriceSource(priceExchange, params.pair, params.priceSourceType),
+      await this.getPriceSource(
+        priceExchange,
+        params.pair,
+        params.priceSourceType,
+      ),
     );
 
     const openOrders =
@@ -589,7 +628,9 @@ export class StrategyService
           amountChangePerLayer: params.amountChangePerLayer,
           amountChangeType: params.amountChangeType,
           inventorySkewFactor: Number(params.inventorySkewFactor || 0),
-          inventoryTargetBaseRatio: Number(params.inventoryTargetBaseRatio || 0.5),
+          inventoryTargetBaseRatio: Number(
+            params.inventoryTargetBaseRatio || 0.5,
+          ),
           currentBaseRatio: Number(params.currentBaseRatio || 0.5),
           makerHeavyMode: Boolean(params.makerHeavyMode),
           makerHeavyBiasBps: Number(params.makerHeavyBiasBps || 0),
@@ -603,6 +644,7 @@ export class StrategyService
         continue;
       }
       const quotePrice = new BigNumber(quote.price);
+
       if (
         quote.side === 'buy' &&
         params.ceilingPrice !== undefined &&
@@ -657,10 +699,13 @@ export class StrategyService
     }> = [];
 
     let currentOrderAmount = new BigNumber(params.orderAmount);
+
     for (let layer = 1; layer <= params.numberOfLayers; layer++) {
       if (layer > 1) {
         if (params.amountChangeType === 'fixed') {
-          currentOrderAmount = currentOrderAmount.plus(params.amountChangePerLayer);
+          currentOrderAmount = currentOrderAmount.plus(
+            params.amountChangePerLayer,
+          );
         } else {
           currentOrderAmount = currentOrderAmount.plus(
             currentOrderAmount.multipliedBy(
@@ -670,10 +715,18 @@ export class StrategyService
         }
       }
 
-      const layerBidSpread = new BigNumber(params.bidSpread).multipliedBy(layer);
-      const layerAskSpread = new BigNumber(params.askSpread).multipliedBy(layer);
-      const buyPrice = priceSource.multipliedBy(new BigNumber(1).minus(layerBidSpread));
-      const sellPrice = priceSource.multipliedBy(new BigNumber(1).plus(layerAskSpread));
+      const layerBidSpread = new BigNumber(params.bidSpread).multipliedBy(
+        layer,
+      );
+      const layerAskSpread = new BigNumber(params.askSpread).multipliedBy(
+        layer,
+      );
+      const buyPrice = priceSource.multipliedBy(
+        new BigNumber(1).minus(layerBidSpread),
+      );
+      const sellPrice = priceSource.multipliedBy(
+        new BigNumber(1).plus(layerAskSpread),
+      );
 
       quotes.push({
         layer,
@@ -741,6 +794,7 @@ export class StrategyService
       this.configService?.get('strategy.intent_execution_driver', 'worker') ||
         'worker',
     ).toLowerCase();
+
     if (intentExecutionDriver === 'sync') {
       await this.strategyIntentExecutionService?.consumeIntents(intents);
     }
@@ -773,6 +827,7 @@ export class StrategyService
     }
 
     const ticker = await exchange.fetchTicker(pair);
+
     return Number(ticker.last);
   }
 
@@ -791,6 +846,7 @@ export class StrategyService
         new BigNumber(volume),
         amountToTradeBn.minus(volumeAccumulated),
       );
+
       volumePriceProductSum = volumePriceProductSum.plus(
         new BigNumber(price).multipliedBy(volumeToUse),
       );

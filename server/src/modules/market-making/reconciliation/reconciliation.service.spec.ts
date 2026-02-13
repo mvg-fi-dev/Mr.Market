@@ -4,7 +4,13 @@ describe('ReconciliationService', () => {
   it('reports zero violations when ledger balances are valid', async () => {
     const balanceRepo = {
       find: jest.fn().mockResolvedValue([
-        { userId: 'u1', assetId: 'usdt', available: '70', locked: '30', total: '100' },
+        {
+          userId: 'u1',
+          assetId: 'usdt',
+          available: '70',
+          locked: '30',
+          total: '100',
+        },
       ]),
     };
     const orderTracker = {
@@ -19,13 +25,20 @@ describe('ReconciliationService', () => {
     );
 
     const report = await service.reconcileLedgerInvariants();
+
     expect(report.violations).toBe(0);
   });
 
   it('detects ledger invariant violations', async () => {
     const balanceRepo = {
       find: jest.fn().mockResolvedValue([
-        { userId: 'u1', assetId: 'usdt', available: '60', locked: '30', total: '100' },
+        {
+          userId: 'u1',
+          assetId: 'usdt',
+          available: '60',
+          locked: '30',
+          total: '100',
+        },
       ]),
     };
     const orderTracker = {
@@ -40,6 +53,7 @@ describe('ReconciliationService', () => {
     );
 
     const report = await service.reconcileLedgerInvariants();
+
     expect(report.violations).toBe(1);
   });
 
@@ -48,9 +62,11 @@ describe('ReconciliationService', () => {
       { find: jest.fn().mockResolvedValue([]) } as any,
       { getOpenOrders: jest.fn().mockReturnValue([]) } as any,
       {
-        find: jest.fn().mockResolvedValue([
-          { txHash: 'tx-1', amount: '100', campaignId: 'c1', dayIndex: 1 },
-        ]),
+        find: jest
+          .fn()
+          .mockResolvedValue([
+            { txHash: 'tx-1', amount: '100', campaignId: 'c1', dayIndex: 1 },
+          ]),
       } as any,
       {
         find: jest.fn().mockResolvedValue([
@@ -62,6 +78,7 @@ describe('ReconciliationService', () => {
     );
 
     const report = await service.reconcileRewardConsistency();
+
     expect(report.violations).toBe(1);
   });
 
@@ -95,6 +112,7 @@ describe('ReconciliationService', () => {
     );
 
     const report = await service.reconcileIntentLifecycleConsistency();
+
     expect(report.violations).toBe(2);
   });
 });

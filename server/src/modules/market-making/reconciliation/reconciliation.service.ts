@@ -2,13 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import BigNumber from 'bignumber.js';
-import { Repository } from 'typeorm';
 import { BalanceReadModel } from 'src/common/entities/ledger/balance-read-model.entity';
-import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
-import { ExchangeOrderTrackerService } from '../trackers/exchange-order-tracker.service';
-import { RewardLedger } from 'src/common/entities/ledger/reward-ledger.entity';
 import { RewardAllocation } from 'src/common/entities/ledger/reward-allocation.entity';
+import { RewardLedger } from 'src/common/entities/ledger/reward-ledger.entity';
 import { StrategyOrderIntentEntity } from 'src/common/entities/market-making/strategy-order-intent.entity';
+import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
+import { Repository } from 'typeorm';
+
+import { ExchangeOrderTrackerService } from '../trackers/exchange-order-tracker.service';
 
 type ReconciliationReport = {
   checked: number;
@@ -36,6 +37,7 @@ export class ReconciliationService {
     const ledger = await this.reconcileLedgerInvariants();
     const rewards = await this.reconcileRewardConsistency();
     const intents = await this.reconcileIntentLifecycleConsistency();
+
     this.logger.log(
       `Ledger reconciliation checked=${ledger.checked} violations=${ledger.violations}; reward checked=${rewards.checked} violations=${rewards.violations}; intent checked=${intents.checked} violations=${intents.violations}`,
     );
@@ -74,11 +76,15 @@ export class ReconciliationService {
     const allocations = await this.rewardAllocationRepository.find();
 
     let violations = 0;
+
     for (const reward of rewards) {
       const rewardAmount = new BigNumber(reward.amount);
       const allocated = allocations
         .filter((allocation) => allocation.rewardTxHash === reward.txHash)
-        .reduce((acc, allocation) => acc.plus(allocation.amount), new BigNumber(0));
+        .reduce(
+          (acc, allocation) => acc.plus(allocation.amount),
+          new BigNumber(0),
+        );
 
       if (allocated.isGreaterThan(rewardAmount)) {
         violations += 1;
@@ -107,6 +113,7 @@ export class ReconciliationService {
 
       if (intent.status === 'SENT') {
         const ageMs = now - Date.parse(intent.updatedAt || intent.createdAt);
+
         if (Number.isFinite(ageMs) && ageMs > 5 * 60 * 1000) {
           violations += 1;
         }

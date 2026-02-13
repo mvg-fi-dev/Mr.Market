@@ -1,9 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Not, Repository } from 'typeorm';
-import { getRFC3339Timestamp } from 'src/common/helpers/utils';
 import { StrategyOrderIntentEntity } from 'src/common/entities/market-making/strategy-order-intent.entity';
-import { StrategyIntentStatus, StrategyOrderIntent } from './strategy-intent.types';
+import { getRFC3339Timestamp } from 'src/common/helpers/utils';
+import { Not, Repository } from 'typeorm';
+
+import {
+  StrategyIntentStatus,
+  StrategyOrderIntent,
+} from './strategy-intent.types';
 
 @Injectable()
 export class StrategyIntentStoreService {
@@ -46,7 +50,10 @@ export class StrategyIntentStoreService {
     status: StrategyIntentStatus,
     errorReason?: string,
   ): Promise<void> {
-    const existing = await this.strategyOrderIntentRepository.findOneBy({ intentId });
+    const existing = await this.strategyOrderIntentRepository.findOneBy({
+      intentId,
+    });
+
     if (!existing) {
       return;
     }
@@ -57,8 +64,14 @@ export class StrategyIntentStoreService {
     await this.strategyOrderIntentRepository.save(existing);
   }
 
-  async attachMixinOrderId(intentId: string, mixinOrderId: string): Promise<void> {
-    const existing = await this.strategyOrderIntentRepository.findOneBy({ intentId });
+  async attachMixinOrderId(
+    intentId: string,
+    mixinOrderId: string,
+  ): Promise<void> {
+    const existing = await this.strategyOrderIntentRepository.findOneBy({
+      intentId,
+    });
+
     if (!existing) {
       return;
     }
@@ -90,7 +103,9 @@ export class StrategyIntentStoreService {
     return rows.map((row) => row.strategyKey);
   }
 
-  async getHeadIntent(strategyKey: string): Promise<StrategyOrderIntentEntity | null> {
+  async getHeadIntent(
+    strategyKey: string,
+  ): Promise<StrategyOrderIntentEntity | null> {
     return await this.strategyOrderIntentRepository.findOne({
       where: {
         strategyKey,

@@ -24,6 +24,7 @@ describe('QuoteExecutorManagerService', () => {
     expect(quotes.length).toBe(4);
     const buyQuote = quotes.find((quote) => quote.side === 'buy');
     const sellQuote = quotes.find((quote) => quote.side === 'sell');
+
     expect(Number(buyQuote?.price)).toBeLessThan(99);
     expect(Number(sellQuote?.price)).toBeGreaterThanOrEqual(100);
   });
@@ -49,6 +50,7 @@ describe('QuoteExecutorManagerService', () => {
     });
 
     const newQuotes = quotes.filter((quote) => quote.shouldCreate);
+
     expect(newQuotes.length).toBe(2);
   });
 });

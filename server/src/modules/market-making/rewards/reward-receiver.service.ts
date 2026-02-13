@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { RewardLedger } from 'src/common/entities/ledger/reward-ledger.entity';
-import { Web3Service } from 'src/modules/web3/web3.service';
 import { getRFC3339Timestamp } from 'src/common/helpers/utils';
+import { Web3Service } from 'src/modules/web3/web3.service';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class RewardReceiverService {
@@ -25,8 +25,10 @@ export class RewardReceiverService {
     });
 
     const signer = this.web3Service.getSigner(chainId);
+
     for (const row of rows) {
       const receipt = await signer.provider?.getTransactionReceipt(row.txHash);
+
       if (receipt?.status === 1) {
         row.status = 'CONFIRMED';
         row.confirmedAt = getRFC3339Timestamp();

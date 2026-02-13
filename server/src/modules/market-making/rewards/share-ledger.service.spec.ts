@@ -7,12 +7,14 @@ describe('ShareLedgerService', () => {
       create: jest.fn((payload) => payload),
       save: jest.fn(async (payload) => {
         entries.push(payload);
+
         return payload;
       }),
       find: jest.fn(async () => entries),
     };
 
     const service = new ShareLedgerService(repository as any);
+
     await service.mintShares('u1', '100', 'dep-1', '2026-02-11T00:00:00.000Z');
     await service.burnShares('u1', '20', 'wd-1', '2026-02-11T12:00:00.000Z');
 

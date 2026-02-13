@@ -4,12 +4,7 @@ export type StrategyIntentType =
   | 'REPLACE_ORDER'
   | 'STOP_EXECUTOR';
 
-export type StrategyIntentStatus =
-  | 'NEW'
-  | 'SENT'
-  | 'ACKED'
-  | 'FAILED'
-  | 'DONE';
+export type StrategyIntentStatus = 'NEW' | 'SENT' | 'ACKED' | 'FAILED' | 'DONE';
 
 export type StrategyOrderIntent = {
   type: StrategyIntentType;

@@ -1,18 +1,19 @@
 import { InternalServerErrorException } from '@nestjs/common';
-import { getRepositoryToken } from '@nestjs/typeorm';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { ArbitrageHistory } from 'src/common/entities/market-making/arbitrage-order.entity';
 import { MarketMakingHistory } from 'src/common/entities/market-making/market-making-order.entity';
 import { StrategyInstance } from 'src/common/entities/market-making/strategy-instances.entity';
 import { PriceSourceType } from 'src/common/enum/pricesourcetype';
 import { ExchangeInitService } from 'src/modules/infrastructure/exchange-init/exchange-init.service';
+
 import { PerformanceService } from '../performance/performance.service';
 import { TradeService } from '../trade/trade.service';
-import { StrategyIntentExecutionService } from './strategy-intent-execution.service';
-import { StrategyIntentStoreService } from './strategy-intent-store.service';
 import { PureMarketMakingStrategyDto } from './strategy.dto';
 import { StrategyService } from './strategy.service';
-import { ConfigService } from '@nestjs/config';
+import { StrategyIntentExecutionService } from './strategy-intent-execution.service';
+import { StrategyIntentStoreService } from './strategy-intent-store.service';
 
 class TradeServiceMock {
   executeLimitTrade = jest.fn();
@@ -106,6 +107,7 @@ describe('StrategyService', () => {
               if (key === 'strategy.intent_execution_driver') {
                 return 'worker';
               }
+
               return defaultValue;
             }),
           },
@@ -175,7 +177,10 @@ describe('StrategyService', () => {
 
     await service.executeMMCycle(strategyParamsDto);
 
-    const intents = service.getLatestIntentsForStrategy('1-client1-pureMarketMaking');
+    const intents = service.getLatestIntentsForStrategy(
+      '1-client1-pureMarketMaking',
+    );
+
     expect(intents.length).toBe(2);
     expect(intents[0].type).toBe('CREATE_LIMIT_ORDER');
   });
@@ -201,7 +206,9 @@ describe('StrategyService', () => {
     await service.executeMMCycle(strategyParamsDto);
 
     expect(strategyIntentStoreService.upsertIntent).toHaveBeenCalledTimes(2);
-    expect(strategyIntentExecutionService.consumeIntents).not.toHaveBeenCalled();
+    expect(
+      strategyIntentExecutionService.consumeIntents,
+    ).not.toHaveBeenCalled();
   });
 
   it('stops a strategy and emits a stop intent', async () => {
@@ -225,7 +232,12 @@ describe('StrategyService', () => {
     await service.executePureMarketMakingStrategy(strategyParamsDto);
     await service.stopStrategyForUser('1', 'client1', 'pureMarketMaking');
 
-    const intents = service.getLatestIntentsForStrategy('1-client1-pureMarketMaking');
-    expect(intents.some((intent) => intent.type === 'STOP_EXECUTOR')).toBe(true);
+    const intents = service.getLatestIntentsForStrategy(
+      '1-client1-pureMarketMaking',
+    );
+
+    expect(intents.some((intent) => intent.type === 'STOP_EXECUTOR')).toBe(
+      true,
+    );
   });
 });

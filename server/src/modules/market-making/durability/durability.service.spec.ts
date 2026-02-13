@@ -1,6 +1,7 @@
-import { DurabilityService } from './durability.service';
 import { ConsumerReceipt } from 'src/common/entities/system/consumer-receipt.entity';
 import { OutboxEvent } from 'src/common/entities/system/outbox-event.entity';
+
+import { DurabilityService } from './durability.service';
 
 type Repo<T> = {
   create: jest.Mock;
@@ -17,12 +18,14 @@ const createInMemoryRepos = () => {
     create: jest.fn((payload: OutboxEvent) => payload),
     save: jest.fn(async (payload: OutboxEvent) => {
       outboxEvents.push(payload);
+
       return payload;
     }),
     findOneBy: jest.fn(async (where: any) => {
       if (where?.eventId) {
         return outboxEvents.find((e) => e.eventId === where.eventId) || null;
       }
+
       return null;
     }),
   };
@@ -31,6 +34,7 @@ const createInMemoryRepos = () => {
     create: jest.fn((payload: ConsumerReceipt) => payload),
     save: jest.fn(async (payload: ConsumerReceipt) => {
       receipts.push(payload);
+
       return payload;
     }),
     insert: jest.fn(async (payload: ConsumerReceipt) => {
@@ -39,10 +43,12 @@ const createInMemoryRepos = () => {
           r.consumerName === payload.consumerName &&
           r.idempotencyKey === payload.idempotencyKey,
       );
+
       if (exists) {
         throw { code: '23505', message: 'duplicate key value' };
       }
       receipts.push(payload);
+
       return payload;
     }),
     findOneBy: jest.fn(async (where: any) => {
@@ -105,8 +111,14 @@ describe('DurabilityService', () => {
       repos.consumerReceiptRepository as any,
     );
 
-    const first = await service.markProcessed('execution-worker', 'intent-race');
-    const second = await service.markProcessed('execution-worker', 'intent-race');
+    const first = await service.markProcessed(
+      'execution-worker',
+      'intent-race',
+    );
+    const second = await service.markProcessed(
+      'execution-worker',
+      'intent-race',
+    );
 
     expect(first).toBe(true);
     expect(second).toBe(false);

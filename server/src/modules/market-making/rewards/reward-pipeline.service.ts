@@ -2,10 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import BigNumber from 'bignumber.js';
 import { createHash } from 'crypto';
-import { Repository } from 'typeorm';
 import { RewardAllocation } from 'src/common/entities/ledger/reward-allocation.entity';
 import { RewardLedger } from 'src/common/entities/ledger/reward-ledger.entity';
 import { getRFC3339Timestamp } from 'src/common/helpers/utils';
+import { Repository } from 'typeorm';
+
 import { BalanceLedgerService } from '../ledger/balance-ledger.service';
 import { ShareLedgerService } from './share-ledger.service';
 
@@ -39,6 +40,7 @@ export class RewardPipelineService {
     const existing = await this.rewardLedgerRepository.findOneBy({
       txHash: command.txHash,
     });
+
     if (existing) {
       return existing;
     }
@@ -58,6 +60,7 @@ export class RewardPipelineService {
 
   async confirmReward(txHash: string): Promise<void> {
     const reward = await this.rewardLedgerRepository.findOneBy({ txHash });
+
     if (!reward) {
       return;
     }
@@ -68,6 +71,7 @@ export class RewardPipelineService {
 
   async createAllocations(txHash: string, shares: ShareInput[]): Promise<void> {
     const reward = await this.rewardLedgerRepository.findOneBy({ txHash });
+
     if (!reward) {
       return;
     }
@@ -76,6 +80,7 @@ export class RewardPipelineService {
       (acc, item) => acc.plus(item.basisShares),
       new BigNumber(0),
     );
+
     if (totalShares.isLessThanOrEqualTo(0)) {
       return;
     }
@@ -84,14 +89,19 @@ export class RewardPipelineService {
     const sortedShares = [...shares].sort((a, b) => {
       const left = new BigNumber(a.basisShares);
       const right = new BigNumber(b.basisShares);
+
       if (left.isEqualTo(right)) {
         return a.userId.localeCompare(b.userId);
       }
+
       return right.minus(left).toNumber();
     });
 
-    const computed: Array<{ userId: string; basisShares: string; amount: BigNumber }> =
-      [];
+    const computed: Array<{
+      userId: string;
+      basisShares: string;
+      amount: BigNumber;
+    }> = [];
     let allocated = new BigNumber(0);
 
     for (const share of sortedShares) {
@@ -99,11 +109,17 @@ export class RewardPipelineService {
       const amount = rewardAmount
         .multipliedBy(ratio)
         .decimalPlaces(REWARD_DECIMAL_PLACES, BigNumber.ROUND_DOWN);
+
       allocated = allocated.plus(amount);
-      computed.push({ userId: share.userId, basisShares: share.basisShares, amount });
+      computed.push({
+        userId: share.userId,
+        basisShares: share.basisShares,
+        amount,
+      });
     }
 
     const remainder = rewardAmount.minus(allocated);
+
     if (remainder.isGreaterThan(0) && computed.length > 0) {
       computed[0].amount = computed[0].amount.plus(remainder);
     }
@@ -127,6 +143,7 @@ export class RewardPipelineService {
         status: 'CREATED',
         createdAt: getRFC3339Timestamp(),
       });
+
       await this.rewardAllocationRepository.save(allocation);
     }
   }
@@ -140,6 +157,7 @@ export class RewardPipelineService {
       windowStart,
       windowEnd,
     );
+
     await this.createAllocations(txHash, shares);
   }
 
@@ -167,6 +185,7 @@ export class RewardPipelineService {
     }
 
     const reward = await this.rewardLedgerRepository.findOneBy({ txHash });
+
     if (!reward) {
       return;
     }

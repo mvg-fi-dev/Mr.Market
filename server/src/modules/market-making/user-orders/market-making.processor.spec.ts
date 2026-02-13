@@ -130,7 +130,8 @@ describe('MarketMakingOrderProcessor', () => {
   });
 
   it('debits ledger before snapshot refund transfer', async () => {
-    const { processor, balanceLedgerService, transactionService } = createProcessor();
+    const { processor, balanceLedgerService, transactionService } =
+      createProcessor();
 
     await (processor as any).refundUser(
       {
@@ -154,12 +155,17 @@ describe('MarketMakingOrderProcessor', () => {
     const debitOrder =
       balanceLedgerService.debitWithdrawal.mock.invocationCallOrder[0];
     const refundOrder = transactionService.refund.mock.invocationCallOrder[0];
+
     expect(debitOrder).toBeLessThan(refundOrder);
   });
 
   it('credits compensation when snapshot refund transfer fails after debit', async () => {
-    const { processor, balanceLedgerService, transactionService } = createProcessor();
-    transactionService.refund.mockRejectedValueOnce(new Error('transfer failed'));
+    const { processor, balanceLedgerService, transactionService } =
+      createProcessor();
+
+    transactionService.refund.mockRejectedValueOnce(
+      new Error('transfer failed'),
+    );
 
     await (processor as any).refundUser(
       {
@@ -182,7 +188,8 @@ describe('MarketMakingOrderProcessor', () => {
   });
 
   it('debits ledger before pending-order refund transfer', async () => {
-    const { processor, balanceLedgerService, transactionService } = createProcessor();
+    const { processor, balanceLedgerService, transactionService } =
+      createProcessor();
 
     await (processor as any).refundMarketMakingPendingOrder(
       'order-9',
@@ -205,7 +212,9 @@ describe('MarketMakingOrderProcessor', () => {
 
     const debitOrder =
       balanceLedgerService.debitWithdrawal.mock.invocationCallOrder[0];
-    const transferOrder = transactionService.transfer.mock.invocationCallOrder[0];
+    const transferOrder =
+      transactionService.transfer.mock.invocationCallOrder[0];
+
     expect(debitOrder).toBeLessThan(transferOrder);
   });
 
@@ -224,7 +233,9 @@ describe('MarketMakingOrderProcessor', () => {
       'order-1',
       'running',
     );
-    expect(strategyService.executePureMarketMakingStrategy).toHaveBeenCalledWith(
+    expect(
+      strategyService.executePureMarketMakingStrategy,
+    ).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: 'user-1',
         clientId: 'order-1',
@@ -246,6 +257,7 @@ describe('MarketMakingOrderProcessor', () => {
 
   it('does nothing when start_mm order is missing', async () => {
     const { processor, strategyService, userOrdersService } = createProcessor();
+
     userOrdersService.findMarketMakingByOrderId.mockResolvedValueOnce(null);
     const queue = {
       add: jest.fn(),
@@ -256,7 +268,9 @@ describe('MarketMakingOrderProcessor', () => {
       queue,
     } as any);
 
-    expect(strategyService.executePureMarketMakingStrategy).not.toHaveBeenCalled();
+    expect(
+      strategyService.executePureMarketMakingStrategy,
+    ).not.toHaveBeenCalled();
     expect(queue.add).not.toHaveBeenCalled();
   });
 });

@@ -1,12 +1,17 @@
 import { ConfigService } from '@nestjs/config';
-import { StrategyIntentWorkerService } from './strategy-intent-worker.service';
 import { StrategyOrderIntentEntity } from 'src/common/entities/market-making/strategy-order-intent.entity';
+
+import { StrategyIntentWorkerService } from './strategy-intent-worker.service';
 
 const wait = async (ms: number) =>
   await new Promise((resolve) => setTimeout(resolve, ms));
 
-const waitFor = async (condition: () => boolean, timeoutMs = 1000): Promise<void> => {
+const waitFor = async (
+  condition: () => boolean,
+  timeoutMs = 1000,
+): Promise<void> => {
   const startedAt = Date.now();
+
   while (!condition()) {
     if (Date.now() - startedAt > timeoutMs) {
       throw new Error('Condition wait timed out');
@@ -25,9 +30,10 @@ const createConfigService = (overrides?: Record<string, number | string>) =>
         'strategy.intent_worker_max_in_flight_per_exchange': 2,
         ...(overrides || {}),
       };
+
       return values[key] ?? defaultValue;
     }),
-  }) as unknown as ConfigService;
+  } as unknown as ConfigService);
 
 const createHeadIntent = (
   strategyKey: string,
@@ -71,9 +77,12 @@ describe('StrategyIntentWorkerService', () => {
     };
 
     const strategyIntentExecutionService = {
-      hasProcessedIntent: jest.fn((intentId: string) => processed.has(intentId)),
+      hasProcessedIntent: jest.fn((intentId: string) =>
+        processed.has(intentId),
+      ),
       consumeIntents: jest.fn(async (intents) => {
         const intentId = intents[0].intentId;
+
         active += 1;
         maxActive = Math.max(maxActive, active);
         await wait(25);
@@ -91,7 +100,10 @@ describe('StrategyIntentWorkerService', () => {
     );
 
     await service.onModuleInit();
-    await waitFor(() => strategyIntentExecutionService.consumeIntents.mock.calls.length >= 3);
+    await waitFor(
+      () =>
+        strategyIntentExecutionService.consumeIntents.mock.calls.length >= 3,
+    );
     expect(maxActive).toBe(2);
     await service.onModuleDestroy();
   });
@@ -101,7 +113,9 @@ describe('StrategyIntentWorkerService', () => {
       listStrategyKeysWithNewIntents: jest.fn().mockResolvedValue(['s1']),
       getHeadIntent: jest
         .fn()
-        .mockResolvedValue(createHeadIntent('s1', 's1-old', 'binance', 'FAILED')),
+        .mockResolvedValue(
+          createHeadIntent('s1', 's1-old', 'binance', 'FAILED'),
+        ),
     };
     const strategyIntentExecutionService = {
       hasProcessedIntent: jest.fn().mockReturnValue(false),
@@ -118,7 +132,9 @@ describe('StrategyIntentWorkerService', () => {
     await wait(40);
     await service.onModuleDestroy();
 
-    expect(strategyIntentExecutionService.consumeIntents).not.toHaveBeenCalled();
+    expect(
+      strategyIntentExecutionService.consumeIntents,
+    ).not.toHaveBeenCalled();
   });
 
   it('enforces per-exchange in-flight cap', async () => {
@@ -136,9 +152,12 @@ describe('StrategyIntentWorkerService', () => {
     };
 
     const strategyIntentExecutionService = {
-      hasProcessedIntent: jest.fn((intentId: string) => processed.has(intentId)),
+      hasProcessedIntent: jest.fn((intentId: string) =>
+        processed.has(intentId),
+      ),
       consumeIntents: jest.fn(async (intents) => {
         const intentId = intents[0].intentId;
+
         activeByExchange += 1;
         maxActiveByExchange = Math.max(maxActiveByExchange, activeByExchange);
         await wait(25);
@@ -157,7 +176,10 @@ describe('StrategyIntentWorkerService', () => {
     );
 
     await service.onModuleInit();
-    await waitFor(() => strategyIntentExecutionService.consumeIntents.mock.calls.length >= 2);
+    await waitFor(
+      () =>
+        strategyIntentExecutionService.consumeIntents.mock.calls.length >= 2,
+    );
     expect(maxActiveByExchange).toBe(1);
     await service.onModuleDestroy();
   });

@@ -1,7 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { MetricsService } from './metrics.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { MarketMakingHistory } from 'src/common/entities/market-making/market-making-order.entity';
+
+import { MetricsService } from './metrics.service';
 
 type MarketMakingHistoryRepoMock = {
   query: jest.Mock;

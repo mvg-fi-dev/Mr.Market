@@ -1,19 +1,22 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import BigNumber from 'bignumber.js';
-import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
+import { getRFC3339Timestamp } from 'src/common/helpers/utils';
 import { ExchangeInitService } from 'src/modules/infrastructure/exchange-init/exchange-init.service';
-import { TradeService } from '../trade/trade.service';
-import { StrategyOrderIntent } from './strategy-intent.types';
+import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
+
 import { DurabilityService } from '../durability/durability.service';
-import { StrategyIntentStoreService } from './strategy-intent-store.service';
 import { ExchangeConnectorAdapterService } from '../execution/exchange-connector-adapter.service';
 import { ExchangeOrderTrackerService } from '../trackers/exchange-order-tracker.service';
-import { getRFC3339Timestamp } from 'src/common/helpers/utils';
+import { TradeService } from '../trade/trade.service';
+import { StrategyOrderIntent } from './strategy-intent.types';
+import { StrategyIntentStoreService } from './strategy-intent-store.service';
 
 @Injectable()
 export class StrategyIntentExecutionService {
-  private readonly logger = new CustomLogger(StrategyIntentExecutionService.name);
+  private readonly logger = new CustomLogger(
+    StrategyIntentExecutionService.name,
+  );
   private readonly processedIntentIds = new Set<string>();
   private readonly executeIntents: boolean;
   private readonly maxRetries: number;
@@ -35,7 +38,9 @@ export class StrategyIntentExecutionService {
     this.executeIntents = Boolean(
       this.configService.get('strategy.execute_intents', false),
     );
-    this.maxRetries = Number(this.configService.get('strategy.intent_max_retries', 2));
+    this.maxRetries = Number(
+      this.configService.get('strategy.intent_max_retries', 2),
+    );
     this.retryBaseDelayMs = Number(
       this.configService.get('strategy.intent_retry_base_delay_ms', 250),
     );
@@ -65,14 +70,21 @@ export class StrategyIntentExecutionService {
 
     if (alreadyProcessed) {
       this.processedIntentIds.add(intent.intentId);
+
       return;
     }
 
-    await this.strategyIntentStoreService?.updateIntentStatus(intent.intentId, 'SENT');
+    await this.strategyIntentStoreService?.updateIntentStatus(
+      intent.intentId,
+      'SENT',
+    );
 
     if (!this.executeIntents) {
       this.processedIntentIds.add(intent.intentId);
-      await this.strategyIntentStoreService?.updateIntentStatus(intent.intentId, 'DONE');
+      await this.strategyIntentStoreService?.updateIntentStatus(
+        intent.intentId,
+        'DONE',
+      );
       await this.durabilityService?.appendOutboxEvent({
         topic: 'strategy.intent.skipped',
         aggregateType: 'strategy_intent',
@@ -83,6 +95,7 @@ export class StrategyIntentExecutionService {
         'strategy-intent-execution',
         intent.intentId,
       );
+
       return;
     }
 
@@ -107,6 +120,7 @@ export class StrategyIntentExecutionService {
                 price: new BigNumber(intent.price).toNumber(),
               }),
         );
+
         if (result?.id) {
           await this.strategyIntentStoreService?.attachMixinOrderId(
             intent.intentId,
@@ -135,10 +149,14 @@ export class StrategyIntentExecutionService {
                 intent.mixinOrderId as string,
               )
             : (() => {
-                const exchange = this.exchangeInitService.getExchange(intent.exchange);
+                const exchange = this.exchangeInitService.getExchange(
+                  intent.exchange,
+                );
+
                 return exchange.cancelOrder(intent.mixinOrderId, intent.pair);
               })(),
         );
+
         this.exchangeOrderTrackerService?.upsertOrder({
           strategyKey: intent.strategyKey,
           exchange: intent.exchange,
@@ -163,7 +181,10 @@ export class StrategyIntentExecutionService {
         intent.intentId,
         'ACKED',
       );
-      await this.strategyIntentStoreService?.updateIntentStatus(intent.intentId, 'DONE');
+      await this.strategyIntentStoreService?.updateIntentStatus(
+        intent.intentId,
+        'DONE',
+      );
 
       await this.durabilityService?.appendOutboxEvent({
         topic: 'strategy.intent.executed',
@@ -203,6 +224,7 @@ export class StrategyIntentExecutionService {
 
   private async runWithRetries<T>(work: () => Promise<T>): Promise<T> {
     let attempt = 0;
+
     while (true) {
       try {
         return await work();
@@ -212,6 +234,7 @@ export class StrategyIntentExecutionService {
           throw error;
         }
         const backoffMs = this.retryBaseDelayMs * 2 ** (attempt - 1);
+
         await this.sleep(backoffMs);
       }
     }

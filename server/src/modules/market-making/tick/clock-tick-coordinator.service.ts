@@ -2,6 +2,7 @@ import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { getRFC3339Timestamp } from 'src/common/helpers/utils';
 import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
+
 import { TickComponent } from './tick-component.interface';
 
 type RegisteredTickComponent = {
@@ -11,7 +12,9 @@ type RegisteredTickComponent = {
 };
 
 @Injectable()
-export class ClockTickCoordinatorService implements OnModuleInit, OnModuleDestroy {
+export class ClockTickCoordinatorService
+  implements OnModuleInit, OnModuleDestroy
+{
   private readonly logger = new CustomLogger(ClockTickCoordinatorService.name);
   private readonly tickSizeMs: number;
   private readonly components = new Map<string, RegisteredTickComponent>();
@@ -20,7 +23,9 @@ export class ClockTickCoordinatorService implements OnModuleInit, OnModuleDestro
   private tickInProgress = false;
 
   constructor(private readonly configService: ConfigService) {
-    this.tickSizeMs = Number(this.configService.get('strategy.tick_size_ms', 1000));
+    this.tickSizeMs = Number(
+      this.configService.get('strategy.tick_size_ms', 1000),
+    );
   }
 
   register(id: string, component: TickComponent, order: number): void {
@@ -74,7 +79,10 @@ export class ClockTickCoordinatorService implements OnModuleInit, OnModuleDestro
 
   async tickOnce(): Promise<void> {
     if (this.tickInProgress) {
-      this.logger.warn('Skipping tick because previous tick is still in progress');
+      this.logger.warn(
+        'Skipping tick because previous tick is still in progress',
+      );
+
       return;
     }
 
@@ -84,6 +92,7 @@ export class ClockTickCoordinatorService implements OnModuleInit, OnModuleDestro
     try {
       for (const item of this.getSortedComponents()) {
         const isHealthy = await item.component.health();
+
         if (!isHealthy) {
           this.logger.warn(`Skipping unhealthy tick component: ${item.id}`);
           continue;

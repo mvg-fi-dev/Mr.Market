@@ -2,9 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { RewardLedger } from 'src/common/entities/ledger/reward-ledger.entity';
 import { TransactionService } from 'src/modules/mixin/transaction/transaction.service';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class RewardVaultTransferService {
@@ -36,6 +36,7 @@ export class RewardVaultTransferService {
     });
 
     let transferredCount = 0;
+
     for (const row of rows) {
       await this.transactionService.transfer(
         this.mixinVaultUserId,

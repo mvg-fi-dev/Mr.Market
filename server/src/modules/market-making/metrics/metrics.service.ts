@@ -44,6 +44,7 @@ export class MetricsService {
 
     closedOrderAndVolume.forEach((item) => {
       const strategyKey = `${item.exchange}-${item.userId}-${item.clientId}`;
+
       if (!metrics[strategyKey]) {
         metrics[strategyKey] = [];
       }
@@ -57,6 +58,7 @@ export class MetricsService {
 
     orderBookVolume.forEach((item) => {
       const strategyKey = `${item.exchange}-${item.userId}-${item.clientId}`;
+
       if (!metrics[strategyKey]) {
         metrics[strategyKey] = [];
       }

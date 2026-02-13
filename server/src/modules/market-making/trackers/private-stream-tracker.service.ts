@@ -1,4 +1,10 @@
-import { Injectable, OnModuleDestroy, OnModuleInit, Optional } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleDestroy,
+  OnModuleInit,
+  Optional,
+} from '@nestjs/common';
+
 import { ClockTickCoordinatorService } from '../tick/clock-tick-coordinator.service';
 import { TickComponent } from '../tick/tick-component.interface';
 
@@ -23,7 +29,11 @@ export class PrivateStreamTrackerService
   ) {}
 
   async onModuleInit(): Promise<void> {
-    this.clockTickCoordinatorService?.register('private-stream-tracker', this, 2);
+    this.clockTickCoordinatorService?.register(
+      'private-stream-tracker',
+      this,
+      2,
+    );
   }
 
   async onModuleDestroy(): Promise<void> {
@@ -46,17 +56,24 @@ export class PrivateStreamTrackerService
     this.queue.push(event);
   }
 
-  getLatestEvent(exchange: string, accountLabel: string): PrivateStreamEvent | undefined {
+  getLatestEvent(
+    exchange: string,
+    accountLabel: string,
+  ): PrivateStreamEvent | undefined {
     return this.latestByKey.get(this.toKey(exchange, accountLabel));
   }
 
   async onTick(_: string): Promise<void> {
     while (this.queue.length > 0) {
       const event = this.queue.shift();
+
       if (!event) {
         continue;
       }
-      this.latestByKey.set(this.toKey(event.exchange, event.accountLabel), event);
+      this.latestByKey.set(
+        this.toKey(event.exchange, event.accountLabel),
+        event,
+      );
     }
   }
 

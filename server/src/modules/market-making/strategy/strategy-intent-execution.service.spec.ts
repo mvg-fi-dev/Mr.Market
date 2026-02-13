@@ -1,6 +1,7 @@
 import { ConfigService } from '@nestjs/config';
-import { StrategyIntentExecutionService } from './strategy-intent-execution.service';
+
 import { StrategyOrderIntent } from './strategy-intent.types';
+import { StrategyIntentExecutionService } from './strategy-intent-execution.service';
 
 describe('StrategyIntentExecutionService', () => {
   const tradeService = {
@@ -16,7 +17,9 @@ describe('StrategyIntentExecutionService', () => {
   };
 
   const exchangeConnectorAdapterService = {
-    placeLimitOrder: jest.fn().mockResolvedValue({ id: 'order-1', status: 'open' }),
+    placeLimitOrder: jest
+      .fn()
+      .mockResolvedValue({ id: 'order-1', status: 'open' }),
     cancelOrder: jest
       .fn()
       .mockResolvedValue({ id: 'exchange-order-1', status: 'canceled' }),
@@ -49,9 +52,10 @@ describe('StrategyIntentExecutionService', () => {
         if (key === 'strategy.intent_retry_base_delay_ms') {
           return 1;
         }
+
         return defaultValue;
       }),
-    }) as unknown as ConfigService;
+    } as unknown as ConfigService);
 
   const baseIntent: StrategyOrderIntent = {
     type: 'CREATE_LIMIT_ORDER',
@@ -86,7 +90,9 @@ describe('StrategyIntentExecutionService', () => {
 
     await service.consumeIntents([baseIntent, baseIntent]);
 
-    expect(exchangeConnectorAdapterService.placeLimitOrder).toHaveBeenCalledTimes(1);
+    expect(
+      exchangeConnectorAdapterService.placeLimitOrder,
+    ).toHaveBeenCalledTimes(1);
     expect(intentStoreService.updateIntentStatus).toHaveBeenCalledWith(
       baseIntent.intentId,
       'SENT',
@@ -168,7 +174,9 @@ describe('StrategyIntentExecutionService', () => {
       exchangeOrderTrackerService as any,
     );
 
-    await expect(service.consumeIntents([baseIntent])).rejects.toThrow('exchange down');
+    await expect(service.consumeIntents([baseIntent])).rejects.toThrow(
+      'exchange down',
+    );
     expect(intentStoreService.updateIntentStatus).toHaveBeenCalledWith(
       baseIntent.intentId,
       'FAILED',
@@ -192,7 +200,9 @@ describe('StrategyIntentExecutionService', () => {
 
     await service.consumeIntents([{ ...baseIntent, intentId: 'retry-intent' }]);
 
-    expect(exchangeConnectorAdapterService.placeLimitOrder).toHaveBeenCalledTimes(2);
+    expect(
+      exchangeConnectorAdapterService.placeLimitOrder,
+    ).toHaveBeenCalledTimes(2);
     expect(intentStoreService.updateIntentStatus).toHaveBeenCalledWith(
       'retry-intent',
       'DONE',

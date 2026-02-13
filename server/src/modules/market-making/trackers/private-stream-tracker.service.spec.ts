@@ -15,6 +15,7 @@ describe('PrivateStreamTrackerService', () => {
     await service.onTick('2026-02-11T00:00:01.000Z');
 
     const latest = service.getLatestEvent('binance', 'read-only');
+
     expect(latest?.eventType).toBe('balance_update');
   });
 });

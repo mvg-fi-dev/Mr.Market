@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+
 import { ExchangeConnectorAdapterService } from './exchange-connector-adapter.service';
 
 @Module({

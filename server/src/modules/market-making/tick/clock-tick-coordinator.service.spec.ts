@@ -1,4 +1,5 @@
 import { ConfigService } from '@nestjs/config';
+
 import { ClockTickCoordinatorService } from './clock-tick-coordinator.service';
 
 type TestTickComponent = {
@@ -15,6 +16,7 @@ describe('ClockTickCoordinatorService', () => {
         if (key === 'strategy.tick_size_ms') {
           return tickSizeMs;
         }
+
         return defaultValue;
       }),
     } as unknown as ConfigService;

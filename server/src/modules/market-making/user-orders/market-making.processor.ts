@@ -1,28 +1,29 @@
-import { Process, Processor } from '@nestjs/bull';
-import { Job } from 'bull';
-import { UserOrdersService } from './user-orders.service';
-import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
-import { StrategyService } from '../strategy/strategy.service';
 import { SafeSnapshot } from '@mixin.dev/mixin-node-sdk';
-import { MarketMakingCreateMemoDetails } from 'src/common/types/memo/memo';
-import BigNumber from 'bignumber.js';
+import { Process, Processor } from '@nestjs/bull';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { MarketMakingOrder } from 'src/common/entities/orders/user-orders.entity';
-import { MarketMakingPaymentState } from 'src/common/entities/orders/payment-state.entity';
+import BigNumber from 'bignumber.js';
+import { Job } from 'bull';
 import { MarketMakingOrderIntent } from 'src/common/entities/market-making/market-making-order-intent.entity';
-import { FeeService } from '../fee/fee.service';
-import { GrowdataRepository } from 'src/modules/data/grow-data/grow-data.repository';
+import { MarketMakingPaymentState } from 'src/common/entities/orders/payment-state.entity';
+import { MarketMakingOrder } from 'src/common/entities/orders/user-orders.entity';
 import { PriceSourceType } from 'src/common/enum/pricesourcetype';
+import { MarketMakingCreateMemoDetails } from 'src/common/types/memo/memo';
+import { CampaignService } from 'src/modules/campaign/campaign.service';
+import { GrowdataRepository } from 'src/modules/data/grow-data/grow-data.repository';
+import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
+import { MixinClientService } from 'src/modules/mixin/client/mixin-client.service';
+import { ExchangeService } from 'src/modules/mixin/exchange/exchange.service';
 import { TransactionService } from 'src/modules/mixin/transaction/transaction.service';
 import { WithdrawalService } from 'src/modules/mixin/withdrawal/withdrawal.service';
-import { LocalCampaignService } from '../local-campaign/local-campaign.service';
-import { CampaignService } from 'src/modules/campaign/campaign.service';
-import { ExchangeService } from 'src/modules/mixin/exchange/exchange.service';
-import { NetworkMappingService } from '../network-mapping/network-mapping.service';
-import { MixinClientService } from 'src/modules/mixin/client/mixin-client.service';
+import { Repository } from 'typeorm';
+
 import { getRFC3339Timestamp } from '../../../common/helpers/utils';
+import { FeeService } from '../fee/fee.service';
 import { BalanceLedgerService } from '../ledger/balance-ledger.service';
+import { LocalCampaignService } from '../local-campaign/local-campaign.service';
+import { NetworkMappingService } from '../network-mapping/network-mapping.service';
+import { StrategyService } from '../strategy/strategy.service';
+import { UserOrdersService } from './user-orders.service';
 
 interface ProcessSnapshotJobData {
   snapshotId: string;
@@ -105,8 +106,10 @@ export class MarketMakingOrderProcessor {
     });
 
     const refundUserId = order?.userId || paymentState.userId;
+
     if (!refundUserId) {
       this.logger.error(`Refund failed: userId missing for order ${orderId}`);
+
       return;
     }
 
@@ -114,8 +117,10 @@ export class MarketMakingOrderProcessor {
     const addRefund = (assetId?: string | null, amount?: string | null) => {
       if (!assetId || !amount) return;
       const amountValue = new BigNumber(amount);
+
       if (amountValue.isLessThanOrEqualTo(0)) return;
       const existing = refundMap.get(assetId) || new BigNumber(0);
+
       refundMap.set(assetId, existing.plus(amountValue));
     };
 
@@ -126,6 +131,7 @@ export class MarketMakingOrderProcessor {
 
     if (refundMap.size === 0) {
       this.logger.warn(`No refundable amounts for order ${orderId}`);
+
       return;
     }
 
@@ -153,7 +159,9 @@ export class MarketMakingOrderProcessor {
     }
   }
 
-  private async executeRefundTransfer(command: RefundTransferCommand): Promise<void> {
+  private async executeRefundTransfer(
+    command: RefundTransferCommand,
+  ): Promise<void> {
     let debitApplied = true;
 
     try {
@@ -165,6 +173,7 @@ export class MarketMakingOrderProcessor {
         refType: command.refType,
         refId: command.refId,
       });
+
       if (debitResult && debitResult.applied === false) {
         debitApplied = false;
       }
@@ -172,6 +181,7 @@ export class MarketMakingOrderProcessor {
       this.logger.error(
         `Refund debit failed for ${command.refType}:${command.refId}:${command.assetId}: ${error.message}`,
       );
+
       return;
     }
 
@@ -179,11 +189,13 @@ export class MarketMakingOrderProcessor {
       this.logger.log(
         `Skipping transfer for duplicate refund debit key ${command.debitIdempotencyKey}`,
       );
+
       return;
     }
 
     try {
       const requests = await command.transfer();
+
       if (!Array.isArray(requests) || requests.length === 0) {
         throw new Error('refund transfer returned no receipt');
       }
@@ -195,7 +207,9 @@ export class MarketMakingOrderProcessor {
     }
   }
 
-  private async compensateRefundDebit(command: RefundTransferCommand): Promise<void> {
+  private async compensateRefundDebit(
+    command: RefundTransferCommand,
+  ): Promise<void> {
     try {
       await this.balanceLedgerService.creditDeposit({
         userId: command.userId,
@@ -236,6 +250,7 @@ export class MarketMakingOrderProcessor {
       if (!pairConfig) {
         this.logger.error(`Market making pair ${marketMakingPairId} not found`);
         await this.refundUser(snapshot, 'Trading pair not found');
+
         return;
       }
 
@@ -244,6 +259,7 @@ export class MarketMakingOrderProcessor {
           `Market making pair ${marketMakingPairId} is disabled`,
         );
         await this.refundUser(snapshot, 'Trading pair disabled');
+
         return;
       }
 
@@ -261,6 +277,7 @@ export class MarketMakingOrderProcessor {
       if (!feeInfo) {
         this.logger.error('Failed to calculate fees');
         await this.refundUser(snapshot, 'Fee calculation failed');
+
         return;
       }
 
@@ -376,6 +393,7 @@ export class MarketMakingOrderProcessor {
           `Unknown asset ${receivedAssetId} received for order ${orderId}`,
         );
         await this.refundUser(snapshot, 'Unknown asset');
+
         return;
       }
 
@@ -387,6 +405,7 @@ export class MarketMakingOrderProcessor {
       // Step 1.6: Queue payment completion check (dedupe per order)
       const checkJobId = `check_payment_${orderId}`;
       const existingCheckJob = await (job.queue as any).getJob(checkJobId);
+
       if (existingCheckJob) {
         this.logger.log(`Payment check already queued for order ${orderId}`);
       } else {
@@ -443,6 +462,7 @@ export class MarketMakingOrderProcessor {
 
       if (!paymentState) {
         this.logger.error(`Payment state not found for order ${orderId}`);
+
         return;
       }
 
@@ -452,6 +472,7 @@ export class MarketMakingOrderProcessor {
 
       if (!pairConfig) {
         this.logger.error(`Pair config not found: ${marketMakingPairId}`);
+
         return;
       }
 
@@ -519,6 +540,7 @@ export class MarketMakingOrderProcessor {
             paymentState,
             'payment timeout',
           );
+
           return;
         }
 
@@ -533,6 +555,7 @@ export class MarketMakingOrderProcessor {
             paymentState,
             'max payment retries exceeded',
           );
+
           return;
         }
 
@@ -558,6 +581,7 @@ export class MarketMakingOrderProcessor {
           paymentState,
           'insufficient fees',
         );
+
         return;
       }
 
@@ -602,6 +626,7 @@ export class MarketMakingOrderProcessor {
           ceilingPrice: '0',
           floorPrice: '0',
         });
+
         await this.marketMakingRepository.save(mmOrder);
       }
 
@@ -643,6 +668,7 @@ export class MarketMakingOrderProcessor {
   @Process('withdraw_to_exchange')
   async handleWithdrawToExchange(job: Job<WithdrawJobData>) {
     const { orderId, marketMakingPairId } = job.data;
+
     this.logger.log(`Withdrawing to exchange for order ${orderId}`);
 
     try {
@@ -799,6 +825,7 @@ export class MarketMakingOrderProcessor {
     }>,
   ) {
     const { orderId, campaignId, hufiCampaign } = job.data;
+
     this.logger.log(`Joining campaign for order ${orderId}`);
 
     try {
@@ -810,12 +837,14 @@ export class MarketMakingOrderProcessor {
       const order = await this.userOrdersService.findMarketMakingByOrderId(
         orderId,
       );
+
       if (!order) {
         throw new Error(`Order ${orderId} not found`);
       }
 
       // Step 1: Try to join HuFi campaign (external Web3 integration)
       let hufiJoinResult = null;
+
       if (hufiCampaign?.chainId && hufiCampaign?.campaignAddress) {
         try {
           this.logger.log(
@@ -904,13 +933,16 @@ export class MarketMakingOrderProcessor {
   @Process('start_mm')
   async handleStartMM(job: Job<{ userId: string; orderId: string }>) {
     const { userId, orderId } = job.data;
+
     this.logger.log(`Starting MM for user ${userId}, order ${orderId}`);
 
     const order = await this.userOrdersService.findMarketMakingByOrderId(
       orderId,
     );
+
     if (!order) {
       this.logger.error(`MM Order ${orderId} not found`);
+
       return;
     }
 
@@ -940,6 +972,7 @@ export class MarketMakingOrderProcessor {
   @Process('stop_mm')
   async handleStopMM(job: Job<{ userId: string; orderId: string }>) {
     const { userId, orderId } = job.data;
+
     this.logger.log(`Stopping MM for user ${userId}, order ${orderId}`);
 
     await this.strategyService.stopStrategyForUser(
@@ -970,6 +1003,7 @@ export class MarketMakingOrderProcessor {
   ) {
     const { orderId, baseWithdrawalTxId, quoteWithdrawalTxId } = job.data;
     const startedAt = job.data.startedAt ?? Date.now();
+
     if (!job.data.startedAt) {
       await job.update({ ...job.data, startedAt });
     }
@@ -1000,6 +1034,7 @@ export class MarketMakingOrderProcessor {
 
       // Check for timeout
       const elapsed = Date.now() - startedAt;
+
       if (elapsed > this.WITHDRAWAL_TIMEOUT_MS) {
         this.logger.error(
           `Withdrawal confirmation timeout for order ${orderId} after ${elapsed}ms`,
@@ -1009,6 +1044,7 @@ export class MarketMakingOrderProcessor {
           orderId,
           'failed',
         );
+
         return;
       }
 
@@ -1026,6 +1062,7 @@ export class MarketMakingOrderProcessor {
           },
         );
         this.logger.log(`Queued join_campaign for order ${orderId}`);
+
         return;
       }
 
@@ -1053,6 +1090,7 @@ export class MarketMakingOrderProcessor {
 
       if (!snapshot) {
         this.logger.warn(`Snapshot ${txId} not found`);
+
         return false;
       }
 
@@ -1069,6 +1107,7 @@ export class MarketMakingOrderProcessor {
       return confirmed;
     } catch (error) {
       this.logger.error(`Error checking withdrawal ${txId}: ${error.message}`);
+
       return false;
     }
   }

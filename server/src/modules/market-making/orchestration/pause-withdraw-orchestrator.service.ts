@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
+import { createStrategyKey } from 'src/common/helpers/strategyKey';
+import { WithdrawalService } from 'src/modules/mixin/withdrawal/withdrawal.service';
+
+import { ExchangeConnectorAdapterService } from '../execution/exchange-connector-adapter.service';
 import { BalanceLedgerService } from '../ledger/balance-ledger.service';
 import { StrategyService } from '../strategy/strategy.service';
-import { WithdrawalService } from 'src/modules/mixin/withdrawal/withdrawal.service';
 import { ExchangeOrderTrackerService } from '../trackers/exchange-order-tracker.service';
-import { createStrategyKey } from 'src/common/helpers/strategyKey';
-import { ExchangeConnectorAdapterService } from '../execution/exchange-connector-adapter.service';
 
 type PauseWithdrawCommand = {
   userId: string;
@@ -73,7 +74,9 @@ export class PauseWithdrawOrchestratorService {
     const startedAt = Date.now();
 
     while (true) {
-      const openOrders = this.exchangeOrderTrackerService.getOpenOrders(strategyKey);
+      const openOrders =
+        this.exchangeOrderTrackerService.getOpenOrders(strategyKey);
+
       if (openOrders.length === 0) {
         return;
       }

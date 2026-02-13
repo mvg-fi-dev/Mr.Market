@@ -1,7 +1,13 @@
-import { Injectable, OnModuleDestroy, OnModuleInit, Optional } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleDestroy,
+  OnModuleInit,
+  Optional,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { StrategyOrderIntentEntity } from 'src/common/entities/market-making/strategy-order-intent.entity';
 import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
+
 import { StrategyOrderIntent } from './strategy-intent.types';
 import { StrategyIntentExecutionService } from './strategy-intent-execution.service';
 import { StrategyIntentStoreService } from './strategy-intent-store.service';
@@ -34,7 +40,9 @@ export class StrategyIntentWorkerService
     ).toLowerCase();
     this.pollIntervalMs = Math.max(
       10,
-      Number(this.configService.get('strategy.intent_worker_poll_interval_ms', 100)),
+      Number(
+        this.configService.get('strategy.intent_worker_poll_interval_ms', 100),
+      ),
     );
     this.maxInFlight = Math.max(
       1,
@@ -81,7 +89,9 @@ export class StrategyIntentWorkerService
         await this.dispatchAvailableIntents();
       } catch (error) {
         this.logger.error(
-          `Intent worker loop error: ${error instanceof Error ? error.message : String(error)}`,
+          `Intent worker loop error: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
         );
       }
 
@@ -90,18 +100,23 @@ export class StrategyIntentWorkerService
   }
 
   private async dispatchAvailableIntents(): Promise<void> {
-    if (!this.strategyIntentStoreService || !this.strategyIntentExecutionService) {
+    if (
+      !this.strategyIntentStoreService ||
+      !this.strategyIntentExecutionService
+    ) {
       return;
     }
 
     const availableSlots = this.maxInFlight - this.inFlightIntentIds.size;
+
     if (availableSlots <= 0) {
       return;
     }
 
-    const strategyKeys = await this.strategyIntentStoreService.listStrategyKeysWithNewIntents(
-      Math.max(availableSlots * 4, availableSlots),
-    );
+    const strategyKeys =
+      await this.strategyIntentStoreService.listStrategyKeysWithNewIntents(
+        Math.max(availableSlots * 4, availableSlots),
+      );
 
     for (const strategyKey of strategyKeys) {
       if (!this.running) {
@@ -116,7 +131,10 @@ export class StrategyIntentWorkerService
         continue;
       }
 
-      const headIntent = await this.strategyIntentStoreService.getHeadIntent(strategyKey);
+      const headIntent = await this.strategyIntentStoreService.getHeadIntent(
+        strategyKey,
+      );
+
       if (!headIntent || headIntent.status !== 'NEW') {
         continue;
       }
@@ -132,12 +150,14 @@ export class StrategyIntentWorkerService
               headIntent.intentId,
             )
           : false;
+
       if (hasProcessedIntent) {
         continue;
       }
 
       const exchangeKey = headIntent.exchange || '__unknown__';
       const exchangeInFlight = this.inFlightByExchange.get(exchangeKey) || 0;
+
       if (exchangeInFlight >= this.maxInFlightPerExchange) {
         continue;
       }
@@ -146,7 +166,10 @@ export class StrategyIntentWorkerService
     }
   }
 
-  private dispatchIntent(intentEntity: StrategyOrderIntentEntity, exchangeKey: string): void {
+  private dispatchIntent(
+    intentEntity: StrategyOrderIntentEntity,
+    exchangeKey: string,
+  ): void {
     if (!this.strategyIntentExecutionService) {
       return;
     }
@@ -165,7 +188,9 @@ export class StrategyIntentWorkerService
         await this.strategyIntentExecutionService?.consumeIntents([intent]);
       } catch (error) {
         this.logger.error(
-          `Intent execution failed for ${intent.intentId}: ${error instanceof Error ? error.message : String(error)}`,
+          `Intent execution failed for ${intent.intentId}: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
         );
       }
     })();
@@ -179,6 +204,7 @@ export class StrategyIntentWorkerService
         0,
         (this.inFlightByExchange.get(exchangeKey) || 0) - 1,
       );
+
       if (remainingForExchange === 0) {
         this.inFlightByExchange.delete(exchangeKey);
       } else {
@@ -187,7 +213,9 @@ export class StrategyIntentWorkerService
     });
   }
 
-  private toIntent(intentEntity: StrategyOrderIntentEntity): StrategyOrderIntent {
+  private toIntent(
+    intentEntity: StrategyOrderIntentEntity,
+  ): StrategyOrderIntent {
     return {
       type: intentEntity.type as StrategyOrderIntent['type'],
       intentId: intentEntity.intentId,

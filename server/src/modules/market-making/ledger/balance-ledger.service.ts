@@ -2,10 +2,14 @@ import { BadRequestException, Injectable, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import BigNumber from 'bignumber.js';
 import { randomUUID } from 'crypto';
-import { DataSource, Repository } from 'typeorm';
 import { BalanceReadModel } from 'src/common/entities/ledger/balance-read-model.entity';
-import { LedgerEntry, LedgerEntryType } from 'src/common/entities/ledger/ledger-entry.entity';
+import {
+  LedgerEntry,
+  LedgerEntryType,
+} from 'src/common/entities/ledger/ledger-entry.entity';
 import { getRFC3339Timestamp } from 'src/common/helpers/utils';
+import { DataSource, Repository } from 'typeorm';
+
 import { DurabilityService } from '../durability/durability.service';
 
 type BalanceLedgerCommand = {
@@ -38,7 +42,9 @@ export class BalanceLedgerService {
     private readonly dataSource?: DataSource,
   ) {}
 
-  async creditDeposit(command: BalanceLedgerCommand): Promise<BalanceLedgerResult> {
+  async creditDeposit(
+    command: BalanceLedgerCommand,
+  ): Promise<BalanceLedgerResult> {
     return await this.applyMutation('DEPOSIT_CREDIT', command);
   }
 
@@ -46,11 +52,15 @@ export class BalanceLedgerService {
     return await this.applyMutation('LOCK', command);
   }
 
-  async unlockFunds(command: BalanceLedgerCommand): Promise<BalanceLedgerResult> {
+  async unlockFunds(
+    command: BalanceLedgerCommand,
+  ): Promise<BalanceLedgerResult> {
     return await this.applyMutation('UNLOCK', command);
   }
 
-  async creditReward(command: BalanceLedgerCommand): Promise<BalanceLedgerResult> {
+  async creditReward(
+    command: BalanceLedgerCommand,
+  ): Promise<BalanceLedgerResult> {
     return await this.applyMutation('REWARD_CREDIT', command);
   }
 
@@ -102,8 +112,13 @@ export class BalanceLedgerService {
             const existingEntry = await this.ledgerEntryRepository.findOneBy({
               idempotencyKey: command.idempotencyKey,
             });
+
             if (existingEntry) {
-              const balance = await this.getOrCreateBalance(command.userId, command.assetId);
+              const balance = await this.getOrCreateBalance(
+                command.userId,
+                command.assetId,
+              );
+
               return { applied: false, entry: existingEntry, balance };
             }
           }
@@ -143,13 +158,17 @@ export class BalanceLedgerService {
     lockKey: string,
     operation: () => Promise<T>,
   ): Promise<T> {
-    const currentTail = this.balanceMutationLocks.get(lockKey) || Promise.resolve();
+    const currentTail =
+      this.balanceMutationLocks.get(lockKey) || Promise.resolve();
     let releaseCurrent: () => void = () => {};
     const nextTail = new Promise<void>((resolve) => {
       releaseCurrent = resolve;
     });
 
-    this.balanceMutationLocks.set(lockKey, currentTail.then(() => nextTail));
+    this.balanceMutationLocks.set(
+      lockKey,
+      currentTail.then(() => nextTail),
+    );
     await currentTail;
 
     try {
@@ -178,10 +197,12 @@ export class BalanceLedgerService {
         command.assetId,
         balanceReadModelRepository,
       );
+
       return { applied: false, entry: existingEntry, balance };
     }
 
     const amountBn = new BigNumber(command.amount);
+
     if (!amountBn.isFinite() || amountBn.isZero()) {
       throw new BadRequestException('amount must be a non-zero numeric string');
     }
@@ -217,7 +238,9 @@ export class BalanceLedgerService {
 
     if (type === 'LOCK') {
       if (availableBn.isLessThan(amountBn)) {
-        throw new BadRequestException('insufficient available balance for lock');
+        throw new BadRequestException(
+          'insufficient available balance for lock',
+        );
       }
       nextAvailable = availableBn.minus(amountBn);
       nextLocked = lockedBn.plus(amountBn);
@@ -262,12 +285,14 @@ export class BalanceLedgerService {
         const existing = await ledgerEntryRepository.findOneBy({
           idempotencyKey: command.idempotencyKey,
         });
+
         if (existing) {
           const unchangedBalance = await this.getOrCreateBalanceWithRepository(
             command.userId,
             command.assetId,
             balanceReadModelRepository,
           );
+
           return { applied: false, entry: existing, balance: unchangedBalance };
         }
       }
@@ -275,6 +300,7 @@ export class BalanceLedgerService {
     }
 
     const nextTotal = nextAvailable.plus(nextLocked);
+
     balance.available = nextAvailable.toFixed();
     balance.locked = nextLocked.toFixed();
     balance.total = nextTotal.toFixed();
@@ -290,6 +316,7 @@ export class BalanceLedgerService {
     }
     const code = (error as { code?: string }).code;
     const message = String((error as { message?: string }).message || '');
+
     return code === '23505' || message.toLowerCase().includes('duplicate');
   }
 
@@ -313,6 +340,7 @@ export class BalanceLedgerService {
       userId,
       assetId,
     });
+
     if (existing) {
       return existing;
     }

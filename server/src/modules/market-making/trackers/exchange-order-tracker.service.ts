@@ -1,8 +1,14 @@
-import { Injectable, OnModuleDestroy, OnModuleInit, Optional } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleDestroy,
+  OnModuleInit,
+  Optional,
+} from '@nestjs/common';
+import { getRFC3339Timestamp } from 'src/common/helpers/utils';
+
+import { ExchangeConnectorAdapterService } from '../execution/exchange-connector-adapter.service';
 import { ClockTickCoordinatorService } from '../tick/clock-tick-coordinator.service';
 import { TickComponent } from '../tick/tick-component.interface';
-import { ExchangeConnectorAdapterService } from '../execution/exchange-connector-adapter.service';
-import { getRFC3339Timestamp } from 'src/common/helpers/utils';
 
 type TrackedOrder = {
   strategyKey: string;
@@ -30,7 +36,11 @@ export class ExchangeOrderTrackerService
   ) {}
 
   async onModuleInit(): Promise<void> {
-    this.clockTickCoordinatorService?.register('exchange-order-tracker', this, 3);
+    this.clockTickCoordinatorService?.register(
+      'exchange-order-tracker',
+      this,
+      3,
+    );
   }
 
   async onModuleDestroy(): Promise<void> {
@@ -80,6 +90,7 @@ export class ExchangeOrderTrackerService
       }
 
       const normalizedStatus = this.normalizeStatus(latest.status);
+
       this.orders.set(order.exchangeOrderId, {
         ...order,
         status: normalizedStatus,
@@ -90,6 +101,7 @@ export class ExchangeOrderTrackerService
 
   private normalizeStatus(status: string): TrackedOrder['status'] {
     const value = (status || '').toLowerCase();
+
     if (value === 'open' || value === 'new') {
       return 'open';
     }
@@ -102,6 +114,7 @@ export class ExchangeOrderTrackerService
     if (value === 'canceled' || value === 'cancelled') {
       return 'cancelled';
     }
+
     return 'failed';
   }
 }

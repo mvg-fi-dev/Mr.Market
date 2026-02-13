@@ -2,9 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import BigNumber from 'bignumber.js';
 import { randomUUID } from 'crypto';
-import { Repository } from 'typeorm';
 import { ShareLedgerEntry } from 'src/common/entities/ledger/share-ledger-entry.entity';
 import { getRFC3339Timestamp } from 'src/common/helpers/utils';
+import { Repository } from 'typeorm';
 
 type WeightedShare = {
   userId: string;
@@ -32,6 +32,7 @@ export class ShareLedgerService {
       refId,
       createdAt: createdAt || getRFC3339Timestamp(),
     });
+
     return await this.shareLedgerRepository.save(entry);
   }
 
@@ -49,6 +50,7 @@ export class ShareLedgerService {
       refId,
       createdAt: createdAt || getRFC3339Timestamp(),
     });
+
     return await this.shareLedgerRepository.save(entry);
   }
 
@@ -65,8 +67,10 @@ export class ShareLedgerService {
     const durationMs = Math.max(1, endMs - startMs);
 
     const users = new Map<string, ShareLedgerEntry[]>();
+
     for (const entry of entries) {
       const list = users.get(entry.userId) || [];
+
       list.push(entry);
       users.set(entry.userId, list);
     }
@@ -80,6 +84,7 @@ export class ShareLedgerService {
 
       for (const entry of userEntries) {
         const eventMs = Date.parse(entry.createdAt);
+
         if (eventMs <= startMs) {
           balance = this.applyEntry(balance, entry);
           continue;
@@ -90,6 +95,7 @@ export class ShareLedgerService {
         }
 
         const segmentMs = eventMs - cursor;
+
         if (segmentMs > 0) {
           weighted = weighted.plus(balance.multipliedBy(segmentMs));
           cursor = eventMs;
@@ -102,6 +108,7 @@ export class ShareLedgerService {
       }
 
       const basis = weighted.dividedBy(durationMs);
+
       if (basis.isGreaterThan(0)) {
         result.push({ userId, basisShares: basis.toFixed() });
       }
@@ -114,6 +121,7 @@ export class ShareLedgerService {
     if (entry.type === 'MINT') {
       return balance.plus(entry.amount);
     }
+
     return balance.minus(entry.amount);
   }
 }

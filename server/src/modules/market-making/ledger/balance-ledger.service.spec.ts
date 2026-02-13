@@ -1,7 +1,8 @@
 import { BadRequestException } from '@nestjs/common';
-import { BalanceLedgerService } from './balance-ledger.service';
 import { BalanceReadModel } from 'src/common/entities/ledger/balance-read-model.entity';
 import { LedgerEntry } from 'src/common/entities/ledger/ledger-entry.entity';
+
+import { BalanceLedgerService } from './balance-ledger.service';
 
 type Repo<T> = {
   create: jest.Mock;
@@ -18,24 +19,29 @@ const createInMemoryRepos = () => {
     create: jest.fn((payload: LedgerEntry) => payload),
     save: jest.fn(async (payload: LedgerEntry) => {
       entries.push(payload);
+
       return payload;
     }),
     findOne: jest.fn(async ({ where }: any) => {
       if (where?.idempotencyKey) {
         return (
-          entries.find((item) => item.idempotencyKey === where.idempotencyKey) ||
-          null
+          entries.find(
+            (item) => item.idempotencyKey === where.idempotencyKey,
+          ) || null
         );
       }
+
       return null;
     }),
     findOneBy: jest.fn(async (where: any) => {
       if (where?.idempotencyKey) {
         return (
-          entries.find((item) => item.idempotencyKey === where.idempotencyKey) ||
-          null
+          entries.find(
+            (item) => item.idempotencyKey === where.idempotencyKey,
+          ) || null
         );
       }
+
       return null;
     }),
   };
@@ -44,18 +50,21 @@ const createInMemoryRepos = () => {
     create: jest.fn((payload: BalanceReadModel) => payload),
     save: jest.fn(async (payload: BalanceReadModel) => {
       balances.set(`${payload.userId}:${payload.assetId}`, payload);
+
       return payload;
     }),
     findOne: jest.fn(async ({ where }: any) => {
       if (where?.userId && where?.assetId) {
         return balances.get(`${where.userId}:${where.assetId}`) || null;
       }
+
       return null;
     }),
     findOneBy: jest.fn(async (where: any) => {
       if (where?.userId && where?.assetId) {
         return balances.get(`${where.userId}:${where.assetId}`) || null;
       }
+
       return null;
     }),
   };
@@ -86,6 +95,7 @@ describe('BalanceLedgerService', () => {
     });
 
     const balance = await service.getBalance('u1', 'asset-usdt');
+
     expect(balance.available).toBe('100');
     expect(balance.locked).toBe('0');
     expect(balance.total).toBe('100');
@@ -124,6 +134,7 @@ describe('BalanceLedgerService', () => {
     });
 
     const balance = await service.getBalance('u1', 'asset-usdt');
+
     expect(balance.available).toBe('70');
     expect(balance.locked).toBe('30');
     expect(balance.total).toBe('100');
@@ -181,11 +192,14 @@ describe('BalanceLedgerService', () => {
     const repos = createInMemoryRepos();
     const balanceWriteCount: number[] = [];
 
-    repos.balanceReadModelRepository.save = jest.fn(async (payload: BalanceReadModel) => {
-      balanceWriteCount.push(1);
-      repos.balances.set(`${payload.userId}:${payload.assetId}`, payload);
-      return payload;
-    });
+    repos.balanceReadModelRepository.save = jest.fn(
+      async (payload: BalanceReadModel) => {
+        balanceWriteCount.push(1);
+        repos.balances.set(`${payload.userId}:${payload.assetId}`, payload);
+
+        return payload;
+      },
+    );
 
     repos.ledgerEntryRepository.findOneBy = jest
       .fn()
@@ -219,6 +233,7 @@ describe('BalanceLedgerService', () => {
 
     expect(result.applied).toBe(false);
     const balance = await service.getBalance('u1', 'asset-usdt');
+
     expect(balance.available).toBe('0');
     expect(balance.locked).toBe('0');
     expect(balance.total).toBe('0');
@@ -229,6 +244,7 @@ describe('BalanceLedgerService', () => {
     const entries: LedgerEntry[] = [];
     const balances = new Map<string, BalanceReadModel>();
     const key = 'u1:asset-usdt';
+
     balances.set(key, {
       userId: 'u1',
       assetId: 'asset-usdt',
@@ -238,13 +254,15 @@ describe('BalanceLedgerService', () => {
       updatedAt: '2026-02-11T00:00:00.000Z',
     });
 
-    const pause = async () => await new Promise((resolve) => setTimeout(resolve, 5));
+    const pause = async () =>
+      await new Promise((resolve) => setTimeout(resolve, 5));
 
     const ledgerEntryRepository: Repo<LedgerEntry> = {
       create: jest.fn((payload: LedgerEntry) => payload),
       save: jest.fn(async (payload: LedgerEntry) => {
         await pause();
         entries.push(payload);
+
         return payload;
       }),
       findOne: jest.fn(async () => null),
@@ -252,9 +270,11 @@ describe('BalanceLedgerService', () => {
         if (!where?.idempotencyKey) {
           return null;
         }
+
         return (
-          entries.find((item) => item.idempotencyKey === where.idempotencyKey) ||
-          null
+          entries.find(
+            (item) => item.idempotencyKey === where.idempotencyKey,
+          ) || null
         );
       }),
     };
@@ -264,14 +284,17 @@ describe('BalanceLedgerService', () => {
       save: jest.fn(async (payload: BalanceReadModel) => {
         await pause();
         balances.set(`${payload.userId}:${payload.assetId}`, { ...payload });
+
         return payload;
       }),
       findOne: jest.fn(async ({ where }: any) => {
         const row = balances.get(`${where.userId}:${where.assetId}`);
+
         return row ? { ...row } : null;
       }),
       findOneBy: jest.fn(async (where: any) => {
         const row = balances.get(`${where.userId}:${where.assetId}`);
+
         return row ? { ...row } : null;
       }),
     };
@@ -300,13 +323,18 @@ describe('BalanceLedgerService', () => {
       }),
     ]);
 
-    const fulfilled = [first, second].filter((result) => result.status === 'fulfilled');
-    const rejected = [first, second].filter((result) => result.status === 'rejected');
+    const fulfilled = [first, second].filter(
+      (result) => result.status === 'fulfilled',
+    );
+    const rejected = [first, second].filter(
+      (result) => result.status === 'rejected',
+    );
 
     expect(fulfilled).toHaveLength(1);
     expect(rejected).toHaveLength(1);
 
     const balance = await service.getBalance('u1', 'asset-usdt');
+
     expect(balance.available).toBe('30');
     expect(balance.locked).toBe('70');
     expect(balance.total).toBe('100');

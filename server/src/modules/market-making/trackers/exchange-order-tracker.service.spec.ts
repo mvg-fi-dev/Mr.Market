@@ -29,17 +29,19 @@ describe('ExchangeOrderTrackerService', () => {
     });
 
     const openOrders = service.getOpenOrders('u1-c1-pureMarketMaking');
+
     expect(openOrders).toHaveLength(1);
     expect(openOrders[0].exchangeOrderId).toBe('ex-1');
   });
 
   it('reconciles order status on tick via adapter poller', async () => {
     const adapter = {
-      fetchOrder: jest
-        .fn()
-        .mockResolvedValue({ id: 'ex-1', status: 'closed' }),
+      fetchOrder: jest.fn().mockResolvedValue({ id: 'ex-1', status: 'closed' }),
     };
-    const service = new ExchangeOrderTrackerService(undefined as any, adapter as any);
+    const service = new ExchangeOrderTrackerService(
+      undefined as any,
+      adapter as any,
+    );
 
     service.upsertOrder({
       strategyKey: 'u1-c1-pureMarketMaking',
@@ -56,6 +58,7 @@ describe('ExchangeOrderTrackerService', () => {
     await service.onTick('2026-02-11T00:00:01.000Z');
 
     const tracked = service.getByExchangeOrderId('ex-1');
+
     expect(tracked?.status).toBe('filled');
   });
 });

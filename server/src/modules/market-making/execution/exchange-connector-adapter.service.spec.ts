@@ -1,11 +1,16 @@
 import { ConfigService } from '@nestjs/config';
+
 import { ExchangeConnectorAdapterService } from './exchange-connector-adapter.service';
 
 describe('ExchangeConnectorAdapterService', () => {
   const exchange = {
     createOrder: jest.fn().mockResolvedValue({ id: 'ex-order-1' }),
-    cancelOrder: jest.fn().mockResolvedValue({ id: 'ex-order-1', status: 'canceled' }),
-    fetchOrder: jest.fn().mockResolvedValue({ id: 'ex-order-1', status: 'open' }),
+    cancelOrder: jest
+      .fn()
+      .mockResolvedValue({ id: 'ex-order-1', status: 'canceled' }),
+    fetchOrder: jest
+      .fn()
+      .mockResolvedValue({ id: 'ex-order-1', status: 'open' }),
     fetchOpenOrders: jest.fn().mockResolvedValue([{ id: 'ex-order-1' }]),
     fetchOrderBook: jest.fn().mockResolvedValue({ bids: [], asks: [] }),
     watchOrderBook: jest.fn().mockResolvedValue({ bids: [], asks: [] }),
@@ -21,6 +26,7 @@ describe('ExchangeConnectorAdapterService', () => {
       if (key === 'strategy.exchange_min_request_interval_ms') {
         return 1;
       }
+
       return defaultValue;
     }),
   } as unknown as ConfigService;

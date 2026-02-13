@@ -13,6 +13,7 @@ describe('RewardReceiverService', () => {
       find: jest.fn(async () => rows),
       save: jest.fn(async (payload) => {
         rows[0] = { ...rows[0], ...payload };
+
         return rows[0];
       }),
     };

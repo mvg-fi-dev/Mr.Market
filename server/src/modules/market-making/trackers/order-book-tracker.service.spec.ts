@@ -18,6 +18,7 @@ describe('OrderBookTrackerService', () => {
     await service.onTick('2026-02-11T00:00:00.000Z');
 
     const orderBook = service.getOrderBook('binance', 'BTC/USDT');
+
     expect(orderBook?.bids[0][0]).toBe(100);
     expect(orderBook?.bids[0][1]).toBe(2);
     expect(orderBook?.asks[0][0]).toBe(101);

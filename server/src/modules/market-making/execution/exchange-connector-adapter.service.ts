@@ -25,6 +25,7 @@ export class ExchangeConnectorAdapterService {
   ): Promise<any> {
     return await this.withRateLimit(exchangeName, async () => {
       const exchange = this.exchangeInitService.getExchange(exchangeName);
+
       return await exchange.createOrder(
         pair,
         'limit',
@@ -42,6 +43,7 @@ export class ExchangeConnectorAdapterService {
   ): Promise<any> {
     return await this.withRateLimit(exchangeName, async () => {
       const exchange = this.exchangeInitService.getExchange(exchangeName);
+
       return await exchange.cancelOrder(exchangeOrderId, pair);
     });
   }
@@ -53,6 +55,7 @@ export class ExchangeConnectorAdapterService {
   ): Promise<any> {
     return await this.withRateLimit(exchangeName, async () => {
       const exchange = this.exchangeInitService.getExchange(exchangeName);
+
       return await exchange.fetchOrder(exchangeOrderId, pair);
     });
   }
@@ -60,6 +63,7 @@ export class ExchangeConnectorAdapterService {
   async fetchOpenOrders(exchangeName: string, pair?: string): Promise<any[]> {
     return await this.withRateLimit(exchangeName, async () => {
       const exchange = this.exchangeInitService.getExchange(exchangeName);
+
       return await exchange.fetchOpenOrders(pair);
     });
   }
@@ -67,23 +71,28 @@ export class ExchangeConnectorAdapterService {
   async fetchOrderBook(exchangeName: string, pair: string): Promise<any> {
     return await this.withRateLimit(exchangeName, async () => {
       const exchange = this.exchangeInitService.getExchange(exchangeName);
+
       return await exchange.fetchOrderBook(pair);
     });
   }
 
   async watchOrderBook(exchangeName: string, pair: string): Promise<any> {
     const exchange = this.exchangeInitService.getExchange(exchangeName);
+
     if (typeof exchange.watchOrderBook !== 'function') {
       return null;
     }
+
     return await exchange.watchOrderBook(pair);
   }
 
   async watchBalance(exchangeName: string): Promise<any> {
     const exchange = this.exchangeInitService.getExchange(exchangeName);
+
     if (typeof exchange.watchBalance !== 'function') {
       return null;
     }
+
     return await exchange.watchBalance();
   }
 
@@ -94,12 +103,15 @@ export class ExchangeConnectorAdapterService {
     const lastAt = this.lastRequestAtMsByExchange.get(exchangeName) || 0;
     const now = Date.now();
     const waitMs = Math.max(0, this.minRequestIntervalMs - (now - lastAt));
+
     if (waitMs > 0) {
       await this.sleep(waitMs);
     }
 
     const result = await work();
+
     this.lastRequestAtMsByExchange.set(exchangeName, Date.now());
+
     return result;
   }
 
