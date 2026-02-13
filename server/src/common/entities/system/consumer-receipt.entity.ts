@@ -1,3 +1,7 @@
+/**
+ * Persists idempotent consumer receipts for at-least-once event handling.
+ * Used by app.module and modules/market-making/durability service/module/specs.
+ */
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
 
 @Entity()

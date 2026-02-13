@@ -1,3 +1,7 @@
+/**
+ * Stores pending market-making order intents before full order lifecycle completion.
+ * Used by app.module, modules/market-making user-orders processors, and modules/mixin/snapshots.
+ */
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 
 export type MarketMakingOrderIntentState =

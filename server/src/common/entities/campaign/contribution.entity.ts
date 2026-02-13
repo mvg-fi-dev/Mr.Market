@@ -1,10 +1,15 @@
+/**
+ * Records user contribution events linked to strategy instances and Mixin users.
+ * Used by app.module and admin strategy services/specs for contribution reporting.
+ */
 import {
-  Entity,
   Column,
-  PrimaryGeneratedColumn,
-  ManyToOne,
   CreateDateColumn,
+  Entity,
+  ManyToOne,
+  PrimaryGeneratedColumn,
 } from 'typeorm';
+
 import { StrategyInstance } from '../market-making/strategy-instances.entity';
 import { MixinUser } from '../mixin/mixin-user.entity';
 

@@ -19,7 +19,9 @@ export class AddStrategyOrderIntentTable1770900000000
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`DROP INDEX "IDX_strategy_order_intent_status"`);
-    await queryRunner.query(`DROP INDEX "IDX_strategy_order_intent_strategy_key"`);
+    await queryRunner.query(
+      `DROP INDEX "IDX_strategy_order_intent_strategy_key"`,
+    );
     await queryRunner.query(`DROP TABLE "strategy_order_intent"`);
   }
 }

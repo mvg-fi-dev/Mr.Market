@@ -1,3 +1,7 @@
+/**
+ * Stores reward vault transfer observations and distribution lifecycle states.
+ * Used by app.module and modules/market-making rewards/reconciliation services.
+ */
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 
 export type RewardLedgerStatus =

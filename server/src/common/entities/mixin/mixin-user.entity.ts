@@ -1,4 +1,9 @@
-import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
+/**
+ * Stores Mixin user profiles and auth/session metadata.
+ * Used by app.module, common/helpers/mixin/user, admin strategy services, and modules/mixin/user.
+ */
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+
 import { Contribution } from '../campaign/contribution.entity';
 
 @Entity()

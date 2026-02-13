@@ -1,3 +1,7 @@
+/**
+ * Stores immutable balance ledger entries with idempotency tracking.
+ * Used by app.module and modules/market-making/ledger balance ledger service.
+ */
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
 
 export type LedgerEntryType =

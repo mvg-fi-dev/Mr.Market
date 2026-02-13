@@ -1,3 +1,7 @@
+/**
+ * Tracks per-user reward allocation records derived from reward ledger events.
+ * Used by app.module and modules/market-making rewards/reconciliation pipelines.
+ */
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 
 @Entity()

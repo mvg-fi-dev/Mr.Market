@@ -1,3 +1,7 @@
+/**
+ * Stores daily HUFI score snapshots derived from market-making activity.
+ * Used by app.module and modules/campaign score estimator logic.
+ */
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity()

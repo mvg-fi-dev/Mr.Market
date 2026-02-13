@@ -1,4 +1,8 @@
-import { Entity, Column, PrimaryColumn } from 'typeorm';
+/**
+ * Defines reference entities for GrowData exchanges, tokens, and trading pairs.
+ * Used by app.module, database seeders, modules/data/grow-data, and admin fee/grow management.
+ */
+import { Column, Entity, PrimaryColumn } from 'typeorm';
 
 @Entity('growdata_exchanges')
 export class GrowdataExchange {

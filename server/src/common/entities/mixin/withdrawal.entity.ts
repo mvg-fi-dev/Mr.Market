@@ -1,10 +1,14 @@
+/**
+ * Stores withdrawal lifecycle data including destination, tx ids, and retry status.
+ * Used by app.module and modules/mixin/withdrawal service/processor/module.
+ */
 import {
-  Entity,
-  PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
-  UpdateDateColumn,
+  Entity,
   Index,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 
 @Entity()

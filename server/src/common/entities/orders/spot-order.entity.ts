@@ -1,6 +1,10 @@
-import { Entity, PrimaryColumn, Column } from 'typeorm';
+/**
+ * Stores spot order requests mapped from Mixin snapshots to exchange execution.
+ * Used by app.module and modules/mixin/exchange repository/service/module.
+ */
 import type { SpotOrderType } from 'src/common/types/memo/memo';
 import type { SpotOrderStatus } from 'src/common/types/orders/states';
+import { Column, Entity, PrimaryColumn } from 'typeorm';
 
 @Entity()
 export class SpotOrder {

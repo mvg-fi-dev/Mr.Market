@@ -1,3 +1,7 @@
+/**
+ * Maintains current per-user per-asset balances as a read model projection.
+ * Used by app.module and modules/market-making ledger/reconciliation services.
+ */
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 
 @Entity()

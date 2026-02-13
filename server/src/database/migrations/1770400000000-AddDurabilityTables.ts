@@ -29,7 +29,9 @@ export class AddDurabilityTables1770400000000 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`DROP INDEX "IDX_consumer_receipt_idempotency_key"`);
+    await queryRunner.query(
+      `DROP INDEX "IDX_consumer_receipt_idempotency_key"`,
+    );
     await queryRunner.query(`DROP INDEX "IDX_consumer_receipt_consumer_name"`);
     await queryRunner.query(`DROP TABLE "consumer_receipt"`);
     await queryRunner.query(`DROP INDEX "IDX_outbox_event_aggregate_id"`);

@@ -1,3 +1,7 @@
+/**
+ * Persists outbound domain events for durable outbox processing.
+ * Used by app.module and modules/market-making/durability service/module/specs.
+ */
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
 
 @Entity()

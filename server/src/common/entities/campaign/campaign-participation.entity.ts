@@ -1,8 +1,12 @@
+/**
+ * Tracks user participation and reward state within each campaign.
+ * Used by app.module and modules/market-making/local-campaign services/controllers.
+ */
 import {
-  Entity,
-  PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 

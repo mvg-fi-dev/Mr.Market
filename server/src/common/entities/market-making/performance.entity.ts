@@ -1,4 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
+/**
+ * Stores strategy performance snapshots (PnL and strategy-specific metrics).
+ * Used by app.module and modules/market-making/performance service.
+ */
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
 @Entity()
 export class Performance {

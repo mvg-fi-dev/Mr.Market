@@ -1,4 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+/**
+ * Stores market-making execution history used for metrics and campaign scoring.
+ * Used by app.module and modules/market-making strategy/user-orders/metrics plus campaign score estimation.
+ */
+import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity()
 export class MarketMakingHistory {

@@ -1,3 +1,7 @@
+/**
+ * Records share-ledger changes used as basis for reward allocation calculations.
+ * Used by app.module and modules/market-making/rewards share-ledger service.
+ */
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 
 export type ShareLedgerEntryType = 'MINT' | 'BURN';

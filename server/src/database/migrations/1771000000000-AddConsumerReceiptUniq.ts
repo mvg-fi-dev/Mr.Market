@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddConsumerReceiptUniq1771000000000
-  implements MigrationInterface
-{
+export class AddConsumerReceiptUniq1771000000000 implements MigrationInterface {
   name = 'AddConsumerReceiptUniq1771000000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

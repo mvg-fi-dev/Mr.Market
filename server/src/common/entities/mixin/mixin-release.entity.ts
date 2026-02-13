@@ -1,4 +1,8 @@
-import { Entity, PrimaryColumn, Column } from 'typeorm';
+/**
+ * Persists token release requests and release history tied to spot order settlement.
+ * Used by app.module and modules/mixin/exchange repository/module.
+ */
+import { Column, Entity, PrimaryColumn } from 'typeorm';
 
 @Entity()
 export class MixinReleaseToken {

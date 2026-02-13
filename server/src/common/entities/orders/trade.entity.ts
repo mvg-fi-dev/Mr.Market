@@ -1,8 +1,12 @@
+/**
+ * Stores executed trade records for market-making trade repository workflows.
+ * Used by app.module and modules/market-making/trade repository/module.
+ */
 import {
-  Entity,
-  PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 

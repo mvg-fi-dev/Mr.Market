@@ -1,4 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+/**
+ * Stores global admin runtime configuration values (fees, limits, funding account).
+ * Used by app.module, database seeders, and admin/infrastructure config services.
+ */
+import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity()
 export class CustomConfigEntity {

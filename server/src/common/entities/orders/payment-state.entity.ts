@@ -1,4 +1,8 @@
-import { Entity, Column, PrimaryColumn } from 'typeorm';
+/**
+ * Persists payment state machines for market-making and simply-grow order funding.
+ * Used by app.module and modules/market-making user-orders services/processors.
+ */
+import { Column, Entity, PrimaryColumn } from 'typeorm';
 
 @Entity()
 export abstract class PaymentState {

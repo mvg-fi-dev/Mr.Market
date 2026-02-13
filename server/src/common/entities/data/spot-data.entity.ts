@@ -1,4 +1,8 @@
-import { Entity, Column, PrimaryColumn } from 'typeorm';
+/**
+ * Defines spot trading pair metadata (precision, limits, asset mapping).
+ * Used by app.module, seeders, modules/data/spot-data, and admin spot/fee management.
+ */
+import { Column, Entity, PrimaryColumn } from 'typeorm';
 
 @Entity('spotdata_trading_pairs')
 export class SpotdataTradingPair {

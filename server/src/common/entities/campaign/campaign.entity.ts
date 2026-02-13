@@ -1,8 +1,12 @@
+/**
+ * Stores campaign definitions and scheduling metadata for reward programs.
+ * Used by app.module, modules/campaign sync logic, and modules/market-making/local-campaign.
+ */
 import {
-  Entity,
-  PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 

@@ -1,11 +1,16 @@
+/**
+ * Stores lifecycle/configuration of created strategy instances per user/client.
+ * Used by app.module and modules/market-making strategy services plus admin strategy tools.
+ */
 import {
-  Entity,
   Column,
-  PrimaryGeneratedColumn,
   CreateDateColumn,
-  UpdateDateColumn,
+  Entity,
   OneToMany,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm';
+
 import { Contribution } from '../campaign/contribution.entity';
 
 @Entity('strategy_instances')

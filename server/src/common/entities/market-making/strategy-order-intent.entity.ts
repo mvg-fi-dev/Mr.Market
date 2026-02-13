@@ -1,3 +1,7 @@
+/**
+ * Stores strategy-level order intents and state transitions for durable execution.
+ * Used by app.module and modules/market-making strategy/reconciliation services.
+ */
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
 
 @Entity({ name: 'strategy_order_intent' })

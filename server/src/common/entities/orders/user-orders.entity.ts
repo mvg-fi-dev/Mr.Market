@@ -1,5 +1,10 @@
-import { Column, Entity, PrimaryColumn } from 'typeorm';
+/**
+ * Stores user-level order intents for market-making and simply-grow products.
+ * Used by app.module and modules/market-making strategy/user-orders services and processors.
+ */
 import { PriceSourceType } from 'src/common/enum/pricesourcetype';
+import { Column, Entity, PrimaryColumn } from 'typeorm';
+
 import type {
   MarketMakingStates,
   SimplyGrowStates,

@@ -1,4 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+/**
+ * Persists exchange API key metadata used by exchange connectivity flows.
+ * Used by TypeORM registration in app.module and in modules/infrastructure/exchange-init and modules/mixin/exchange.
+ */
+import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity()
 export class APIKeysConfig {

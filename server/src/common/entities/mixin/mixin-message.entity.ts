@@ -1,5 +1,9 @@
+/**
+ * Persists inbound/outbound Mixin messaging payloads and delivery metadata.
+ * Used by app.module and modules/mixin/message repository/service/module.
+ */
 import { MessageCategory, MessageStatus } from '@mixin.dev/mixin-node-sdk';
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity()
 export class MixinMessage {
