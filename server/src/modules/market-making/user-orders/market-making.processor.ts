@@ -85,6 +85,7 @@ export class MarketMakingOrderProcessor {
   ) {}
 
   private readonly WITHDRAWAL_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+  private readonly DEPOSIT_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
   private readonly RETRY_DELAY_MS = 30000; // 30 seconds
 
   private async refundUser(snapshot: SafeSnapshot, reason: string) {
@@ -1167,7 +1168,7 @@ export class MarketMakingOrderProcessor {
 
     const elapsed = Date.now() - startedAt;
 
-    if (elapsed > this.WITHDRAWAL_TIMEOUT_MS) {
+    if (elapsed > this.DEPOSIT_TIMEOUT_MS) {
       this.logger.error(
         `Exchange deposit confirmation timeout for order ${orderId} after ${elapsed}ms`,
       );
