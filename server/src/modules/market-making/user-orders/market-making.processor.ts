@@ -1040,10 +1040,18 @@ export class MarketMakingOrderProcessor {
       marketMakingPairId: string;
       baseWithdrawalTxId?: string;
       quoteWithdrawalTxId?: string;
+      baseWithdrawalTxHash?: string;
+      quoteWithdrawalTxHash?: string;
       startedAt?: number;
     }>,
   ) {
-    const { orderId, baseWithdrawalTxId, quoteWithdrawalTxId } = job.data;
+    const {
+      orderId,
+      baseWithdrawalTxId,
+      quoteWithdrawalTxId,
+      baseWithdrawalTxHash,
+      quoteWithdrawalTxHash,
+    } = job.data;
     const startedAt = job.data.startedAt ?? Date.now();
 
     if (!job.data.startedAt) {
@@ -1059,19 +1067,19 @@ export class MarketMakingOrderProcessor {
 
     try {
       // Check base withdrawal confirmation
-      const baseConfirmed = baseWithdrawalTxId
+      const baseStatus = baseWithdrawalTxId
         ? await this.checkWithdrawalConfirmation(baseWithdrawalTxId)
-        : false;
+        : { confirmed: false };
 
       // Check quote withdrawal confirmation
-      const quoteConfirmed = quoteWithdrawalTxId
+      const quoteStatus = quoteWithdrawalTxId
         ? await this.checkWithdrawalConfirmation(quoteWithdrawalTxId)
-        : false;
+        : { confirmed: false };
 
       this.logger.log(
         `Order ${orderId} withdrawal status - Base: ${
-          baseConfirmed ? 'confirmed' : 'pending'
-        }, Quote: ${quoteConfirmed ? 'confirmed' : 'pending'}`,
+          baseStatus.confirmed ? 'confirmed' : 'pending'
+        }, Quote: ${quoteStatus.confirmed ? 'confirmed' : 'pending'}`,
       );
 
       // Check for timeout
@@ -1090,8 +1098,8 @@ export class MarketMakingOrderProcessor {
         return;
       }
 
-      // If both confirmed, proceed to join campaign
-      if (baseConfirmed && quoteConfirmed) {
+      // If both confirmed, proceed to monitor exchange deposits
+      if (baseStatus.confirmed && quoteStatus.confirmed) {
         this.logger.log(
           `Both withdrawals confirmed for order ${orderId}, proceeding to monitor exchange deposits`,
         );
@@ -1111,6 +1119,8 @@ export class MarketMakingOrderProcessor {
           {
             orderId,
             marketMakingPairId: job.data.marketMakingPairId,
+            baseWithdrawalTxHash: baseStatus.txHash,
+            quoteWithdrawalTxHash: quoteStatus.txHash,
             startedAt,
           },
           {
@@ -1148,10 +1158,17 @@ export class MarketMakingOrderProcessor {
     job: Job<{
       orderId: string;
       marketMakingPairId: string;
+      baseWithdrawalTxHash?: string;
+      quoteWithdrawalTxHash?: string;
       startedAt?: number;
     }>,
   ) {
-    const { orderId, marketMakingPairId } = job.data;
+    const {
+      orderId,
+      marketMakingPairId,
+      baseWithdrawalTxHash,
+      quoteWithdrawalTxHash,
+    } = job.data;
     const startedAt = job.data.startedAt ?? Date.now();
 
     if (!job.data.startedAt) {
@@ -1245,6 +1262,7 @@ export class MarketMakingOrderProcessor {
       symbol: string,
       network: string,
       expectedAmount: string,
+      expectedTxHash?: string,
     ) => {
       const expectedBn = new BigNumber(expectedAmount || '0');
 
@@ -1262,6 +1280,23 @@ export class MarketMakingOrderProcessor {
 
         if (dNetwork !== network) {
           return false;
+        }
+
+        // If we have an expected tx hash from Mixin, prefer strict match.
+        if (expectedTxHash) {
+          const dTxid = (
+            d.txid ||
+            d.txId ||
+            d.txHash ||
+            d.hash ||
+            ''
+          ).toString();
+
+          if (!dTxid) {
+            return false;
+          }
+
+          return dTxid.toLowerCase() === expectedTxHash.toLowerCase();
         }
 
         const amountBn = new BigNumber(
@@ -1282,12 +1317,14 @@ export class MarketMakingOrderProcessor {
       pairConfig.base_symbol,
       baseNetwork,
       paymentState.baseAssetAmount,
+      baseWithdrawalTxHash,
     );
 
     const quoteDeposit = matchDeposit(
       pairConfig.quote_symbol,
       quoteNetwork,
       paymentState.quoteAssetAmount,
+      quoteWithdrawalTxHash,
     );
 
     this.logger.log(
@@ -1328,7 +1365,9 @@ export class MarketMakingOrderProcessor {
   /**
    * Check if a withdrawal is confirmed by checking the Mixin snapshot
    */
-  private async checkWithdrawalConfirmation(txId: string): Promise<boolean> {
+  private async checkWithdrawalConfirmation(
+    txId: string,
+  ): Promise<{ confirmed: boolean; txHash?: string }> {
     try {
       const snapshot =
         await this.mixinClientService.client.safe.fetchSafeSnapshot(txId);
@@ -1336,7 +1375,7 @@ export class MarketMakingOrderProcessor {
       if (!snapshot) {
         this.logger.warn(`Snapshot ${txId} not found`);
 
-        return false;
+        return { confirmed: false };
       }
 
       // Consider confirmed if we have at least 1 confirmation and a transaction hash
@@ -1349,11 +1388,14 @@ export class MarketMakingOrderProcessor {
         );
       }
 
-      return confirmed;
+      return {
+        confirmed,
+        txHash: snapshot.transaction_hash || undefined,
+      };
     } catch (error) {
       this.logger.error(`Error checking withdrawal ${txId}: ${error.message}`);
 
-      return false;
+      return { confirmed: false };
     }
   }
 }
