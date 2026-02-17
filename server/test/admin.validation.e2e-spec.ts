@@ -220,4 +220,28 @@ describe('Admin validation (e2e)', () => {
         }
       });
   });
+
+  it('rejects extra inbound fields on POST /admin/grow/market-making/add', async () => {
+    await request(app.getHttpServer())
+      .post('/admin/grow/market-making/add')
+      .send({
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        symbol: 'BTC/USDT',
+        base_symbol: 'BTC',
+        quote_symbol: 'USDT',
+        base_asset_id: '7e04727a-6f8b-499a-92d0-18bf4ef013bb',
+        base_icon_url: '',
+        quote_asset_id: 'ccde90fe-d611-4fc8-afb4-3388e96fbb02',
+        quote_icon_url: '',
+        exchange_id: 'binance',
+        enable: true,
+        apiKeyId: 'should-not-be-accepted',
+      })
+      .expect(400)
+      .expect((res) => {
+        if (!res.body || res.body.statusCode !== 400) {
+          throw new Error('expected 400 response body');
+        }
+      });
+  });
 });
