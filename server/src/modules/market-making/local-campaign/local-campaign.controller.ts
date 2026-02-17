@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Campaign } from 'src/common/entities/campaign/campaign.entity';
 
+import { CreateLocalCampaignDto } from './local-campaign.dto';
 import { LocalCampaignService } from './local-campaign.service';
 
 @ApiTags('Campaigns')
@@ -10,7 +11,7 @@ export class LocalCampaignController {
   constructor(private readonly campaignService: LocalCampaignService) {}
 
   @Post()
-  async createCampaign(@Body() data: Partial<Campaign>) {
+  async createCampaign(@Body() data: CreateLocalCampaignDto): Promise<Campaign> {
     return this.campaignService.createCampaign(data);
   }
 
