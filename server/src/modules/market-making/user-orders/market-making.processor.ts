@@ -245,10 +245,9 @@ export class MarketMakingOrderProcessor {
 
     try {
       // Step 1.1: Validate trading pair exists
-      const pairConfig =
-        await this.growDataRepository.findMarketMakingPairById(
-          marketMakingPairId,
-        );
+      const pairConfig = await this.growDataRepository.findMarketMakingPairById(
+        marketMakingPairId,
+      );
 
       if (!pairConfig) {
         this.logger.error(`Market making pair ${marketMakingPairId} not found`);
@@ -469,10 +468,9 @@ export class MarketMakingOrderProcessor {
         return;
       }
 
-      const pairConfig =
-        await this.growDataRepository.findMarketMakingPairById(
-          marketMakingPairId,
-        );
+      const pairConfig = await this.growDataRepository.findMarketMakingPairById(
+        marketMakingPairId,
+      );
 
       if (!pairConfig) {
         this.logger.error(`Pair config not found: ${marketMakingPairId}`);
@@ -502,14 +500,14 @@ export class MarketMakingOrderProcessor {
         paymentState.baseFeeAssetId === paymentState.baseAssetId
           ? baseAssetAmount
           : paymentState.baseFeeAssetId === paymentState.quoteAssetId
-            ? quoteAssetAmount
-            : baseFeeAssetAmount;
+          ? quoteAssetAmount
+          : baseFeeAssetAmount;
       const quoteFeePaidAmount =
         paymentState.quoteFeeAssetId === paymentState.quoteAssetId
           ? quoteAssetAmount
           : paymentState.quoteFeeAssetId === paymentState.baseAssetId
-            ? baseAssetAmount
-            : quoteFeeAssetAmount;
+          ? baseAssetAmount
+          : quoteFeeAssetAmount;
 
       // Check fees (comparing with required amounts)
       const hasBaseFee =
@@ -694,10 +692,9 @@ export class MarketMakingOrderProcessor {
         where: { orderId },
       });
 
-      const pairConfig =
-        await this.growDataRepository.findMarketMakingPairById(
-          marketMakingPairId,
-        );
+      const pairConfig = await this.growDataRepository.findMarketMakingPairById(
+        marketMakingPairId,
+      );
 
       if (!paymentState || !pairConfig) {
         throw new Error('Payment state or pair config not found');
@@ -706,8 +703,9 @@ export class MarketMakingOrderProcessor {
       const exchangeName = pairConfig.exchange_id;
 
       // Get API key for this exchange
-      const apiKey =
-        await this.exchangeService.findFirstAPIKeyByExchange(exchangeName);
+      const apiKey = await this.exchangeService.findFirstAPIKeyByExchange(
+        exchangeName,
+      );
 
       if (!apiKey) {
         throw new Error(`No API key found for exchange ${exchangeName}`);
@@ -875,8 +873,9 @@ export class MarketMakingOrderProcessor {
         'joining_campaign',
       );
 
-      const order =
-        await this.userOrdersService.findMarketMakingByOrderId(orderId);
+      const order = await this.userOrdersService.findMarketMakingByOrderId(
+        orderId,
+      );
 
       if (!order) {
         throw new Error(`Order ${orderId} not found`);
@@ -976,8 +975,9 @@ export class MarketMakingOrderProcessor {
 
     this.logger.log(`Starting MM for user ${userId}, order ${orderId}`);
 
-    const order =
-      await this.userOrdersService.findMarketMakingByOrderId(orderId);
+    const order = await this.userOrdersService.findMarketMakingByOrderId(
+      orderId,
+    );
 
     if (!order) {
       this.logger.error(`MM Order ${orderId} not found`);
