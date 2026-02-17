@@ -1,5 +1,9 @@
 # Execution Flow Changelog
 
+## 2026-02-17
+
+- Add architecture doc for HuFi + Mr.Market + EasyEnclave responsibilities and integration flow
+
 ## 2026-02-05
 
 - Switch Playwright workflow to SQLite and remove Postgres service
