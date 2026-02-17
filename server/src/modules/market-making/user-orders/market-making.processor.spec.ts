@@ -73,6 +73,7 @@ describe('MarketMakingOrderProcessor', () => {
       {
         findFirstAPIKeyByExchange: jest.fn(),
         getDepositAddress: jest.fn(),
+        getDeposits: jest.fn(),
       } as any,
       { getNetworkForAsset: jest.fn() } as any,
       {} as any,
@@ -273,5 +274,67 @@ describe('MarketMakingOrderProcessor', () => {
       strategyService.executePureMarketMakingStrategy,
     ).not.toHaveBeenCalled();
     expect(queue.add).not.toHaveBeenCalled();
+  });
+
+  it('queues start_mm when both exchange deposits are confirmed', async () => {
+    const { processor, userOrdersService, paymentStateRepository } =
+      createProcessor();
+
+    (
+      processor as any
+    ).growDataRepository.findMarketMakingPairById.mockResolvedValueOnce({
+      exchange_id: 'mexc',
+      base_symbol: 'BTC',
+      quote_symbol: 'USDT',
+    });
+
+    paymentStateRepository.findOne.mockResolvedValueOnce({
+      orderId: 'order-1',
+      baseAssetId: 'asset-base',
+      quoteAssetId: 'asset-quote',
+      baseAssetAmount: '1',
+      quoteAssetAmount: '2',
+    });
+
+    (
+      processor as any
+    ).networkMappingService.getNetworkForAsset.mockResolvedValueOnce('ERC20');
+    (
+      processor as any
+    ).networkMappingService.getNetworkForAsset.mockResolvedValueOnce('ERC20');
+
+    (
+      processor as any
+    ).exchangeService.findFirstAPIKeyByExchange.mockResolvedValueOnce({
+      key_id: 'key-1',
+    });
+
+    (processor as any).exchangeService.getDeposits.mockResolvedValueOnce([
+      { currency: 'BTC', network: 'ERC20', amount: '1' },
+      { currency: 'USDT', network: 'ERC20', amount: '2' },
+    ]);
+
+    const queue = { add: jest.fn() };
+
+    await processor.handleMonitorExchangeDeposit({
+      data: {
+        orderId: 'order-1',
+        marketMakingPairId: 'pair-1',
+        startedAt: Date.now(),
+      },
+      attemptsMade: 0,
+      queue,
+    } as any);
+
+    expect(userOrdersService.updateMarketMakingOrderState).toHaveBeenCalledWith(
+      'order-1',
+      'deposit_confirmed',
+    );
+
+    expect(queue.add).toHaveBeenCalledWith(
+      'start_mm',
+      { userId: 'user-1', orderId: 'order-1' },
+      expect.objectContaining({ jobId: 'start_mm_order-1' }),
+    );
   });
 });
