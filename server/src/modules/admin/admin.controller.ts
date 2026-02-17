@@ -365,7 +365,7 @@ export class AdminController {
   @ApiBody({ type: GrowdataMarketMakingPairDto })
   async updateMarketMakingPair(
     @Param('id') id: string,
-    @Body() modifications: Partial<GrowdataMarketMakingPairDto>,
+    @Body() modifications: GrowdataMarketMakingPairDto,
   ) {
     return this.adminGrowService.updateMarketMakingPair(id, modifications);
   }

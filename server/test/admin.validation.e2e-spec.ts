@@ -179,4 +179,20 @@ describe('Admin validation (e2e)', () => {
         }
       });
   });
+
+  it('rejects extra inbound fields on POST /admin/grow/market-making/update/:id', async () => {
+    await request(app.getHttpServer())
+      .post('/admin/grow/market-making/update/123e4567-e89b-12d3-a456-426614174000')
+      .send({
+        symbol: 'BTC/USDT',
+        enable: true,
+        unexpectedField: 'should-not-be-accepted',
+      })
+      .expect(400)
+      .expect((res) => {
+        if (!res.body || res.body.statusCode !== 400) {
+          throw new Error('expected 400 response body');
+        }
+      });
+  });
 });
