@@ -1,5 +1,7 @@
 # Mr.Market
 
+> See also: `docs/plans/2026-02-17-vision-layer-todo.md` for a comprehensive phased plan across Protocol / Execution / Participation layers (HuFi + Mr.Market + EasyEnclave).
+
 ## Backend
 
 ### Validation of create market making process

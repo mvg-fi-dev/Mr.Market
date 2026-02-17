@@ -3,6 +3,7 @@
 ## 2026-02-17
 
 - Add architecture doc for HuFi + Mr.Market + EasyEnclave responsibilities and integration flow
+- Add phased TODO doc for Protocol / Execution / Participation vision layers
 
 ## 2026-02-05
 
