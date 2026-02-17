@@ -4,6 +4,11 @@
 
 ## Backend
 
+### Observability + audit
+- [ ] Standardize structured logging fields across services (campaign_id, order_id, job_id, chain_id, exchange, version).
+- [ ] Add tracing/correlation IDs across Mr.Market -> executor -> HuFi components; propagate on withdraw/deposit monitoring pipeline.
+- [ ] Add a single “system status” dashboard page in Mr.Market admin (queue health, executor health, HuFi API reachability, attestation/verification status).
+
 ### Validation of create market making process
 - [x] 1. user can open invoice payment page in confirm payment step
 - [x] 2. invoice payment can be handled correctly by backend
