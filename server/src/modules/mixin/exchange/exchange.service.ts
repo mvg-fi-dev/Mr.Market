@@ -28,14 +28,16 @@ import {
   SpotOrderStatus,
   STATE_TEXT_MAP,
 } from 'src/common/types/orders/states';
-import { AggregatedBalances } from 'src/common/types/rebalance/map';
 import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
 import { ExchangeRepository } from 'src/modules/mixin/exchange/exchange.repository';
 
 import {
   ExchangeDepositDto,
+  ExchangeDepositRequestDto,
   ExchangeDepositsDto,
+  ExchangeDepositsRequestDto,
   ExchangeWithdrawalDto,
+  ExchangeWithdrawalRequestDto,
 } from './exchange.dto';
 
 @Injectable()
@@ -220,41 +222,12 @@ export class ExchangeService {
 
       return successfulBalances;
     } catch (error) {
-      this.logger.error(
-        `Error fetching all API keys balances: ${error.message}`,
-      );
-      throw error;
+      this.logger.error(`Error in getAllAPIKeysBalance: ${error.message}`);
+      throw new InternalServerErrorException('Failed to get balances');
     }
   }
 
-  aggregateBalancesByExchange(successfulBalances: any[]): AggregatedBalances {
-    return successfulBalances.reduce((acc, curr) => {
-      const { exchange, balance } = curr;
-
-      if (!acc[exchange]) {
-        acc[exchange] = { free: {}, used: {}, total: {} };
-      }
-
-      Object.keys(balance).forEach((balanceType) => {
-        const balanceDetails = balance[balanceType];
-
-        Object.entries(balanceDetails).forEach(([currency, amount]) => {
-          if (!acc[exchange][balanceType][currency]) {
-            acc[exchange][balanceType][currency] = 0;
-          }
-          acc[exchange][balanceType][currency] += amount;
-        });
-      });
-
-      return acc;
-    }, {});
-  }
-
-  async getBalance(
-    exchange: string,
-    apiKey: string,
-    apiSecret: string,
-  ): Promise<any> {
+  async getBalance(exchange: string, apiKey: string, apiSecret: string) {
     const e = new ccxt[exchange]({
       apiKey,
       secret: apiSecret,
@@ -321,6 +294,54 @@ export class ExchangeService {
       return secret;
     }
   }
+
+  // -----------------------------
+  // Request (HTTP) entrypoints - DB-only api key selection
+  // -----------------------------
+
+  async getDepositAddressFromRequest(data: ExchangeDepositRequestDto) {
+    const key = await this.findFirstAPIKeyByExchange(data.exchange);
+
+    if (!key) {
+      return;
+    }
+
+    return await this._getDepositAddress({
+      ...data,
+      apiKey: key.api_key,
+      apiSecret: this.decryptApiSecret(key.api_secret),
+    });
+  }
+
+  async getDepositsFromRequest(data: ExchangeDepositsRequestDto): Promise<any[]> {
+    const key = await this.findFirstAPIKeyByExchange(data.exchange);
+
+    if (!key) {
+      return [];
+    }
+
+    return await this.getDeposits({
+      ...data,
+      apiKeyId: key.key_id,
+    });
+  }
+
+  async createWithdrawalFromRequest(data: ExchangeWithdrawalRequestDto) {
+    const key = await this.findFirstAPIKeyByExchange(data.exchange);
+
+    if (!key) {
+      return;
+    }
+
+    return await this.createWithdrawal({
+      ...data,
+      apiKeyId: key.key_id,
+    });
+  }
+
+  // -----------------------------
+  // Internal (jobs/services) - explicit apiKeyId
+  // -----------------------------
 
   async getDepositAddress(data: ExchangeDepositDto) {
     const key = await this.readAPIKey(data.apiKeyId);
@@ -450,6 +471,7 @@ export class ExchangeService {
       ...data,
       apiKey: key.api_key,
       apiSecret: this.decryptApiSecret(key.api_secret),
+      tag: data.tag || '',
     });
   }
 

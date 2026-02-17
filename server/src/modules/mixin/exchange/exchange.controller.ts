@@ -1,12 +1,12 @@
-import { Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/modules/auth/jwt-auth.guard';
 import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
 
 import {
-  ExchangeDepositDto,
-  ExchangeDepositsDto,
-  ExchangeWithdrawalDto,
+  ExchangeDepositRequestDto,
+  ExchangeDepositsRequestDto,
+  ExchangeWithdrawalRequestDto,
 } from './exchange.dto';
 import { ExchangeService } from './exchange.service';
 
@@ -23,9 +23,9 @@ export class ExchangeController {
   @ApiOperation({ summary: 'Create withdrawal with api key' })
   @ApiResponse({ status: 200, description: 'Create withdrawal' })
   @ApiResponse({ status: 400, description: 'Bad Request' })
-  async createWithdrawal(data: ExchangeWithdrawalDto) {
+  async createWithdrawal(@Body() data: ExchangeWithdrawalRequestDto) {
     try {
-      return this.exchangeService.createWithdrawal(data);
+      return this.exchangeService.createWithdrawalFromRequest(data);
     } catch (e) {
       this.logger.error(`Create withdrawal error: ${e.message}`);
     }
@@ -35,9 +35,9 @@ export class ExchangeController {
   @ApiOperation({ summary: 'Get deposit address with api key' })
   @ApiResponse({ status: 200, description: 'Get deposit address' })
   @ApiResponse({ status: 400, description: 'Bad Request' })
-  async getDepositAddress(data: ExchangeDepositDto) {
+  async getDepositAddress(@Body() data: ExchangeDepositRequestDto) {
     try {
-      return this.exchangeService.getDepositAddress(data);
+      return this.exchangeService.getDepositAddressFromRequest(data);
     } catch (e) {
       this.logger.error(`Get deposit address error: ${e.message}`);
     }
@@ -47,9 +47,9 @@ export class ExchangeController {
   @ApiOperation({ summary: 'Fetch deposits from exchange (ccxt)' })
   @ApiResponse({ status: 200, description: 'Deposit history list' })
   @ApiResponse({ status: 400, description: 'Bad Request' })
-  async getDeposits(data: ExchangeDepositsDto) {
+  async getDeposits(@Body() data: ExchangeDepositsRequestDto) {
     try {
-      return await this.exchangeService.getDeposits(data);
+      return await this.exchangeService.getDepositsFromRequest(data);
     } catch (e) {
       this.logger.error(`Get deposits error: ${e.message}`);
     }
