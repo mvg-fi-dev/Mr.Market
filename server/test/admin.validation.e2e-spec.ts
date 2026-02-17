@@ -274,4 +274,34 @@ describe('Admin validation (e2e)', () => {
         }
       });
   });
+
+  it('rejects extra inbound fields on POST /admin/grow/simply-grow/update/:asset_id', async () => {
+    await request(app.getHttpServer())
+      .post('/admin/grow/simply-grow/update/123e4567-e89b-12d3-a456-426614174000')
+      .send({
+        enable: true,
+        unexpectedField: 'should-not-be-accepted',
+      })
+      .expect(400)
+      .expect((res) => {
+        if (!res.body || res.body.statusCode !== 400) {
+          throw new Error('expected 400 response body');
+        }
+      });
+  });
+
+  it('rejects extra inbound fields on POST /admin/spot/trading-pair/update/:id', async () => {
+    await request(app.getHttpServer())
+      .post('/admin/spot/trading-pair/update/123e4567-e89b-12d3-a456-426614174000')
+      .send({
+        enable: true,
+        unexpectedField: 'should-not-be-accepted',
+      })
+      .expect(400)
+      .expect((res) => {
+        if (!res.body || res.body.statusCode !== 400) {
+          throw new Error('expected 400 response body');
+        }
+      });
+  });
 });

@@ -58,6 +58,13 @@ export class GrowdataSimplyGrowTokenDto {
   enable: boolean;
 }
 
+// Swagger + validation friendly DTO for partial updates.
+// Partial<GrowdataSimplyGrowTokenDto> in controller signatures does NOT
+// carry runtime metadata, so Nest ValidationPipe cannot forbid extra fields.
+export class GrowdataSimplyGrowTokenUpdateDto extends PartialType(
+  GrowdataSimplyGrowTokenDto,
+) {}
+
 // DTO for GrowdataArbitragePair
 export class GrowdataArbitragePairDto {
   @IsUUID()

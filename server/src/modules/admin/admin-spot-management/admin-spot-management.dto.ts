@@ -1,3 +1,4 @@
+import { PartialType } from '@nestjs/swagger';
 import { IsBoolean, IsOptional, IsString, IsUUID } from 'class-validator';
 
 // DTO for SpotdataTradingPair
@@ -45,3 +46,10 @@ export class SpotdataTradingPairDto {
   @IsBoolean()
   enable: boolean;
 }
+
+// Swagger + validation friendly DTO for partial updates.
+// Partial<SpotdataTradingPairDto> in controller signatures does NOT
+// carry runtime metadata, so Nest ValidationPipe cannot forbid extra fields.
+export class SpotdataTradingPairUpdateDto extends PartialType(
+  SpotdataTradingPairDto,
+) {}

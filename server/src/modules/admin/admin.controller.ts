@@ -19,7 +19,10 @@ import {
 } from '@nestjs/swagger';
 
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { SpotdataTradingPairDto } from './admin-spot-management/admin-spot-management.dto';
+import {
+  SpotdataTradingPairDto,
+  SpotdataTradingPairUpdateDto,
+} from './admin-spot-management/admin-spot-management.dto';
 import { AdminSpotService } from './admin-spot-management/admin-spot-management.service';
 import {
   GrowdataArbitragePairDto,
@@ -28,6 +31,7 @@ import {
   GrowdataExchangeUpdateDto,
   GrowdataMarketMakingPairDto,
   GrowdataSimplyGrowTokenDto,
+  GrowdataSimplyGrowTokenUpdateDto,
 } from './growdata/adminGrow.dto';
 import { AdminGrowService } from './growdata/adminGrow.service';
 import {
@@ -336,7 +340,7 @@ export class AdminController {
   @ApiBody({ type: GrowdataSimplyGrowTokenDto })
   async updateSimplyGrowToken(
     @Param('asset_id') asset_id: string,
-    @Body() modifications: Partial<GrowdataSimplyGrowTokenDto>,
+    @Body() modifications: GrowdataSimplyGrowTokenUpdateDto,
   ) {
     return this.adminGrowService.updateSimplyGrowToken(asset_id, modifications);
   }
@@ -426,7 +430,7 @@ export class AdminController {
   @ApiBody({ type: SpotdataTradingPairDto })
   async updateTradingPair(
     @Param('id') id: string,
-    @Body() modifications: Partial<SpotdataTradingPairDto>,
+    @Body() modifications: SpotdataTradingPairUpdateDto,
   ) {
     return this.adminSpotService.updateTradingPair(id, modifications);
   }
