@@ -5,13 +5,24 @@
 - Add architecture doc for HuFi + Mr.Market + EasyEnclave responsibilities and integration flow
 - Add phased TODO doc for Protocol / Execution / Participation vision layers
 
-## 2026-02-05
+## 2026-02-12
 
-- Switch Playwright workflow to SQLite and remove Postgres service
+- Add Mixin CLI skill guide and execution testing docs, and restore MARKET_MAKING_FLOW.md as backend flow reference
+
+## 2026-02-11
+
+- Add tick-driven market-making engine foundation (tick coordinator + intent orchestration)
+- Add single-writer balance ledger and durability/idempotency foundations for restart-safe processing
+- Add HuFi campaign sync + reward pipeline foundations (allocations, vault transfers, reconciliation)
+- Harden stop/withdraw orchestration and config wiring across modules
 
 ## 2026-02-06
 
 - Adjust Mixin snapshot polling interval and clarify view-only exchange mode when no API keys
+
+## 2026-02-05
+
+- Switch Playwright workflow to SQLite and remove Postgres service
 
 ## 2026-02-04
 
