@@ -85,8 +85,15 @@ Objective: a campaign can be created, joined, measured, and paid out with minima
 
 Objective: make the market-making loop real and reliable before making it decentralized.
 
+What already exists in this repo (foundation):
+- tick-driven runtime + intent-driven execution
+- single-writer balance ledger + durability/idempotency primitives
+- HuFi campaign sync + score estimator + reward pipeline foundations
+- end-to-end testing guidance in `docs/tests/MARKET_MAKING.md`
+
 ### 2.1 Funds flow completion (Mr.Market)
 - [ ] Withdraw-to-exchange (real mode)
+  - Status: currently the flow may stop at `payment_complete` because `withdraw_to_exchange` can be in validation/refund mode.
   - Acceptance: funds move from custody to exchange for a given order.
 - [ ] Deposit confirmation tracking
   - Acceptance: detect arrival and update order state in near real-time.

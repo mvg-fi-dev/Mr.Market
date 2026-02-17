@@ -34,6 +34,7 @@ Main responsibilities:
 
 Important note:
 - Mr.Market is the place where the “market-making loop” must become real: funding -> exchange -> execute -> report -> settle.
+- This repo already contains a tick-driven + intent-driven MM engine foundation and a single-writer balance ledger foundation; the remaining gap is completing the real withdrawal/deposit-to-exchange lifecycle and production hardening.
 
 ### EasyEnclave (easyenclave/easyenclave)
 EasyEnclave provides the **TEE trust and discovery control plane** for TDX-attested services.
