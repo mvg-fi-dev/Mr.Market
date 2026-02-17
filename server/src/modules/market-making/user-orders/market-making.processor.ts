@@ -16,6 +16,8 @@ import { MixinClientService } from 'src/modules/mixin/client/mixin-client.servic
 import { ExchangeService } from 'src/modules/mixin/exchange/exchange.service';
 import { TransactionService } from 'src/modules/mixin/transaction/transaction.service';
 import { WithdrawalService } from 'src/modules/mixin/withdrawal/withdrawal.service';
+
+const DEPOSIT_AMOUNT_TOLERANCE = new BigNumber('0.00000001');
 import { Repository } from 'typeorm';
 
 import { getRFC3339Timestamp } from '../../../common/helpers/utils';
@@ -245,9 +247,10 @@ export class MarketMakingOrderProcessor {
 
     try {
       // Step 1.1: Validate trading pair exists
-      const pairConfig = await this.growDataRepository.findMarketMakingPairById(
-        marketMakingPairId,
-      );
+      const pairConfig =
+        await this.growDataRepository.findMarketMakingPairById(
+          marketMakingPairId,
+        );
 
       if (!pairConfig) {
         this.logger.error(`Market making pair ${marketMakingPairId} not found`);
@@ -468,9 +471,10 @@ export class MarketMakingOrderProcessor {
         return;
       }
 
-      const pairConfig = await this.growDataRepository.findMarketMakingPairById(
-        marketMakingPairId,
-      );
+      const pairConfig =
+        await this.growDataRepository.findMarketMakingPairById(
+          marketMakingPairId,
+        );
 
       if (!pairConfig) {
         this.logger.error(`Pair config not found: ${marketMakingPairId}`);
@@ -500,14 +504,14 @@ export class MarketMakingOrderProcessor {
         paymentState.baseFeeAssetId === paymentState.baseAssetId
           ? baseAssetAmount
           : paymentState.baseFeeAssetId === paymentState.quoteAssetId
-          ? quoteAssetAmount
-          : baseFeeAssetAmount;
+            ? quoteAssetAmount
+            : baseFeeAssetAmount;
       const quoteFeePaidAmount =
         paymentState.quoteFeeAssetId === paymentState.quoteAssetId
           ? quoteAssetAmount
           : paymentState.quoteFeeAssetId === paymentState.baseAssetId
-          ? baseAssetAmount
-          : quoteFeeAssetAmount;
+            ? baseAssetAmount
+            : quoteFeeAssetAmount;
 
       // Check fees (comparing with required amounts)
       const hasBaseFee =
@@ -692,9 +696,10 @@ export class MarketMakingOrderProcessor {
         where: { orderId },
       });
 
-      const pairConfig = await this.growDataRepository.findMarketMakingPairById(
-        marketMakingPairId,
-      );
+      const pairConfig =
+        await this.growDataRepository.findMarketMakingPairById(
+          marketMakingPairId,
+        );
 
       if (!paymentState || !pairConfig) {
         throw new Error('Payment state or pair config not found');
@@ -703,9 +708,8 @@ export class MarketMakingOrderProcessor {
       const exchangeName = pairConfig.exchange_id;
 
       // Get API key for this exchange
-      const apiKey = await this.exchangeService.findFirstAPIKeyByExchange(
-        exchangeName,
-      );
+      const apiKey =
+        await this.exchangeService.findFirstAPIKeyByExchange(exchangeName);
 
       if (!apiKey) {
         throw new Error(`No API key found for exchange ${exchangeName}`);
@@ -873,9 +877,8 @@ export class MarketMakingOrderProcessor {
         'joining_campaign',
       );
 
-      const order = await this.userOrdersService.findMarketMakingByOrderId(
-        orderId,
-      );
+      const order =
+        await this.userOrdersService.findMarketMakingByOrderId(orderId);
 
       if (!order) {
         throw new Error(`Order ${orderId} not found`);
@@ -975,9 +978,8 @@ export class MarketMakingOrderProcessor {
 
     this.logger.log(`Starting MM for user ${userId}, order ${orderId}`);
 
-    const order = await this.userOrdersService.findMarketMakingByOrderId(
-      orderId,
-    );
+    const order =
+      await this.userOrdersService.findMarketMakingByOrderId(orderId);
 
     if (!order) {
       this.logger.error(`MM Order ${orderId} not found`);
@@ -1090,7 +1092,7 @@ export class MarketMakingOrderProcessor {
       // If both confirmed, proceed to join campaign
       if (baseConfirmed && quoteConfirmed) {
         this.logger.log(
-          `Both withdrawals confirmed for order ${orderId}, proceeding to join campaign`,
+          `Both withdrawals confirmed for order ${orderId}, proceeding to monitor exchange deposits`,
         );
 
         await this.userOrdersService.updateMarketMakingOrderState(
@@ -1098,15 +1100,27 @@ export class MarketMakingOrderProcessor {
           'withdrawal_confirmed',
         );
 
+        await this.userOrdersService.updateMarketMakingOrderState(
+          orderId,
+          'deposit_confirming',
+        );
+
         await (job.queue as any).add(
-          'join_campaign',
-          { orderId },
+          'monitor_exchange_deposit',
           {
-            jobId: `join_campaign_${orderId}`,
+            orderId,
+            marketMakingPairId: job.data.marketMakingPairId,
+            startedAt,
+          },
+          {
+            jobId: `monitor_exchange_deposit_${orderId}`,
+            attempts: 120,
+            backoff: { type: 'fixed', delay: this.RETRY_DELAY_MS },
             removeOnComplete: false,
           },
         );
-        this.logger.log(`Queued join_campaign for order ${orderId}`);
+
+        this.logger.log(`Queued monitor_exchange_deposit for order ${orderId}`);
 
         return;
       }
@@ -1123,6 +1137,187 @@ export class MarketMakingOrderProcessor {
       );
       throw error;
     }
+  }
+
+  /**
+   * Check if a withdrawal is confirmed by checking the Mixin snapshot
+   */
+  @Process('monitor_exchange_deposit')
+  async handleMonitorExchangeDeposit(
+    job: Job<{
+      orderId: string;
+      marketMakingPairId: string;
+      startedAt?: number;
+    }>,
+  ) {
+    const { orderId, marketMakingPairId } = job.data;
+    const startedAt = job.data.startedAt ?? Date.now();
+
+    if (!job.data.startedAt) {
+      await job.update({ ...job.data, startedAt });
+    }
+
+    const retryCount = job.attemptsMade || 0;
+
+    this.logger.log(
+      `Monitoring exchange deposits for order ${orderId} (attempt ${
+        retryCount + 1
+      })`,
+    );
+
+    const elapsed = Date.now() - startedAt;
+
+    if (elapsed > this.WITHDRAWAL_TIMEOUT_MS) {
+      this.logger.error(
+        `Exchange deposit confirmation timeout for order ${orderId} after ${elapsed}ms`,
+      );
+
+      await this.userOrdersService.updateMarketMakingOrderState(
+        orderId,
+        'failed',
+      );
+
+      return;
+    }
+
+    const order =
+      await this.userOrdersService.findMarketMakingByOrderId(orderId);
+
+    if (!order) {
+      throw new Error(`Order ${orderId} not found`);
+    }
+
+    const pairConfig =
+      await this.growDataRepository.findMarketMakingPairById(
+        marketMakingPairId,
+      );
+
+    if (!pairConfig) {
+      throw new Error(`Market making pair ${marketMakingPairId} not found`);
+    }
+
+    const paymentState = await this.paymentStateRepository.findOne({
+      where: { orderId },
+    });
+
+    if (!paymentState) {
+      throw new Error(`Payment state not found for order ${orderId}`);
+    }
+
+    const exchangeName = pairConfig.exchange_id;
+
+    if (exchangeName !== 'mexc') {
+      this.logger.warn(
+        `Exchange deposit monitor currently only implemented for mexc. Got ${exchangeName}.`,
+      );
+      throw new Error('unsupported exchange for deposit monitor');
+    }
+
+    const apiKey =
+      await this.exchangeService.findFirstAPIKeyByExchange(exchangeName);
+
+    if (!apiKey) {
+      throw new Error(`No API key found for exchange ${exchangeName}`);
+    }
+
+    const [baseNetwork, quoteNetwork] = await Promise.all([
+      this.networkMappingService.getNetworkForAsset(
+        paymentState.baseAssetId,
+        pairConfig.base_symbol,
+      ),
+      this.networkMappingService.getNetworkForAsset(
+        paymentState.quoteAssetId,
+        pairConfig.quote_symbol,
+      ),
+    ]);
+
+    const since = startedAt;
+
+    const deposits = await this.exchangeService.getDeposits({
+      exchange: exchangeName,
+      apiKeyId: apiKey.key_id,
+      since,
+      limit: 200,
+    });
+
+    const matchDeposit = (
+      symbol: string,
+      network: string,
+      expectedAmount: string,
+    ) => {
+      const expectedBn = new BigNumber(expectedAmount || '0');
+
+      return deposits.find((d: any) => {
+        const dSymbol = (d.currency || d.code || '').toString();
+        const dNetwork = (d.network || '').toString();
+
+        if (!dSymbol || !dNetwork) {
+          return false;
+        }
+
+        if (dSymbol.toUpperCase() !== symbol.toUpperCase()) {
+          return false;
+        }
+
+        if (dNetwork !== network) {
+          return false;
+        }
+
+        const amountBn = new BigNumber(
+          d.amount ?? d.quantity ?? d.value ?? '0',
+        );
+
+        if (!amountBn.isFinite() || amountBn.isLessThanOrEqualTo(0)) {
+          return false;
+        }
+
+        const delta = amountBn.minus(expectedBn).abs();
+
+        return delta.isLessThanOrEqualTo(DEPOSIT_AMOUNT_TOLERANCE);
+      });
+    };
+
+    const baseDeposit = matchDeposit(
+      pairConfig.base_symbol,
+      baseNetwork,
+      paymentState.baseAssetAmount,
+    );
+
+    const quoteDeposit = matchDeposit(
+      pairConfig.quote_symbol,
+      quoteNetwork,
+      paymentState.quoteAssetAmount,
+    );
+
+    this.logger.log(
+      `Order ${orderId} exchange deposit status - Base: ${
+        baseDeposit ? 'confirmed' : 'pending'
+      }, Quote: ${quoteDeposit ? 'confirmed' : 'pending'}`,
+    );
+
+    if (baseDeposit && quoteDeposit) {
+      await this.userOrdersService.updateMarketMakingOrderState(
+        orderId,
+        'deposit_confirmed',
+      );
+
+      await (job.queue as any).add(
+        'join_campaign',
+        { orderId },
+        {
+          jobId: `join_campaign_${orderId}`,
+          removeOnComplete: false,
+        },
+      );
+
+      this.logger.log(
+        `Exchange deposits confirmed for order ${orderId}, queued join_campaign`,
+      );
+
+      return;
+    }
+
+    throw new Error('Exchange deposits not fully confirmed yet');
   }
 
   /**
