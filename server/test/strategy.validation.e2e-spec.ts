@@ -113,4 +113,26 @@ describe('Strategy validation (e2e)', () => {
         }
       });
   });
+
+  it('rejects extra inbound fields on POST /strategy/join', async () => {
+    await request(app.getHttpServer())
+      .post('/strategy/join')
+      .send({
+        userId: 'u1',
+        clientId: 'c1',
+        strategyKey: 'u1-c1-arbitrage',
+        amount: 100,
+        transactionHash: '0xabc123',
+        tokenSymbol: 'USDT',
+        chainId: 1,
+        tokenAddress: '0xdef456',
+        unexpectedField: 'should-not-be-accepted',
+      })
+      .expect(400)
+      .expect((res) => {
+        if (!res.body || res.body.statusCode !== 400) {
+          throw new Error('expected 400 response body');
+        }
+      });
+  });
 });
