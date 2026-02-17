@@ -265,7 +265,7 @@ export class AdminController {
   // Exchange endpoints
   @Post('grow/exchange/add')
   @ApiOperation({ summary: 'Add a new exchange' })
-  @ApiBody({ type: GrowdataExchangeUpdateDto })
+  @ApiBody({ type: GrowdataExchangeDto })
   async addExchange(@Body() exchangeDto: GrowdataExchangeDto) {
     return this.adminGrowService.addExchange(exchangeDto);
   }
@@ -308,7 +308,7 @@ export class AdminController {
 
   @Post('grow/exchange/update/:exchange_id')
   @ApiOperation({ summary: 'Update an exchange' })
-  @ApiBody({ type: GrowdataExchangeDto })
+  @ApiBody({ type: GrowdataExchangeUpdateDto })
   async updateExchange(
     @Param('exchange_id') exchange_id: string,
     @Body() modifications: GrowdataExchangeUpdateDto,
@@ -428,7 +428,7 @@ export class AdminController {
 
   @Post('spot/trading-pair/update/:id')
   @ApiOperation({ summary: 'Update a spot trading pair' })
-  @ApiBody({ type: SpotdataTradingPairDto })
+  @ApiBody({ type: SpotdataTradingPairUpdateDto })
   async updateTradingPair(
     @Param('id') id: string,
     @Body() modifications: SpotdataTradingPairUpdateDto,
