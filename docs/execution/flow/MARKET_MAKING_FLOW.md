@@ -42,8 +42,9 @@ The old queue self-loop `execute_mm_cycle` has been removed.
 
 Current behavior:
 
-- Queueing `withdraw_to_exchange` is still disabled in this flow.
-- This path logs and stops at `payment_complete` unless other jobs/flows continue the lifecycle.
+- After `payment_complete`, the system *may* queue `withdraw_to_exchange` depending on config (`strategy.queue_withdraw_on_payment_complete`).
+- The `withdraw_to_exchange` handler may execute real withdrawals or refund/fail depending on config (`strategy.withdraw_to_exchange_enabled`).
+- If withdrawal queueing is disabled, the order can remain at `payment_complete` until another job/flow advances the lifecycle.
 
 ### 3) Withdrawal and deposit confirmation stage (when used)
 

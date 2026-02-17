@@ -1031,7 +1031,7 @@ export class MarketMakingOrderProcessor {
   /**
    * Monitor market making withdrawal confirmations
    * This handler checks both base and quote withdrawal confirmations
-   * and proceeds to join_campaign once both are confirmed
+   * and proceeds to monitor_exchange_deposit once both are confirmed
    */
   @Process('monitor_mixin_withdrawal')
   async handleMonitorMMWithdrawal(

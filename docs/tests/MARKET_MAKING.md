@@ -10,12 +10,13 @@ This document covers backend end-to-end testing for market making:
 
 ## Important Reality Check
 
-Current implementation has a hard stop in withdrawal stage:
+The post-`payment_complete` lifecycle is config-gated:
 
-- `withdraw_to_exchange` handler is currently validation/refund mode.
-- live withdrawal calls are commented out in `server/src/modules/market-making/user-orders/market-making.processor.ts`.
+- `strategy.queue_withdraw_on_payment_complete` controls whether `withdraw_to_exchange` is queued after `payment_complete`.
+- `strategy.withdraw_to_exchange_enabled` controls whether `withdraw_to_exchange` actually submits withdrawals, or refunds/fails safely.
+- Exchange deposit monitoring is currently implemented only for MEXC (`monitor_exchange_deposit`).
 
-So the default runtime reaches `payment_complete`, but not full exchange-start lifecycle unless you explicitly enable/simulate those stages in tests.
+So depending on config, the runtime may stop at `payment_complete`, refund/fail at withdrawal stage, or proceed through withdrawal + deposit confirmation into `start_mm`.
 
 ## Components Under Test
 
