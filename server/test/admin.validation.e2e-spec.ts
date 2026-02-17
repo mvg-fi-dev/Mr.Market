@@ -143,4 +143,24 @@ describe('Admin validation (e2e)', () => {
         }
       });
   });
+
+  it('rejects extra inbound fields on POST /admin/grow/simply-grow/add', async () => {
+    await request(app.getHttpServer())
+      .post('/admin/grow/simply-grow/add')
+      .send({
+        asset_id: '123e4567-e89b-12d3-a456-426614174000',
+        name: 'SimplyGrow Token',
+        symbol: 'SGT',
+        icon_url: '',
+        apy: '0.12',
+        enable: true,
+        apiKeyId: 'should-not-be-accepted',
+      })
+      .expect(400)
+      .expect((res) => {
+        if (!res.body || res.body.statusCode !== 400) {
+          throw new Error('expected 400 response body');
+        }
+      });
+  });
 });
