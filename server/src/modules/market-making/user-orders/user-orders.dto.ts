@@ -1,7 +1,8 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateMarketMakingIntentDto {
   @IsString()
+  @IsNotEmpty()
   marketMakingPairId: string;
 
   @IsOptional()

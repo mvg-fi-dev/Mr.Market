@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class AddAPIKeyDto {
   @ApiProperty({ description: 'The name of exchange' })
@@ -11,7 +11,9 @@ export class AddAPIKeyDto {
     description: 'The index used in the exchange map',
     required: false,
   })
-  exchange_index: string;
+  @IsString()
+  @IsOptional()
+  exchange_index?: string;
 
   @ApiProperty({ description: 'The name(alias) of API key' })
   @IsString()
