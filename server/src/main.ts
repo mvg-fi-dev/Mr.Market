@@ -1,5 +1,6 @@
 import 'dotenv/config';
 
+import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as crypto from 'crypto';
@@ -53,6 +54,16 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.enableCors();
+
+  // Input validation: only accept whitelisted DTO fields.
+  // This prevents accidental acceptance of raw exchange key/secret material in request bodies.
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
 
   // Global request logging
   app.use((req, _, next) => {
