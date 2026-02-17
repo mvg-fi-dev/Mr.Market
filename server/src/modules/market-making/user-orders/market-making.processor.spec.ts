@@ -337,4 +337,79 @@ describe('MarketMakingOrderProcessor', () => {
       expect.objectContaining({ jobId: 'start_mm_order-1' }),
     );
   });
+
+  it('prefers tx hash matching for deposits when provided', async () => {
+    const { processor, userOrdersService, paymentStateRepository } =
+      createProcessor();
+
+    (
+      processor as any
+    ).growDataRepository.findMarketMakingPairById.mockResolvedValueOnce({
+      exchange_id: 'mexc',
+      base_symbol: 'BTC',
+      quote_symbol: 'USDT',
+    });
+
+    paymentStateRepository.findOne.mockResolvedValueOnce({
+      orderId: 'order-1',
+      baseAssetId: 'asset-base',
+      quoteAssetId: 'asset-quote',
+      // amounts deliberately not matching to ensure we are using tx hash.
+      baseAssetAmount: '999',
+      quoteAssetAmount: '999',
+    });
+
+    (
+      processor as any
+    ).networkMappingService.getNetworkForAsset.mockResolvedValueOnce('ERC20');
+    (
+      processor as any
+    ).networkMappingService.getNetworkForAsset.mockResolvedValueOnce('ERC20');
+
+    (
+      processor as any
+    ).exchangeService.findFirstAPIKeyByExchange.mockResolvedValueOnce({
+      key_id: 'key-1',
+    });
+
+    (processor as any).exchangeService.getDeposits.mockResolvedValueOnce([
+      {
+        currency: 'BTC',
+        network: 'ERC20',
+        amount: '1',
+        txid: '0xbase',
+      },
+      {
+        currency: 'USDT',
+        network: 'ERC20',
+        amount: '2',
+        txHash: '0xquote',
+      },
+    ]);
+
+    const queue = { add: jest.fn() };
+
+    await processor.handleMonitorExchangeDeposit({
+      data: {
+        orderId: 'order-1',
+        marketMakingPairId: 'pair-1',
+        baseWithdrawalTxHash: '0xbase',
+        quoteWithdrawalTxHash: '0xquote',
+        startedAt: Date.now(),
+      },
+      attemptsMade: 0,
+      queue,
+    } as any);
+
+    expect(userOrdersService.updateMarketMakingOrderState).toHaveBeenCalledWith(
+      'order-1',
+      'deposit_confirmed',
+    );
+
+    expect(queue.add).toHaveBeenCalledWith(
+      'start_mm',
+      { userId: 'user-1', orderId: 'order-1' },
+      expect.objectContaining({ jobId: 'start_mm_order-1' }),
+    );
+  });
 });
