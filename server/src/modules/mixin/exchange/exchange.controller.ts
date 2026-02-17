@@ -3,7 +3,11 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/modules/auth/jwt-auth.guard';
 import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
 
-import { ExchangeDepositDto, ExchangeWithdrawalDto } from './exchange.dto';
+import {
+  ExchangeDepositDto,
+  ExchangeDepositsDto,
+  ExchangeWithdrawalDto,
+} from './exchange.dto';
 import { ExchangeService } from './exchange.service';
 
 // This API is used for admin page to do rebalance
@@ -36,6 +40,18 @@ export class ExchangeController {
       return this.exchangeService.getDepositAddress(data);
     } catch (e) {
       this.logger.error(`Get deposit address error: ${e.message}`);
+    }
+  }
+
+  @Post('/deposits')
+  @ApiOperation({ summary: 'Fetch deposits from exchange (ccxt)' })
+  @ApiResponse({ status: 200, description: 'Deposit history list' })
+  @ApiResponse({ status: 400, description: 'Bad Request' })
+  async getDeposits(data: ExchangeDepositsDto) {
+    try {
+      return await this.exchangeService.getDeposits(data);
+    } catch (e) {
+      this.logger.error(`Get deposits error: ${e.message}`);
     }
   }
 

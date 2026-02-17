@@ -8,6 +8,7 @@ import { Cron } from '@nestjs/schedule';
 import BigNumber from 'bignumber.js';
 import * as ccxt from 'ccxt';
 import { APIKeysConfig } from 'src/common/entities/admin/api-keys.entity';
+// ccxt types are not consistently exported across builds; keep deposits typed as any.
 import { SpotOrder } from 'src/common/entities/orders/spot-order.entity';
 import {
   decrypt,
@@ -31,7 +32,11 @@ import { AggregatedBalances } from 'src/common/types/rebalance/map';
 import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
 import { ExchangeRepository } from 'src/modules/mixin/exchange/exchange.repository';
 
-import { ExchangeDepositDto, ExchangeWithdrawalDto } from './exchange.dto';
+import {
+  ExchangeDepositDto,
+  ExchangeDepositsDto,
+  ExchangeWithdrawalDto,
+} from './exchange.dto';
 
 @Injectable()
 export class ExchangeService {
@@ -300,6 +305,23 @@ export class ExchangeService {
     }
   }
 
+  private decryptApiSecret(secret: string): string {
+    const privateKey =
+      this.configService.get<string>('admin.encryption_private_key') || '';
+
+    if (!privateKey) {
+      return secret;
+    }
+
+    try {
+      return decrypt(secret, privateKey);
+    } catch (e) {
+      this.logger.warn(`Failed to decrypt api secret: ${e.message}`);
+
+      return secret;
+    }
+  }
+
   async getDepositAddress(data: ExchangeDepositDto) {
     const key = await this.readAPIKey(data.apiKeyId);
 
@@ -310,8 +332,33 @@ export class ExchangeService {
     return await this._getDepositAddress({
       ...data,
       apiKey: key.api_key,
-      apiSecret: key.api_secret,
+      apiSecret: this.decryptApiSecret(key.api_secret),
     });
+  }
+
+  async getDeposits(data: ExchangeDepositsDto): Promise<any[]> {
+    const key = await this.readAPIKey(data.apiKeyId);
+
+    if (!key) {
+      return [];
+    }
+
+    const e = new ccxt[data.exchange]({
+      apiKey: key.api_key,
+      secret: this.decryptApiSecret(key.api_secret),
+    });
+
+    if (!e.has['fetchDeposits']) {
+      throw new Error(`${data.exchange} doesn't support fetchDeposits()`);
+    }
+
+    const params: Record<string, any> = {};
+
+    if (data.network) {
+      params.network = data.network;
+    }
+
+    return await e.fetchDeposits(data.symbol, data.since, data.limit, params);
   }
 
   async _getDepositAddress({
@@ -402,7 +449,7 @@ export class ExchangeService {
     await this._createWithdrawal({
       ...data,
       apiKey: key.api_key,
-      apiSecret: key.api_secret,
+      apiSecret: this.decryptApiSecret(key.api_secret),
     });
   }
 
@@ -498,9 +545,8 @@ export class ExchangeService {
     amount: string,
   ): Promise<SuccessResponse | ErrorResponse> {
     const symbol = ''; // getSymbolByAssetID(asset_id);
-    const apiKeys = await this.exchangeRepository.readAllAPIKeysByExchange(
-      exchange,
-    );
+    const apiKeys =
+      await this.exchangeRepository.readAllAPIKeysByExchange(exchange);
 
     apiKeys.forEach(async (key) => {
       if (
@@ -662,15 +708,23 @@ export class ExchangeService {
   async findFirstAPIKeyByExchange(
     exchange: string,
   ): Promise<APIKeysConfig | null> {
-    const apiKeys = await this.exchangeRepository.readAllAPIKeysByExchange(
-      exchange,
-    );
+    const apiKeys =
+      await this.exchangeRepository.readAllAPIKeysByExchange(exchange);
 
     if (!apiKeys) {
       return null;
     }
 
-    return apiKeys[0];
+    const key = apiKeys[0];
+
+    if (!key) {
+      return null;
+    }
+
+    return {
+      ...key,
+      api_secret: this.decryptApiSecret(key.api_secret),
+    };
   }
 
   async removeAPIKey(keyId: string) {
