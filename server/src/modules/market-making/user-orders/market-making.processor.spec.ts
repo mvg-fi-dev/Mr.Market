@@ -76,6 +76,7 @@ describe('MarketMakingOrderProcessor', () => {
       } as any,
       { getNetworkForAsset: jest.fn() } as any,
       {} as any,
+      { get: jest.fn().mockReturnValue(false) } as any,
       paymentStateRepository as any,
       { update: jest.fn(), findOne: jest.fn(), save: jest.fn() } as any,
       marketMakingRepository as any,
