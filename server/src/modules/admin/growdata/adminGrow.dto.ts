@@ -16,6 +16,25 @@ export class GrowdataExchangeDto {
   enable: boolean;
 }
 
+// DTO for partial updates to GrowdataExchange
+export class GrowdataExchangeUpdateDto {
+  @IsString()
+  @IsOptional()
+  exchange_id?: string;
+
+  @IsString()
+  @IsOptional()
+  name?: string;
+
+  @IsString()
+  @IsOptional()
+  icon_url?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  enable?: boolean;
+}
+
 // DTO for GrowdataSimplyGrowToken
 export class GrowdataSimplyGrowTokenDto {
   @IsUUID()

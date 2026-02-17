@@ -24,6 +24,7 @@ import { AdminSpotService } from './admin-spot-management/admin-spot-management.
 import {
   GrowdataArbitragePairDto,
   GrowdataExchangeDto,
+  GrowdataExchangeUpdateDto,
   GrowdataMarketMakingPairDto,
   GrowdataSimplyGrowTokenDto,
 } from './growdata/adminGrow.dto';
@@ -258,7 +259,7 @@ export class AdminController {
   // Exchange endpoints
   @Post('grow/exchange/add')
   @ApiOperation({ summary: 'Add a new exchange' })
-  @ApiBody({ type: GrowdataExchangeDto })
+  @ApiBody({ type: GrowdataExchangeUpdateDto })
   async addExchange(@Body() exchangeDto: GrowdataExchangeDto) {
     return this.adminGrowService.addExchange(exchangeDto);
   }
@@ -304,7 +305,7 @@ export class AdminController {
   @ApiBody({ type: GrowdataExchangeDto })
   async updateExchange(
     @Param('exchange_id') exchange_id: string,
-    @Body() modifications: Partial<GrowdataExchangeDto>,
+    @Body() modifications: GrowdataExchangeUpdateDto,
   ) {
     return this.adminGrowService.updateExchange(exchange_id, modifications);
   }

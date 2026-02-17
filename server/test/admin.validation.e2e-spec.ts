@@ -163,4 +163,20 @@ describe('Admin validation (e2e)', () => {
         }
       });
   });
+
+  it('rejects extra inbound fields on POST /admin/grow/exchange/update/:exchange_id', async () => {
+    await request(app.getHttpServer())
+      .post('/admin/grow/exchange/update/binance')
+      .send({
+        name: 'Binance',
+        enable: true,
+        unexpectedField: 'should-not-be-accepted',
+      })
+      .expect(400)
+      .expect((res) => {
+        if (!res.body || res.body.statusCode !== 400) {
+          throw new Error('expected 400 response body');
+        }
+      });
+  });
 });
