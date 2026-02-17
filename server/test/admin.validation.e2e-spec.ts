@@ -180,11 +180,11 @@ describe('Admin validation (e2e)', () => {
       });
   });
 
-  it('rejects extra inbound fields on POST /admin/grow/market-making/update/:id', async () => {
+  it('rejects extra inbound fields on POST /admin/grow/arbitrage/update/:id', async () => {
     await request(app.getHttpServer())
-      .post('/admin/grow/market-making/update/123e4567-e89b-12d3-a456-426614174000')
+      .post('/admin/grow/arbitrage/update/123e4567-e89b-12d3-a456-426614174000')
       .send({
-        symbol: 'BTC/USDT',
+        // use a minimal valid partial payload plus one disallowed field
         enable: true,
         unexpectedField: 'should-not-be-accepted',
       })

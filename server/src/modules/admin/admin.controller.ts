@@ -23,6 +23,7 @@ import { SpotdataTradingPairDto } from './admin-spot-management/admin-spot-manag
 import { AdminSpotService } from './admin-spot-management/admin-spot-management.service';
 import {
   GrowdataArbitragePairDto,
+  GrowdataArbitragePairUpdateDto,
   GrowdataExchangeDto,
   GrowdataExchangeUpdateDto,
   GrowdataMarketMakingPairDto,
@@ -373,7 +374,7 @@ export class AdminController {
   // Arbitrage pair endpoints
   @Post('grow/arbitrage/add')
   @ApiOperation({ summary: 'Add a new arbitrage pair' })
-  @ApiBody({ type: GrowdataArbitragePairDto })
+  @ApiBody({ type: GrowdataArbitragePairUpdateDto })
   async addArbitragePair(@Body() pairDto: GrowdataArbitragePairDto) {
     return this.adminGrowService.addArbitragePair(pairDto);
   }
@@ -392,10 +393,10 @@ export class AdminController {
 
   @Post('grow/arbitrage/update/:id')
   @ApiOperation({ summary: 'Update an arbitrage pair' })
-  @ApiBody({ type: GrowdataArbitragePairDto })
+  @ApiBody({ type: GrowdataArbitragePairUpdateDto })
   async updateArbitragePair(
     @Param('id') id: string,
-    @Body() modifications: Partial<GrowdataArbitragePairDto>,
+    @Body() modifications: GrowdataArbitragePairUpdateDto,
   ) {
     return this.adminGrowService.updateArbitragePair(id, modifications);
   }
