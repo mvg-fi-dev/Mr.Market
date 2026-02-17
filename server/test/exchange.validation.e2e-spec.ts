@@ -1,4 +1,5 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { ValidationAuditFilter } from '../src/common/filters/validation-audit.filter';
 import { Test, TestingModule } from '@nestjs/testing';
 // supertest's typings are easiest to consume via require in this repo's TS config.
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -44,6 +45,9 @@ describe('Exchange validation (e2e)', () => {
         transform: true,
       }),
     );
+
+    // Mirror main.ts audit filter.
+    app.useGlobalFilters(new ValidationAuditFilter());
 
     await app.init();
   });

@@ -7,6 +7,7 @@ import * as crypto from 'crypto';
 import * as fs from 'fs';
 
 import { AppModule } from './app.module';
+import { ValidationAuditFilter } from './common/filters/validation-audit.filter';
 import * as encryption from './common/helpers/crypto';
 import { CustomLogger } from './modules/infrastructure/logger/logger.service';
 
@@ -64,6 +65,9 @@ async function bootstrap() {
       transform: true,
     }),
   );
+
+  // Audit suspicious validation failures (e.g. attempts to pass db-only fields).
+  app.useGlobalFilters(new ValidationAuditFilter());
 
   // Global request logging
   app.use((req, _, next) => {
