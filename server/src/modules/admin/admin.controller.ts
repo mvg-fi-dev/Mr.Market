@@ -30,6 +30,7 @@ import {
   GrowdataExchangeDto,
   GrowdataExchangeUpdateDto,
   GrowdataMarketMakingPairDto,
+  GrowdataMarketMakingPairUpdateDto,
   GrowdataSimplyGrowTokenDto,
   GrowdataSimplyGrowTokenUpdateDto,
 } from './growdata/adminGrow.dto';
@@ -367,10 +368,10 @@ export class AdminController {
 
   @Post('grow/market-making/update/:id')
   @ApiOperation({ summary: 'Update a market making pair' })
-  @ApiBody({ type: GrowdataMarketMakingPairDto })
+  @ApiBody({ type: GrowdataMarketMakingPairUpdateDto })
   async updateMarketMakingPair(
     @Param('id') id: string,
-    @Body() modifications: GrowdataMarketMakingPairDto,
+    @Body() modifications: GrowdataMarketMakingPairUpdateDto,
   ) {
     return this.adminGrowService.updateMarketMakingPair(id, modifications);
   }

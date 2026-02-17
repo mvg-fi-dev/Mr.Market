@@ -17,24 +17,10 @@ export class GrowdataExchangeDto {
   enable: boolean;
 }
 
-// DTO for partial updates to GrowdataExchange
-export class GrowdataExchangeUpdateDto {
-  @IsString()
-  @IsOptional()
-  exchange_id?: string;
-
-  @IsString()
-  @IsOptional()
-  name?: string;
-
-  @IsString()
-  @IsOptional()
-  icon_url?: string;
-
-  @IsBoolean()
-  @IsOptional()
-  enable?: boolean;
-}
+// Swagger + validation friendly DTO for partial updates.
+// Partial<GrowdataExchangeDto> in controller signatures does NOT
+// carry runtime metadata, so Nest ValidationPipe cannot forbid extra fields.
+export class GrowdataExchangeUpdateDto extends PartialType(GrowdataExchangeDto) {}
 
 // DTO for GrowdataSimplyGrowToken
 export class GrowdataSimplyGrowTokenDto {
@@ -109,6 +95,13 @@ export class GrowdataArbitragePairDto {
   enable: boolean;
 }
 
+// Swagger + validation friendly DTO for partial updates.
+// Partial<GrowdataArbitragePairDto> in controller signatures does NOT
+// carry runtime metadata, so Nest ValidationPipe cannot forbid extra fields.
+export class GrowdataArbitragePairUpdateDto extends PartialType(
+  GrowdataArbitragePairDto,
+) {}
+
 // DTO for GrowdataMarketMakingPair
 export class GrowdataMarketMakingPairDto {
   @IsUUID()
@@ -171,8 +164,8 @@ export class GrowdataMarketMakingPairDto {
 }
 
 // Swagger + validation friendly DTO for partial updates.
-// Partial<GrowdataArbitragePairDto> in controller signatures does NOT
+// Partial<GrowdataMarketMakingPairDto> in controller signatures does NOT
 // carry runtime metadata, so Nest ValidationPipe cannot forbid extra fields.
-export class GrowdataArbitragePairUpdateDto extends PartialType(
-  GrowdataArbitragePairDto,
+export class GrowdataMarketMakingPairUpdateDto extends PartialType(
+  GrowdataMarketMakingPairDto,
 ) {}
