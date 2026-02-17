@@ -11,6 +11,7 @@ import {
 import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { MarketMakingHistory } from 'src/common/entities/market-making/market-making-order.entity';
 
+import { CreateMarketMakingIntentDto } from './user-orders.dto';
 import { UserOrdersService } from './user-orders.service';
 
 @ApiTags('Trading Engine')
@@ -106,11 +107,7 @@ export class UserOrdersController {
   })
   @ApiResponse({ status: 400, description: 'Bad request.' })
   async createMarketMakingIntent(
-    @Body()
-    body: {
-      marketMakingPairId: string;
-      userId?: string;
-    },
+    @Body() body: CreateMarketMakingIntentDto,
   ) {
     return await this.userOrdersService.createMarketMakingOrderIntent(body);
   }
