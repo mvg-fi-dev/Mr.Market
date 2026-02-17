@@ -1,6 +1,8 @@
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import * as request from 'supertest';
+// supertest's typings are easiest to consume via require in this repo's TS config.
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const request = require('supertest');
 
 import { AppModule } from './../src/app.module';
 
