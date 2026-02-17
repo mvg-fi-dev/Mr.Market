@@ -87,4 +87,30 @@ describe('Strategy validation (e2e)', () => {
         }
       });
   });
+
+  it('rejects extra inbound fields on POST /strategy/execute-pure-market-making', async () => {
+    await request(app.getHttpServer())
+      .post('/strategy/execute-pure-market-making')
+      .send({
+        userId: 'u1',
+        clientId: 'c1',
+        pair: 'BTC/USDT',
+        exchangeName: 'mexc',
+        bidSpread: 0.1,
+        askSpread: 0.1,
+        orderAmount: 0.1,
+        orderRefreshTime: 15_000,
+        numberOfLayers: 1,
+        priceSourceType: 'MID_PRICE',
+        amountChangePerLayer: 1,
+        amountChangeType: 'percentage',
+        unexpectedField: 'should-not-be-accepted',
+      })
+      .expect(400)
+      .expect((res) => {
+        if (!res.body || res.body.statusCode !== 400) {
+          throw new Error('expected 400 response body');
+        }
+      });
+  });
 });
