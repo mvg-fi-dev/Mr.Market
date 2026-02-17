@@ -72,4 +72,42 @@ describe('Exchange validation (e2e)', () => {
         }
       });
   });
+
+  it('rejects extra inbound fields on /exchange/deposits', async () => {
+    await request(app.getHttpServer())
+      .post('/exchange/deposits')
+      .send({
+        exchange: 'mexc',
+        symbol: 'BTC',
+        network: 'BTC',
+        since: 0,
+        limit: 10,
+        apiKeyId: 'should-not-be-accepted',
+      })
+      .expect(400)
+      .expect((res) => {
+        if (!res.body || res.body.statusCode !== 400) {
+          throw new Error('expected 400 response body');
+        }
+      });
+  });
+
+  it('rejects extra inbound fields on /exchange/withdrawal/create', async () => {
+    await request(app.getHttpServer())
+      .post('/exchange/withdrawal/create')
+      .send({
+        exchange: 'mexc',
+        symbol: 'BTC',
+        network: 'BTC',
+        address: 'bc1qexampleaddressxxxxxxxxxxxxxxxxxxxxxx',
+        amount: '0.1',
+        apiKeyId: 'should-not-be-accepted',
+      })
+      .expect(400)
+      .expect((res) => {
+        if (!res.body || res.body.statusCode !== 400) {
+          throw new Error('expected 400 response body');
+        }
+      });
+  });
 });
