@@ -135,4 +135,26 @@ describe('Strategy validation (e2e)', () => {
         }
       });
   });
+
+  it('accepts a valid body on POST /strategy/join (200)', async () => {
+    await request(app.getHttpServer())
+      .post('/strategy/join')
+      .send({
+        userId: 'u1',
+        clientId: 'c1',
+        strategyKey: 'u1-c1-arbitrage',
+        amount: 100,
+        transactionHash: '0xabc123',
+        tokenSymbol: 'USDT',
+        chainId: 1,
+        tokenAddress: '0xdef456',
+      })
+      .expect((res) => {
+        if (res.statusCode !== 200) {
+          throw new Error(
+            `expected 200 OK but got ${res.statusCode}: ${JSON.stringify(res.body)}`,
+          );
+        }
+      });
+  });
 });

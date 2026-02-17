@@ -1,37 +1,46 @@
 // strategy.dto.ts
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsNumber, IsString } from 'class-validator';
 import { PriceSourceType } from 'src/common/enum/pricesourcetype';
 
 export class JoinStrategyDto {
   @ApiProperty({ description: 'User ID', example: 'user123' })
+  @IsString()
   userId: string;
 
   @ApiProperty({ description: 'Client ID', example: 'client123' })
+  @IsString()
   clientId: string;
 
   @ApiProperty({
     description: 'Strategy Key',
     example: 'user123-client123-arbitrage',
   })
+  @IsString()
   strategyKey: string;
 
   @ApiProperty({ description: 'Amount contributed', example: 100.0 })
+  @IsNumber()
   amount: number;
 
   @ApiProperty({ description: 'Transaction Hash', example: '0xabc123...' })
+  @IsString()
   transactionHash: string;
 
   @ApiProperty({ description: 'Token Symbol', example: 'USDT' })
+  @IsString()
   tokenSymbol: string;
 
   @ApiProperty({ description: 'Chain ID', example: 1 })
+  @IsNumber()
   chainId: number;
 
   @ApiProperty({
     description: 'Token Contract Address',
     example: '0xabc123...',
   })
+  @IsString()
   tokenAddress: string;
 }
 

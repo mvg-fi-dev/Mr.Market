@@ -58,6 +58,7 @@ export class StrategyController {
   }
 
   @Post('join')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Join a strategy with a contribution' })
   @ApiBody({
     description: 'Data required to join a strategy',
