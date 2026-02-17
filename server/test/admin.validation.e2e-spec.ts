@@ -164,6 +164,31 @@ describe('Admin validation (e2e)', () => {
       });
   });
 
+  it('rejects extra inbound fields on POST /admin/grow/arbitrage/add', async () => {
+    await request(app.getHttpServer())
+      .post('/admin/grow/arbitrage/add')
+      .send({
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        symbol: 'BTC/USDT',
+        base_symbol: 'BTC',
+        quote_symbol: 'USDT',
+        base_asset_id: '7e04727a-6f8b-499a-92d0-18bf4ef013bb',
+        base_icon_url: '',
+        quote_asset_id: 'ccde90fe-d611-4fc8-afb4-3388e96fbb02',
+        quote_icon_url: '',
+        base_exchange_id: 'binance',
+        target_exchange_id: 'mexc',
+        enable: true,
+        unexpectedField: 'should-not-be-accepted',
+      })
+      .expect(400)
+      .expect((res) => {
+        if (!res.body || res.body.statusCode !== 400) {
+          throw new Error('expected 400 response body');
+        }
+      });
+  });
+
   it('rejects extra inbound fields on POST /admin/grow/exchange/update/:exchange_id', async () => {
     await request(app.getHttpServer())
       .post('/admin/grow/exchange/update/binance')
