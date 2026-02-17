@@ -4,6 +4,7 @@
 
 - Add architecture doc for HuFi + Mr.Market + EasyEnclave responsibilities and integration flow
 - Add phased TODO doc for Protocol / Execution / Participation vision layers (updated to reflect tick/ledger foundation)
+- Add config-gated withdraw-to-exchange queueing and enable live withdrawal execution when explicitly enabled
 
 ## 2026-02-12
 
