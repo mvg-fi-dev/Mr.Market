@@ -41,27 +41,39 @@ The old queue self-loop `execute_mm_cycle` has been removed.
 3. If complete, intent state is updated and order state becomes `payment_complete`.
 
 Current behavior:
+
 - Queueing `withdraw_to_exchange` is still disabled in this flow.
 - This path logs and stops at `payment_complete` unless other jobs/flows continue the lifecycle.
 
-### 3) Withdrawal and campaign stage (when used)
+### 3) Withdrawal and deposit confirmation stage (when used)
 
 If withdrawal path is enabled and used:
 
-1. `withdraw_to_exchange` resolves network/deposit addresses.
-2. Current code is validation mode and refunds instead of submitting real withdrawal.
-3. `monitor_mixin_withdrawal` checks confirmation status and can queue `join_campaign`.
-4. `join_campaign` creates local campaign participation and queues `start_mm`.
+1. `withdraw_to_exchange` resolves network/deposit addresses and (when enabled) submits real Mixin withdrawals.
+2. `monitor_mixin_withdrawal` checks confirmation status for both base and quote withdrawals.
+3. Once both withdrawals are confirmed, order state transitions to:
+   - `withdrawal_confirmed`
+   - `deposit_confirming`
+4. `monitor_exchange_deposit` polls the target exchange deposit history (ccxt `fetchDeposits`) until both base and quote deposits are confirmed.
+   - For MEXC, matching prefers withdrawal `transaction_hash` (tx hash) when available, otherwise falls back to `symbol + ccxt network + amount`.
+5. Once both deposits are confirmed, order state becomes `deposit_confirmed` and `start_mm` is queued.
+
+Note on campaigns:
+
+- HuFi campaign joining is handled by the CampaignService hourly cron (not the MM order queue).
+- The MM queue job `join_campaign` creates a **local** participation record and queues `start_mm`, but is not required for starting market making.
 
 ### 4) Start and stop market making
 
 `start_mm`:
+
 - Sets order state to `running`.
 - Builds `PureMarketMakingStrategyDto` from order config.
 - Calls `strategyService.executePureMarketMakingStrategy(...)`.
 - Does not enqueue `execute_mm_cycle`.
 
 `stop_mm`:
+
 - Calls `strategyService.stopStrategyForUser(...)`.
 - Sets order state to `stopped`.
 
@@ -83,7 +95,8 @@ Queue: `market-making`
 - `check_payment_complete`
 - `withdraw_to_exchange`
 - `monitor_mixin_withdrawal`
-- `join_campaign`
+- `monitor_exchange_deposit`
+- `join_campaign` (local participation only; optional)
 - `start_mm`
 - `stop_mm`
 
@@ -96,19 +109,21 @@ Removed from runtime flow:
 All balance mutations must go through `BalanceLedgerService`.
 
 Common mutations in MM flow:
+
 - Snapshot intake: `creditDeposit`
 - Refund path: `debitWithdrawal` before transfer
 - Refund transfer failure: compensation `creditDeposit`
 - Pause/withdraw orchestration: `unlockFunds` then `debitWithdrawal`
 
 Concurrency protection:
+
 - Ledger now serializes same `userId:assetId` mutation path in-process.
 
 ## State Progression
 
 Common order states in current flow:
 
-`payment_pending -> payment_complete -> campaign_joined -> running -> stopped`
+`payment_pending -> payment_complete -> (withdrawing -> withdrawal_confirmed -> deposit_confirming -> deposit_confirmed) -> running -> stopped`
 
 Failure paths can move to:
 

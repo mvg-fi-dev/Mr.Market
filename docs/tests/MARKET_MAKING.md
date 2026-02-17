@@ -43,7 +43,8 @@ Queue `market-making`:
 - `check_payment_complete`
 - `withdraw_to_exchange`
 - `monitor_mixin_withdrawal`
-- `join_campaign`
+- `monitor_exchange_deposit`
+- `join_campaign` (local participation only; optional)
 - `start_mm`
 - `stop_mm`
 
@@ -56,8 +57,8 @@ Queue `market-making`:
 5. `check_payment_complete` retries until base/quote/fee completeness is met.
 6. Order becomes `payment_complete` and persists in market making order table.
 7. Withdrawal stage:
-   - default: refund/fail (validation mode)
-   - full lifecycle: withdraw -> monitor confirmation -> join campaign -> start MM
+   - default: refund/fail when withdrawals are disabled
+   - full lifecycle: withdraw -> monitor Mixin confirmations -> monitor exchange deposits -> start MM
 8. Strategy is registered and triggered by tick coordinator.
 9. Intents are stored, dispatched by worker, and executed on exchange adapter.
 10. Ledger/performance/reward/score data confirms user profit and balances.
@@ -106,16 +107,20 @@ Assert:
 
 - order state moves to `withdrawing`
 - base and quote confirmation checks require `confirmations >= 1` and `transaction_hash`
-- once both confirmed, `join_campaign` is queued
+- once both are confirmed, order transitions to `withdrawal_confirmed` and `deposit_confirming`
 
-### B2. Join campaign and start MM
+### B2. Monitor exchange deposits and start MM
 
 Assert:
 
-- local campaign participation record is created
-- order becomes `campaign_joined`
+- `monitor_exchange_deposit` runs after withdrawal confirmation
+- once both base and quote deposits are confirmed, order becomes `deposit_confirmed`
 - `start_mm` enqueued and executed
 - order becomes `running`
+
+(Optionally) local participation:
+
+- `join_campaign` may create a local campaign participation record, but HuFi join is handled by cron.
 
 ### B3. Tick -> intents -> exchange execution
 
