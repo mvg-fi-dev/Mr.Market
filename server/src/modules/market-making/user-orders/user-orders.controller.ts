@@ -8,6 +8,8 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
+
+import { StopMarketMakingDto } from './user-orders.dto';
 import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { MarketMakingHistory } from 'src/common/entities/market-making/market-making-order.entity';
 
@@ -106,10 +108,61 @@ export class UserOrdersController {
     description: 'Market making order intent created.',
   })
   @ApiResponse({ status: 400, description: 'Bad request.' })
-  async createMarketMakingIntent(
-    @Body() body: CreateMarketMakingIntentDto,
-  ) {
+  async createMarketMakingIntent(@Body() body: CreateMarketMakingIntentDto) {
     return await this.userOrdersService.createMarketMakingOrderIntent(body);
+  }
+
+  @Post('/market-making/:orderId/stop')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Soft stop market making (stop strategy, no exit)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Market making stop queued.',
+  })
+  @ApiResponse({ status: 400, description: 'Bad request.' })
+  async stopMarketMaking(
+    @Param('orderId') orderId: string,
+    @Body() body: StopMarketMakingDto,
+  ) {
+    await this.userOrdersService.stopMarketMaking(body.userId, orderId);
+
+    return { ok: true };
+  }
+
+  @Post('/market-making/:orderId/pause')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Pause market making (stop strategy and mark paused)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Market making pause queued.',
+  })
+  @ApiResponse({ status: 400, description: 'Bad request.' })
+  async pauseMarketMaking(
+    @Param('orderId') orderId: string,
+    @Body() body: StopMarketMakingDto,
+  ) {
+    await this.userOrdersService.pauseMarketMaking(body.userId, orderId);
+
+    return { ok: true };
+  }
+
+  @Post('/market-making/:orderId/resume')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Resume market making (mark created and start)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Market making resume queued.',
+  })
+  @ApiResponse({ status: 400, description: 'Bad request.' })
+  async resumeMarketMaking(
+    @Param('orderId') orderId: string,
+    @Body() body: StopMarketMakingDto,
+  ) {
+    await this.userOrdersService.resumeMarketMaking(body.userId, orderId);
+
+    return { ok: true };
   }
 
   @Get('/market-making/history/:userId')

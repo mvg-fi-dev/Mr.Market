@@ -216,9 +216,10 @@ export class UserOrdersService {
       throw new BadRequestException('marketMakingPairId is required');
     }
 
-    const pair = await this.growdataRepository.findMarketMakingPairById(
-      marketMakingPairId,
-    );
+    const pair =
+      await this.growdataRepository.findMarketMakingPairById(
+        marketMakingPairId,
+      );
 
     if (!pair || !pair.enable) {
       throw new NotFoundException('Market making pair not found');
@@ -319,9 +320,53 @@ export class UserOrdersService {
   }
 
   async stopMarketMaking(userId: string, orderId: string) {
-    await this.marketMakingQueue.add('stop_mm', {
-      userId,
-      orderId,
-    });
+    await this.marketMakingQueue.add(
+      'stop_mm',
+      {
+        userId,
+        orderId,
+      },
+      {
+        jobId: `stop_mm_${orderId}`,
+        attempts: 3,
+        removeOnComplete: false,
+      },
+    );
+
+    await this.updateMarketMakingOrderState(orderId, 'stopped');
+  }
+
+  async pauseMarketMaking(userId: string, orderId: string) {
+    await this.marketMakingQueue.add(
+      'stop_mm',
+      {
+        userId,
+        orderId,
+      },
+      {
+        jobId: `pause_mm_${orderId}`,
+        attempts: 3,
+        removeOnComplete: false,
+      },
+    );
+
+    await this.updateMarketMakingOrderState(orderId, 'paused');
+  }
+
+  async resumeMarketMaking(userId: string, orderId: string) {
+    await this.marketMakingQueue.add(
+      'start_mm',
+      {
+        userId,
+        orderId,
+      },
+      {
+        jobId: `resume_mm_${orderId}`,
+        attempts: 3,
+        removeOnComplete: false,
+      },
+    );
+
+    await this.updateMarketMakingOrderState(orderId, 'created');
   }
 }

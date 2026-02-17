@@ -239,4 +239,49 @@ describe('UserOrdersService', () => {
       orderId: 'mm1',
     });
   });
+
+  it('queues pause/resume/stop jobs and updates state', async () => {
+    jest.spyOn(marketMakingRepository, 'update').mockResolvedValue(undefined);
+
+    const queueAddSpy = jest.spyOn(
+      testingModule.get('BullQueue_market-making'),
+      'add',
+    );
+
+    await service.pauseMarketMaking('user1', 'order-1');
+
+    expect(queueAddSpy).toHaveBeenCalledWith(
+      'stop_mm',
+      { userId: 'user1', orderId: 'order-1' },
+      expect.objectContaining({ jobId: 'pause_mm_order-1' }),
+    );
+    expect(marketMakingRepository.update).toHaveBeenCalledWith(
+      { orderId: 'order-1' },
+      { state: 'paused' },
+    );
+
+    await service.resumeMarketMaking('user1', 'order-1');
+
+    expect(queueAddSpy).toHaveBeenCalledWith(
+      'start_mm',
+      { userId: 'user1', orderId: 'order-1' },
+      expect.objectContaining({ jobId: 'resume_mm_order-1' }),
+    );
+    expect(marketMakingRepository.update).toHaveBeenCalledWith(
+      { orderId: 'order-1' },
+      { state: 'created' },
+    );
+
+    await service.stopMarketMaking('user1', 'order-1');
+
+    expect(queueAddSpy).toHaveBeenCalledWith(
+      'stop_mm',
+      { userId: 'user1', orderId: 'order-1' },
+      expect.objectContaining({ jobId: 'stop_mm_order-1' }),
+    );
+    expect(marketMakingRepository.update).toHaveBeenCalledWith(
+      { orderId: 'order-1' },
+      { state: 'stopped' },
+    );
+  });
 });
