@@ -338,7 +338,7 @@ export class AdminController {
 
   @Post('grow/simply-grow/update/:asset_id')
   @ApiOperation({ summary: 'Update a SimplyGrow token' })
-  @ApiBody({ type: GrowdataSimplyGrowTokenDto })
+  @ApiBody({ type: GrowdataSimplyGrowTokenUpdateDto })
   async updateSimplyGrowToken(
     @Param('asset_id') asset_id: string,
     @Body() modifications: GrowdataSimplyGrowTokenUpdateDto,
