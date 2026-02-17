@@ -8,9 +8,13 @@
 - [x] 1. user can open invoice payment page in confirm payment step
 - [x] 2. invoice payment can be handled correctly by backend
 - [ ] 3. backend can withdraw to exchange (should link exchange api key only from db)
+  - [ ] Enforce db-only exchange API key lookup (never accept raw key material from request) + add audit log fields (exchange, api_key_id, order_id).
 - [ ] 4. after withdrawal to exchange, the deposit status can be tracked by backend, update in real time
+  - [ ] Add correlation/tracing id across withdraw -> monitor_mixin_withdrawal -> monitor_exchange_deposit; document current MEXC-only support and the path to extend.
 - [ ] 5. after arrival of deposit to exchange, then join campaign should be triggered automatically
+  - [ ] Define exact state transition + queueing rules for `deposit_confirmed -> join_campaign` (idempotent enqueue).
 - [ ] 6. after join campaign, or no campain to join, the market making handler can start mm right away
+  - [ ] Define exact state transition + queueing rules for `join_campaign -> start_mm` (or direct `deposit_confirmed -> start_mm` when no campaign), including retries.
 - [ ] 7. user call stop endpoint or initialize withdrawal, can be handled correctly by backend on time
   - [ ] Define idempotency + retry rules for withdraw/deposit state transitions (avoid double-withdraw / double-start).
   - [ ] Document failure-mode handling: exchange downtime/timeouts, insufficient balance, partial fills.
