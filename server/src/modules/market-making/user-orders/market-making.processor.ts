@@ -3,6 +3,7 @@ import { Process, Processor } from '@nestjs/bull';
 import { InjectRepository } from '@nestjs/typeorm';
 import BigNumber from 'bignumber.js';
 import { Job } from 'bull';
+import { ConfigService } from '@nestjs/config';
 import { MarketMakingOrderIntent } from 'src/common/entities/market-making/market-making-order-intent.entity';
 import { MarketMakingPaymentState } from 'src/common/entities/orders/payment-state.entity';
 import { MarketMakingOrder } from 'src/common/entities/orders/user-orders.entity';
@@ -71,6 +72,7 @@ export class MarketMakingOrderProcessor {
     private readonly exchangeService: ExchangeService,
     private readonly networkMappingService: NetworkMappingService,
     private readonly mixinClientService: MixinClientService,
+    private readonly configService: ConfigService,
     @InjectRepository(MarketMakingPaymentState)
     private readonly paymentStateRepository: Repository<MarketMakingPaymentState>,
     @InjectRepository(MarketMakingOrderIntent)
@@ -243,9 +245,10 @@ export class MarketMakingOrderProcessor {
 
     try {
       // Step 1.1: Validate trading pair exists
-      const pairConfig = await this.growDataRepository.findMarketMakingPairById(
-        marketMakingPairId,
-      );
+      const pairConfig =
+        await this.growDataRepository.findMarketMakingPairById(
+          marketMakingPairId,
+        );
 
       if (!pairConfig) {
         this.logger.error(`Market making pair ${marketMakingPairId} not found`);
@@ -466,9 +469,10 @@ export class MarketMakingOrderProcessor {
         return;
       }
 
-      const pairConfig = await this.growDataRepository.findMarketMakingPairById(
-        marketMakingPairId,
-      );
+      const pairConfig =
+        await this.growDataRepository.findMarketMakingPairById(
+          marketMakingPairId,
+        );
 
       if (!pairConfig) {
         this.logger.error(`Pair config not found: ${marketMakingPairId}`);
@@ -498,14 +502,14 @@ export class MarketMakingOrderProcessor {
         paymentState.baseFeeAssetId === paymentState.baseAssetId
           ? baseAssetAmount
           : paymentState.baseFeeAssetId === paymentState.quoteAssetId
-          ? quoteAssetAmount
-          : baseFeeAssetAmount;
+            ? quoteAssetAmount
+            : baseFeeAssetAmount;
       const quoteFeePaidAmount =
         paymentState.quoteFeeAssetId === paymentState.quoteAssetId
           ? quoteAssetAmount
           : paymentState.quoteFeeAssetId === paymentState.baseAssetId
-          ? baseAssetAmount
-          : quoteFeeAssetAmount;
+            ? baseAssetAmount
+            : quoteFeeAssetAmount;
 
       // Check fees (comparing with required amounts)
       const hasBaseFee =
@@ -635,24 +639,33 @@ export class MarketMakingOrderProcessor {
         'payment_complete',
       );
 
-      // Queue withdrawal (disabled for snapshot flow testing)
-      // await (job.queue as any).add(
-      //   'withdraw_to_exchange',
-      //   {
-      //     orderId,
-      //     marketMakingPairId,
-      //   } as WithdrawJobData,
-      //   {
-      //     jobId: `withdraw_${orderId}`,
-      //     attempts: 3,
-      //     backoff: { type: 'exponential', delay: 10000 },
-      //     removeOnComplete: false,
-      //   },
-      // );
-
-      this.logger.log(
-        `Payment complete, withdrawal queueing skipped for order ${orderId}`,
+      const queueWithdraw = this.configService.get<boolean>(
+        'strategy.queue_withdraw_on_payment_complete',
       );
+
+      if (queueWithdraw) {
+        await (job.queue as any).add(
+          'withdraw_to_exchange',
+          {
+            orderId,
+            marketMakingPairId,
+          } as WithdrawJobData,
+          {
+            jobId: `withdraw_${orderId}`,
+            attempts: 3,
+            backoff: { type: 'exponential', delay: 10000 },
+            removeOnComplete: false,
+          },
+        );
+
+        this.logger.log(
+          `Payment complete, queued withdrawal for order ${orderId}`,
+        );
+      } else {
+        this.logger.log(
+          `Payment complete, withdrawal queueing disabled for order ${orderId}`,
+        );
+      }
     } catch (error) {
       this.logger.error(
         `Error checking payment for ${orderId}: ${error.message}`,
@@ -681,9 +694,10 @@ export class MarketMakingOrderProcessor {
         where: { orderId },
       });
 
-      const pairConfig = await this.growDataRepository.findMarketMakingPairById(
-        marketMakingPairId,
-      );
+      const pairConfig =
+        await this.growDataRepository.findMarketMakingPairById(
+          marketMakingPairId,
+        );
 
       if (!paymentState || !pairConfig) {
         throw new Error('Payment state or pair config not found');
@@ -692,9 +706,8 @@ export class MarketMakingOrderProcessor {
       const exchangeName = pairConfig.exchange_id;
 
       // Get API key for this exchange
-      const apiKey = await this.exchangeService.findFirstAPIKeyByExchange(
-        exchangeName,
-      );
+      const apiKey =
+        await this.exchangeService.findFirstAPIKeyByExchange(exchangeName);
 
       if (!apiKey) {
         throw new Error(`No API key found for exchange ${exchangeName}`);
@@ -749,49 +762,77 @@ export class MarketMakingOrderProcessor {
         `Got deposit addresses - Base: ${baseDepositResult.address}, Quote: ${quoteDepositResult.address}`,
       );
 
-      // Withdrawal dry-run for validation
+      const withdrawEnabled = this.configService.get<boolean>(
+        'strategy.withdraw_to_exchange_enabled',
+      );
+
+      if (!withdrawEnabled) {
+        this.logger.warn(
+          `Withdrawal disabled. Refunding order ${orderId} instead of sending to exchange.`,
+        );
+
+        await this.refundMarketMakingPendingOrder(
+          orderId,
+          paymentState,
+          'withdrawal disabled',
+        );
+
+        await this.userOrdersService.updateMarketMakingOrderState(
+          orderId,
+          'failed',
+        );
+
+        return;
+      }
+
       this.logger.log(
-        `Withdrawal dry-run for order ${orderId}: base=${paymentState.baseAssetAmount} ${pairConfig.base_symbol}, quote=${paymentState.quoteAssetAmount} ${pairConfig.quote_symbol}`,
+        `Executing withdrawals for order ${orderId}: base=${paymentState.baseAssetAmount} ${pairConfig.base_symbol}, quote=${paymentState.quoteAssetAmount} ${pairConfig.quote_symbol}`,
       );
 
-      // Execute withdrawals for base and quote
-      // const baseWithdrawalResult = await this.withdrawalService.executeWithdrawal(
-      //   paymentState.baseAssetId,
-      //   baseDepositResult.address,
-      //   baseDepositResult.memo || `MM:${orderId}:base`,
-      //   paymentState.baseAssetAmount,
-      // );
+      const baseWithdrawalResult =
+        await this.withdrawalService.executeWithdrawal(
+          paymentState.baseAssetId,
+          baseDepositResult.address,
+          baseDepositResult.memo || `MM:${orderId}:base`,
+          paymentState.baseAssetAmount,
+        );
 
-      // const quoteWithdrawalResult = await this.withdrawalService.executeWithdrawal(
-      //   paymentState.quoteAssetId,
-      //   quoteDepositResult.address,
-      //   quoteDepositResult.memo || `MM:${orderId}:quote`,
-      //   paymentState.quoteAssetAmount,
-      // );
+      const quoteWithdrawalResult =
+        await this.withdrawalService.executeWithdrawal(
+          paymentState.quoteAssetId,
+          quoteDepositResult.address,
+          quoteDepositResult.memo || `MM:${orderId}:quote`,
+          paymentState.quoteAssetAmount,
+        );
 
-      // this.logger.log(
-      //   `Withdrawals executed for order ${orderId}: base=${baseWithdrawalResult[0]?.request_id}, quote=${quoteWithdrawalResult[0]?.request_id}`,
-      // );
+      const baseTxId = baseWithdrawalResult?.[0]?.request_id;
+      const quoteTxId = quoteWithdrawalResult?.[0]?.request_id;
 
-      // await this.userOrdersService.updateMarketMakingOrderState(
-      //   orderId,
-      //   'withdrawal_confirmed',
-      // );
+      if (!baseTxId || !quoteTxId) {
+        throw new Error('Withdrawal executed but missing request_id');
+      }
 
-      this.logger.warn(
-        `Withdrawal disabled for validation. Refunding order ${orderId} instead of sending to exchange.`,
+      this.logger.log(
+        `Withdrawals submitted for order ${orderId}: base=${baseTxId}, quote=${quoteTxId}`,
       );
 
-      await this.refundMarketMakingPendingOrder(
-        orderId,
-        paymentState,
-        'validation mode: withdrawal disabled',
+      await (job.queue as any).add(
+        'monitor_mixin_withdrawal',
+        {
+          orderId,
+          marketMakingPairId,
+          baseWithdrawalTxId: baseTxId,
+          quoteWithdrawalTxId: quoteTxId,
+        },
+        {
+          jobId: `monitor_withdrawal_${orderId}`,
+          attempts: 60,
+          backoff: { type: 'fixed', delay: this.RETRY_DELAY_MS },
+          removeOnComplete: false,
+        },
       );
 
-      await this.userOrdersService.updateMarketMakingOrderState(
-        orderId,
-        'failed',
-      );
+      this.logger.log(`Queued withdrawal monitor for order ${orderId}`);
     } catch (error) {
       this.logger.error(
         `Error withdrawing for order ${orderId}: ${error.message}`,
@@ -834,9 +875,8 @@ export class MarketMakingOrderProcessor {
         'joining_campaign',
       );
 
-      const order = await this.userOrdersService.findMarketMakingByOrderId(
-        orderId,
-      );
+      const order =
+        await this.userOrdersService.findMarketMakingByOrderId(orderId);
 
       if (!order) {
         throw new Error(`Order ${orderId} not found`);
@@ -936,9 +976,8 @@ export class MarketMakingOrderProcessor {
 
     this.logger.log(`Starting MM for user ${userId}, order ${orderId}`);
 
-    const order = await this.userOrdersService.findMarketMakingByOrderId(
-      orderId,
-    );
+    const order =
+      await this.userOrdersService.findMarketMakingByOrderId(orderId);
 
     if (!order) {
       this.logger.error(`MM Order ${orderId} not found`);
@@ -1053,6 +1092,12 @@ export class MarketMakingOrderProcessor {
         this.logger.log(
           `Both withdrawals confirmed for order ${orderId}, proceeding to join campaign`,
         );
+
+        await this.userOrdersService.updateMarketMakingOrderState(
+          orderId,
+          'withdrawal_confirmed',
+        );
+
         await (job.queue as any).add(
           'join_campaign',
           { orderId },

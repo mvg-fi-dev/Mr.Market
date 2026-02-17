@@ -66,6 +66,10 @@ export default () => ({
         process.env.MARKET_MAKING_INTENT_WORKER_MAX_IN_FLIGHT_PER_EXCHANGE,
         10,
       ) || 1,
+    withdraw_to_exchange_enabled:
+      process.env.MARKET_MAKING_WITHDRAW_TO_EXCHANGE_ENABLED === 'true',
+    queue_withdraw_on_payment_complete:
+      process.env.MARKET_MAKING_QUEUE_WITHDRAW_ON_PAYMENT_COMPLETE === 'true',
   },
   web3: {
     network: {
