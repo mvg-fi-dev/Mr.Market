@@ -7,16 +7,18 @@
 ### Validation of create market making process
 - [x] 1. user can open invoice payment page in confirm payment step
 - [x] 2. invoice payment can be handled correctly by backend
-3. backend can withdraw to exchange (should link exchange api key only from db)
-4. after withdrawal to exchange, the deposit status can be tracked by backend, update in real time
-5. after arrival of deposit to exchange, then join campaign should be triggered automatically
-6. after join campaign, or no campain to join, the market making handler can start mm right away
-7. user call stop endpoint or initialize withdrawal, can be handled correctly by backend on time
+- [ ] 3. backend can withdraw to exchange (should link exchange api key only from db)
+- [ ] 4. after withdrawal to exchange, the deposit status can be tracked by backend, update in real time
+- [ ] 5. after arrival of deposit to exchange, then join campaign should be triggered automatically
+- [ ] 6. after join campaign, or no campain to join, the market making handler can start mm right away
+- [ ] 7. user call stop endpoint or initialize withdrawal, can be handled correctly by backend on time
+  - [ ] Define idempotency + retry rules for withdraw/deposit state transitions (avoid double-withdraw / double-start).
+  - [ ] Document failure-mode handling: exchange downtime/timeouts, insufficient balance, partial fills.
 
 ### Market making execution system
-1. market making execution system, including order status updates, place/cancel order logs, error handling. reflect on user's market making orders details.
-2. comprehensive order tracking, including volume created, profit made, placed order count, filled order amount, success/failure/cancel count.
-3. campaign reward trading, calculate reward based on performance.
+- [ ] 1. market making execution system, including order status updates, place/cancel order logs, error handling. reflect on user's market making orders details.
+- [ ] 2. comprehensive order tracking, including volume created, profit made, placed order count, filled order amount, success/failure/cancel count.
+- [ ] 3. campaign reward trading, calculate reward based on performance.
 
 ## Interface
 
@@ -30,11 +32,11 @@
 - [x] 1. when select trading pair, there should be an small icon that represents the chain of the asset
 
 ### Admin page
-- [] 1. Add a setup guide for initialization that is step by step, allowing admin to have basic understanding of how setting works, and makes it easier to set up all the things
-- [] 2. Support sorting and filter in manage market making pairs/spot trading pairs
+- [ ] 1. Add a setup guide for initialization that is step by step, allowing admin to have basic understanding of how setting works, and makes it easier to set up all the things
+- [ ] 2. Support sorting and filter in manage market making pairs/spot trading pairs
 
 ### Admin exchanges management
-1. should design a way to merge /exchanges and /api-keys. so user don't get confused when adding exchange. api keys should be managed in the same place as exchanges, should be in the dropdown of the added exchange management page
+- [ ] 1. should design a way to merge /exchanges and /api-keys. so user don't get confused when adding exchange. api keys should be managed in the same place as exchanges, should be in the dropdown of the added exchange management page
 
 ### E2e Test
 - [x] 1. Create market making UI
@@ -46,17 +48,17 @@
 ## UI
 ### Campaigns
 - [-] 0. Mr.Market users can see all campaigns, and specific campaign details under /market-making/hufi
-- [] 1. Mr.Market users should see volume created by Hufi campaigns
-- [] 2. Mr.Market users can create campaigns with mixin wallet under /market-making/hufi
-- [] 3. Mr.Market users can join hufi campaigns by creating market making orders with mixin wallet under /market-making/hufi
-- [] 4. Mr.Market users can see joined hufi campaigns (via market making orders) under /market-making/hufi
-- [] 5. Mr.Market users can see their created campaigns with mixin wallet under /market-making/hufi
+- [ ] 1. Mr.Market users should see volume created by Hufi campaigns
+- [ ] 2. Mr.Market users can create campaigns with mixin wallet under /market-making/hufi
+- [ ] 3. Mr.Market users can join hufi campaigns by creating market making orders with mixin wallet under /market-making/hufi
+- [ ] 4. Mr.Market users can see joined hufi campaigns (via market making orders) under /market-making/hufi
+- [ ] 5. Mr.Market users can see their created campaigns with mixin wallet under /market-making/hufi
 
-- [] 6. Mr.Market users can create campaigns with evm wallets (including mixin evm wallet) under /market-making/hufi
-- [] 7. Mr.Market users can join hufi campaigns by creating market making orders with evm wallets under /market-making/hufi
-- [] 8. Mr.Market users can see joined hufi campaigns with evm wallets under /market-making/hufi
-- [] 9. Mr.Market users can see their created campaigns with evm wallets under /market-making/hufi
+- [ ] 6. Mr.Market users can create campaigns with evm wallets (including mixin evm wallet) under /market-making/hufi
+- [ ] 7. Mr.Market users can join hufi campaigns by creating market making orders with evm wallets under /market-making/hufi
+- [ ] 8. Mr.Market users can see joined hufi campaigns with evm wallets under /market-making/hufi
+- [ ] 9. Mr.Market users can see their created campaigns with evm wallets under /market-making/hufi
 
-- [] 10. HuFi Learn more page should introduce each types of campaigns
-- [] 11. HuFi campaigns page should have a filter button put on top of the page, allowing user open dialog to filter campaigns (by campaign type, create/end date, DESC or ASC, reward amount)
-- [] 12. For different types of campaigns, should have different types of actions in details page
+- [ ] 10. HuFi Learn more page should introduce each types of campaigns
+- [ ] 11. HuFi campaigns page should have a filter button put on top of the page, allowing user open dialog to filter campaigns (by campaign type, create/end date, DESC or ASC, reward amount)
+- [ ] 12. For different types of campaigns, should have different types of actions in details page
