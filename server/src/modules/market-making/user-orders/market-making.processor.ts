@@ -1302,16 +1302,20 @@ export class MarketMakingOrderProcessor {
       );
 
       await (job.queue as any).add(
-        'join_campaign',
-        { orderId },
+        'start_mm',
         {
-          jobId: `join_campaign_${orderId}`,
+          userId: order.userId,
+          orderId,
+        },
+        {
+          jobId: `start_mm_${orderId}`,
+          attempts: 3,
           removeOnComplete: false,
         },
       );
 
       this.logger.log(
-        `Exchange deposits confirmed for order ${orderId}, queued join_campaign`,
+        `Exchange deposits confirmed for order ${orderId}, queued start_mm`,
       );
 
       return;
