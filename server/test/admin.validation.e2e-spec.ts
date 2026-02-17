@@ -231,11 +231,41 @@ describe('Admin validation (e2e)', () => {
         quote_symbol: 'USDT',
         base_asset_id: '7e04727a-6f8b-499a-92d0-18bf4ef013bb',
         base_icon_url: '',
+        base_chain_id: 'eth',
+        base_chain_icon_url: '',
+        quote_asset_id: 'ccde90fe-d611-4fc8-afb4-3388e96fbb02',
+        quote_icon_url: '',
+        quote_chain_id: 'eth',
+        quote_chain_icon_url: '',
+        exchange_id: 'binance',
+        custom_fee_rate: '0.001',
+        enable: true,
+        apiKeyId: 'should-not-be-accepted',
+      })
+      .expect(400)
+      .expect((res) => {
+        if (!res.body || res.body.statusCode !== 400) {
+          throw new Error('expected 400 response body');
+        }
+      });
+  });
+
+  it('rejects extra inbound fields on POST /admin/grow/market-making/update/:id', async () => {
+    await request(app.getHttpServer())
+      .post('/admin/grow/market-making/update/123e4567-e89b-12d3-a456-426614174000')
+      .send({
+        // provide a minimal valid payload plus one disallowed field
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        symbol: 'BTC/USDT',
+        base_symbol: 'BTC',
+        quote_symbol: 'USDT',
+        base_asset_id: '7e04727a-6f8b-499a-92d0-18bf4ef013bb',
+        base_icon_url: '',
         quote_asset_id: 'ccde90fe-d611-4fc8-afb4-3388e96fbb02',
         quote_icon_url: '',
         exchange_id: 'binance',
         enable: true,
-        apiKeyId: 'should-not-be-accepted',
+        unexpectedField: 'should-not-be-accepted',
       })
       .expect(400)
       .expect((res) => {
