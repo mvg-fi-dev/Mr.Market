@@ -414,6 +414,56 @@ describe('MarketMakingOrderProcessor', () => {
     );
   });
 
+  it('refuses to monitor exit deposits when order is not in exit states', async () => {
+    const { processor, userOrdersService } = createProcessor();
+
+    userOrdersService.findMarketMakingByOrderId.mockResolvedValueOnce({
+      orderId: 'order-1',
+      state: 'running',
+    });
+
+    await expect(
+      processor.handleMonitorExitMixinDeposit({
+        data: {
+          userId: 'user-1',
+          orderId: 'order-1',
+          exchangeName: 'binance',
+          baseAssetId: 'asset-base',
+          quoteAssetId: 'asset-quote',
+          expectedBaseAmount: '1',
+          expectedQuoteAmount: '1',
+          startedAt: Date.now(),
+        },
+        attemptsMade: 0,
+        update: jest.fn(),
+      } as any),
+    ).rejects.toThrow('Exit deposit monitor not allowed');
+  });
+
+  it('skips exit deposit monitor when exit is already complete', async () => {
+    const { processor, userOrdersService } = createProcessor();
+
+    userOrdersService.findMarketMakingByOrderId.mockResolvedValueOnce({
+      orderId: 'order-1',
+      state: 'exit_complete',
+    });
+
+    await processor.handleMonitorExitMixinDeposit({
+      data: {
+        userId: 'user-1',
+        orderId: 'order-1',
+        exchangeName: 'binance',
+        baseAssetId: 'asset-base',
+        quoteAssetId: 'asset-quote',
+        expectedBaseAmount: '1',
+        expectedQuoteAmount: '1',
+        startedAt: Date.now(),
+      },
+      attemptsMade: 0,
+      update: jest.fn(),
+    } as any);
+  });
+
   it('prefers tx hash matching for deposits when provided', async () => {
     const { processor, userOrdersService, paymentStateRepository } =
       createProcessor();
