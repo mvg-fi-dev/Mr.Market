@@ -1070,7 +1070,11 @@ export class MarketMakingOrderProcessor {
   async handleExitWithdrawal(job: Job<{ userId: string; orderId: string }>) {
     const { userId, orderId } = job.data;
 
-    this.logger.log(`Exit withdrawal for user ${userId}, order ${orderId}`);
+    const exitTraceId = `mm:exit:${orderId}`;
+
+    this.logger.log(
+      `${this.logCtx({ traceId: exitTraceId, orderId, job })} Exit withdrawal requested by user ${userId}`,
+    );
 
     await this.strategyService.stopStrategyForUser(
       userId,
@@ -1086,7 +1090,9 @@ export class MarketMakingOrderProcessor {
     }
 
     if (order.state === 'exit_complete') {
-      this.logger.log(`Exit already completed for order ${orderId}, skipping`);
+      this.logger.log(
+        `${this.logCtx({ traceId: exitTraceId, orderId, job })} Exit already completed, skipping`,
+      );
 
       return;
     }
@@ -1114,7 +1120,7 @@ export class MarketMakingOrderProcessor {
 
     if (!allowedStates.includes(order.state)) {
       throw new Error(
-        `Exit not allowed for order ${orderId} in state ${order.state}`,
+        `${this.logCtx({ traceId: exitTraceId, orderId, job })} Exit not allowed in state ${order.state}`,
       );
     }
 
@@ -1136,8 +1142,14 @@ export class MarketMakingOrderProcessor {
       await this.exchangeService.findFirstAPIKeyByExchange(exchangeName);
 
     if (!apiKey) {
-      throw new Error(`No API key found for exchange ${exchangeName}`);
+      throw new Error(
+        `${this.logCtx({ traceId: exitTraceId, orderId, job, exchange: exchangeName })} No API key found for exchange`,
+      );
     }
+
+    this.logger.log(
+      `${this.logCtx({ traceId: exitTraceId, orderId, job, exchange: exchangeName, apiKeyId: apiKey.key_id })} Using exchange api key`,
+    );
 
     // Determine exchange networks (ccxt) for base/quote
     const [baseNetwork, quoteNetwork] = await Promise.all([
@@ -1226,7 +1238,7 @@ export class MarketMakingOrderProcessor {
         expectedQuoteAmount: quoteAmount,
         expectedBaseTxHash: this.pickTxHash(baseWithdrawal),
         expectedQuoteTxHash: this.pickTxHash(quoteWithdrawal),
-        traceId: `mm:exit:${orderId}`,
+        traceId: exitTraceId,
         startedAt: Date.now(),
       },
       {
@@ -1288,7 +1300,7 @@ export class MarketMakingOrderProcessor {
 
     if (order.state === 'exit_complete') {
       this.logger.log(
-        `Exit already completed for order ${orderId}, skipping refund`,
+        `${this.logCtx({ traceId: traceId || `mm:exit:${orderId}`, orderId, job })} Exit already completed, skipping refund`,
       );
 
       return;
