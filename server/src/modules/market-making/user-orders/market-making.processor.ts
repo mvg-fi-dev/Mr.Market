@@ -1057,6 +1057,12 @@ export class MarketMakingOrderProcessor {
       throw new Error(`MM Order ${orderId} not found`);
     }
 
+    if (order.state === 'exit_complete') {
+      this.logger.log(`Exit already completed for order ${orderId}, skipping`);
+
+      return;
+    }
+
     const pairConfig =
       await this.growDataRepository.findMarketMakingPairByExchangeAndSymbol(
         order.exchangeName,
@@ -1221,6 +1227,21 @@ export class MarketMakingOrderProcessor {
       await this.userOrdersService.updateMarketMakingOrderState(
         orderId,
         'failed',
+      );
+
+      return;
+    }
+
+    const order =
+      await this.userOrdersService.findMarketMakingByOrderId(orderId);
+
+    if (!order) {
+      throw new Error(`MM Order ${orderId} not found`);
+    }
+
+    if (order.state === 'exit_complete') {
+      this.logger.log(
+        `Exit already completed for order ${orderId}, skipping refund`,
       );
 
       return;
