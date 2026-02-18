@@ -57,8 +57,19 @@
 
     $: backendOrder = data.order?.data || data.order;
     $: history = data.history || [];
+    $: executionReport = data.executionReport;
 
     $: ordersPlaced = history.length.toString();
+
+    $: executedCount = history.filter((h: any) => h.status === "closed").length;
+    $: canceledCount = history.filter((h: any) => h.status === "canceled").length;
+    $: successRate = history.length
+        ? `${((executedCount / history.length) * 100).toFixed(1)}%`
+        : "0%";
+    $: canceledRate = history.length
+        ? `${((canceledCount / history.length) * 100).toFixed(1)}%`
+        : "0%";
+
     $: volume = history
         .reduce((acc: BigNumber, curr: any) => {
             const amount = new BigNumber(curr.amount || 0);
@@ -66,6 +77,11 @@
             return acc.plus(amount.times(price));
         }, new BigNumber(0))
         .toFormat(2);
+
+    // Prefer backend execution report totals (reproducible bundle) when available.
+    $: reportVolume = executionReport?.totals?.volume
+        ? new BigNumber(executionReport.totals.volume || 0).toFormat(2)
+        : volume;
 
     $: fills = history.map((h: any) => ({
         amount: `${h.amount}`,
@@ -183,7 +199,12 @@
     <ExecutionDetailsDialog
         isOpen={showExecutionDetails}
         totalOrders={order.ordersPlaced}
-        totalVolume={order.volume}
+        executedOrders={executedCount.toString()}
+        successRate={successRate}
+        canceledOrders={canceledCount.toString()}
+        canceledRate={canceledRate}
+        totalVolume={reportVolume}
+        volumeCurrency={order.balances?.quote?.symbol || "---"}
         on:close={() => (showExecutionDetails = false)}
     />
 </div>
