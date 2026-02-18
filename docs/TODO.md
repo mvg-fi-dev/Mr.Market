@@ -42,7 +42,7 @@ _DoD: with withdrawal enabled in a staging environment, a fresh order can reach 
 - [x] Exchange deposit confirmation tracking (MEXC-only today). (server: `server/src/modules/market-making/user-orders/market-making.processor.ts`, `server/src/modules/market-making/network-mapping/*`)
   - Notes:
     - Polling-based (near real-time), not websocket-driven.
-  - [ ] Propagate correlation/tracing id across `withdraw_to_exchange -> monitor_mixin_withdrawal -> monitor_exchange_deposit`. (server: `server/src/modules/market-making/user-orders/market-making.processor.ts`)
+  - [x] Propagate correlation/tracing id across `withdraw_to_exchange -> monitor_mixin_withdrawal -> monitor_exchange_deposit`. (server: `server/src/modules/market-making/user-orders/market-making.processor.ts`)
   - [ ] Extend `monitor_exchange_deposit` beyond MEXC (per-exchange matching rules for `network`, `txid`, amount tolerance). (server: `server/src/modules/mixin/exchange/exchange.service.ts`, MM deposit monitor)
   - [ ] Add reconciliation job: periodic refresh + repair missed events. (server: `server/src/modules/market-making/reconciliation/*`)
 

@@ -481,7 +481,7 @@ export class MarketMakingOrderProcessor {
    */
   @Process('check_payment_complete')
   async handleCheckPaymentComplete(job: Job<CheckPaymentJobData>) {
-    const { orderId, marketMakingPairId } = job.data;
+    const { orderId, marketMakingPairId, traceId } = job.data;
     const attemptsMade = job.attemptsMade ?? 0;
     const maxAttempts = job.opts.attempts ?? this.MAX_PAYMENT_RETRIES;
     const attemptNumber = BigNumber.min(
@@ -490,7 +490,7 @@ export class MarketMakingOrderProcessor {
     ).toNumber();
 
     this.logger.log(
-      `Checking payment for order ${orderId} (attempt ${attemptNumber}/${maxAttempts})`,
+      `${this.logCtx({ traceId: traceId || `mm:${orderId}`, orderId, job })} Checking payment complete (attempt ${attemptNumber}/${maxAttempts})`,
     );
 
     try {
@@ -695,11 +695,11 @@ export class MarketMakingOrderProcessor {
         );
 
         this.logger.log(
-          `Payment complete, queued withdrawal for order ${orderId}`,
+          `${this.logCtx({ traceId: job.data.traceId || `mm:${orderId}`, orderId, job })} Payment complete, queued withdrawal`,
         );
       } else {
         this.logger.log(
-          `Payment complete, withdrawal queueing disabled for order ${orderId}`,
+          `${this.logCtx({ traceId: job.data.traceId || `mm:${orderId}`, orderId, job })} Payment complete, withdrawal queueing disabled`,
         );
       }
     } catch (error) {
