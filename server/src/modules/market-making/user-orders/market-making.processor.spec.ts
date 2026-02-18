@@ -19,6 +19,7 @@ describe('MarketMakingOrderProcessor', () => {
         amountChangeType: 'fixed',
         ceilingPrice: '0',
         floorPrice: '0',
+        state: 'running',
       }),
     };
     const strategyService = {
@@ -65,6 +66,14 @@ describe('MarketMakingOrderProcessor', () => {
           base_asset_id: 'asset-base',
           quote_asset_id: 'asset-quote',
         }),
+        findMarketMakingPairByExchangeAndSymbol: jest.fn().mockResolvedValue({
+          exchange_id: 'binance',
+          symbol: 'BTC/USDT',
+          base_asset_id: 'asset-base',
+          quote_asset_id: 'asset-quote',
+          base_symbol: 'BTC',
+          quote_symbol: 'USDT',
+        }),
       } as any,
       transactionService as any,
       { executeWithdrawal: jest.fn() } as any,
@@ -74,6 +83,8 @@ describe('MarketMakingOrderProcessor', () => {
         findFirstAPIKeyByExchange: jest.fn(),
         getDepositAddress: jest.fn(),
         getDeposits: jest.fn(),
+        getBalanceBySymbol: jest.fn(),
+        createWithdrawal: jest.fn(),
       } as any,
       { getNetworkForAsset: jest.fn() } as any,
       {} as any,
@@ -340,6 +351,66 @@ describe('MarketMakingOrderProcessor', () => {
       'start_mm',
       { userId: 'user-1', orderId: 'order-1' },
       expect.objectContaining({ jobId: 'start_mm_order-1' }),
+    );
+  });
+
+  it('enqueues exit deposit monitor after exit withdrawal', async () => {
+    const { processor, userOrdersService } = createProcessor();
+
+    (
+      processor as any
+    ).exchangeService.findFirstAPIKeyByExchange.mockResolvedValueOnce({
+      key_id: 'key-1',
+      api_key: 'k',
+      api_secret: 's',
+    });
+
+    (
+      processor as any
+    ).networkMappingService.getNetworkForAsset.mockResolvedValueOnce('ERC20');
+    (
+      processor as any
+    ).networkMappingService.getNetworkForAsset.mockResolvedValueOnce('ERC20');
+
+    (processor as any).exchangeService.getBalanceBySymbol.mockResolvedValueOnce(
+      {
+        BTC: '1',
+      },
+    );
+    (processor as any).exchangeService.getBalanceBySymbol.mockResolvedValueOnce(
+      {
+        USDT: '2',
+      },
+    );
+
+    (processor as any).exchangeService.createWithdrawal.mockResolvedValueOnce({
+      txid: '0xbase',
+    });
+    (processor as any).exchangeService.createWithdrawal.mockResolvedValueOnce({
+      txid: '0xquote',
+    });
+
+    const queue = { add: jest.fn() };
+
+    await processor.handleExitWithdrawal({
+      data: { userId: 'user-1', orderId: 'order-1' },
+      queue,
+    } as any);
+
+    expect(userOrdersService.updateMarketMakingOrderState).toHaveBeenCalledWith(
+      'order-1',
+      'exit_withdrawing',
+    );
+
+    expect(queue.add).toHaveBeenCalledWith(
+      'monitor_exit_mixin_deposit',
+      expect.objectContaining({
+        userId: 'user-1',
+        orderId: 'order-1',
+        expectedBaseTxHash: '0xbase',
+        expectedQuoteTxHash: '0xquote',
+      }),
+      expect.objectContaining({ jobId: 'monitor_exit_mixin_deposit_order-1' }),
     );
   });
 
