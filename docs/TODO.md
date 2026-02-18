@@ -14,7 +14,7 @@ This TODO is intentionally organized to match the project soul:
 
 _DoD: written permission model + enforced gates in code (tests), so operators cannot “just do it manually” without leaving an audit trail._
 
-- [ ] Define and publish the **permission surface** (what can be governed, what cannot, upgrade paths). (docs: `docs/thesis/*`, `docs/plans/2026-02-17-vision-layer-todo.md`)
+- [x] Define and publish the **permission surface** (what can be governed, what cannot, upgrade paths). (docs: `docs/thesis/permission-surface-v0.md`, `docs/plans/2026-02-17-vision-layer-todo.md`)
 - [ ] No identifiable market-making controller: execution attributable to **immutable rules + verifiable nodes**. (future: `repos/easyenclave/*` integration; docs: `docs/plans/2026-02-17-hufi-mrmarket-easyenclave-architecture.md`)
 - [ ] No yield / price-support promises in UI/docs; dashboards are **measurement**, not marketing. (interface: `interface/src/i18n/*`, `interface/src/lib/components/**`)
 - [ ] Every critical flow is **auditable + replayable** (traceId, structured logs, durable state transitions, idempotency keys). (server: `server/src/modules/infrastructure/logger/*`, `server/src/modules/market-making/durability/*`)
