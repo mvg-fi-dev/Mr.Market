@@ -21,9 +21,10 @@ import { WithdrawalModule } from 'src/modules/mixin/withdrawal/withdrawal.module
 
 import { FeeModule } from '../fee/fee.module';
 import { LedgerModule } from '../ledger/ledger.module';
-import { LocalCampaignModule } from '../local-campaign/local-campaign.module';
 import { MMExchangeAllocationModule } from '../exchange-allocation/mm-exchange-allocation.module';
+import { LocalCampaignModule } from '../local-campaign/local-campaign.module';
 import { NetworkMappingModule } from '../network-mapping/network-mapping.module';
+import { OrchestrationModule } from '../orchestration/orchestration.module';
 import { StrategyModule } from '../strategy/strategy.module';
 import { MarketMakingOrderProcessor } from './market-making.processor';
 import { UserOrdersController } from './user-orders.controller';
@@ -54,6 +55,7 @@ import { UserOrdersService } from './user-orders.service';
     ExchangeModule,
     NetworkMappingModule,
     MMExchangeAllocationModule,
+    OrchestrationModule,
     CampaignModule,
     MixinClientModule,
     LedgerModule,

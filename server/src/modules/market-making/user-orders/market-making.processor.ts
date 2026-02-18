@@ -18,6 +18,8 @@ import { TransactionService } from 'src/modules/mixin/transaction/transaction.se
 import { WithdrawalService } from 'src/modules/mixin/withdrawal/withdrawal.service';
 import { WalletService } from 'src/modules/mixin/wallet/wallet.service';
 
+import { PauseWithdrawOrchestratorService } from '../orchestration/pause-withdraw-orchestrator.service';
+
 const DEPOSIT_AMOUNT_TOLERANCE = new BigNumber('0.00000001');
 import { Repository } from 'typeorm';
 
@@ -100,6 +102,7 @@ export class MarketMakingOrderProcessor {
     private readonly networkMappingService: NetworkMappingService,
     private readonly mixinClientService: MixinClientService,
     private readonly walletService: WalletService,
+    private readonly pauseWithdrawOrchestratorService: PauseWithdrawOrchestratorService,
     private readonly allocationService: MMExchangeAllocationService,
     private readonly configService: ConfigService,
     @InjectRepository(MarketMakingPaymentState)
@@ -1203,6 +1206,16 @@ export class MarketMakingOrderProcessor {
 
     const baseAmount = toWithdrawalAmount(allocation.baseAllocatedAmount);
     const quoteAmount = toWithdrawalAmount(allocation.quoteAllocatedAmount);
+
+    // IMPORTANT: shared exchange accounts may have balances locked in open orders.
+    // Drain open orders (cancel until no open orders) before exchange withdrawals.
+    await this.pauseWithdrawOrchestratorService.pauseAndDrainOrders({
+      userId,
+      clientId: orderId,
+      strategyType: 'pureMarketMaking',
+      timeoutMs: 120_000,
+      pollMs: 1_000,
+    });
 
     const baseWithdrawal = new BigNumber(baseAmount).isGreaterThan(0)
       ? await this.exchangeService.createWithdrawal({

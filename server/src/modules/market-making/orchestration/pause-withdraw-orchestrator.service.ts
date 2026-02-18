@@ -27,7 +27,13 @@ export class PauseWithdrawOrchestratorService {
     private readonly exchangeConnectorAdapterService: ExchangeConnectorAdapterService,
   ) {}
 
-  async pauseAndWithdraw(command: PauseWithdrawCommand): Promise<void> {
+  async pauseAndDrainOrders(command: {
+    userId: string;
+    clientId: string;
+    strategyType: 'arbitrage' | 'pureMarketMaking' | 'volume';
+    timeoutMs?: number;
+    pollMs?: number;
+  }): Promise<void> {
     await this.strategyService.stopStrategyForUser(
       command.userId,
       command.clientId,
@@ -40,7 +46,18 @@ export class PauseWithdrawOrchestratorService {
       client_id: command.clientId,
     });
 
-    await this.cancelUntilDrained(strategyKey);
+    await this.cancelUntilDrained(strategyKey, {
+      timeoutMs: command.timeoutMs,
+      pollMs: command.pollMs,
+    });
+  }
+
+  async pauseAndWithdraw(command: PauseWithdrawCommand): Promise<void> {
+    await this.pauseAndDrainOrders({
+      userId: command.userId,
+      clientId: command.clientId,
+      strategyType: command.strategyType,
+    });
 
     await this.balanceLedgerService.unlockFunds({
       userId: command.userId,
@@ -68,9 +85,12 @@ export class PauseWithdrawOrchestratorService {
     );
   }
 
-  private async cancelUntilDrained(strategyKey: string): Promise<void> {
-    const timeoutMs = 30_000;
-    const pollMs = 500;
+  private async cancelUntilDrained(
+    strategyKey: string,
+    opts?: { timeoutMs?: number; pollMs?: number },
+  ): Promise<void> {
+    const timeoutMs = opts?.timeoutMs ?? 30_000;
+    const pollMs = opts?.pollMs ?? 500;
     const startedAt = Date.now();
 
     while (true) {

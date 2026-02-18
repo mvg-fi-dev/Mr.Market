@@ -93,6 +93,7 @@ describe('MarketMakingOrderProcessor', () => {
           .fn()
           .mockResolvedValue({ address: 'addr', memo: '' }),
       } as any,
+      { pauseAndDrainOrders: jest.fn() } as any,
       {
         getByOrderId: jest.fn(),
         getOrCreate: jest.fn(),
