@@ -1,6 +1,7 @@
 import { Process, Processor } from '@nestjs/bull';
 import BigNumber from 'bignumber.js';
 import { Job } from 'bull';
+import { formatAuditLogContext } from 'src/modules/infrastructure/logger/log-context';
 import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
 
 import { LocalCampaignService } from './local-campaign.service';
@@ -15,19 +16,34 @@ export class LocalCampaignProcessor {
   async handleCheckCampaignStatus(job: Job<{ campaignId: string }>) {
     const { campaignId } = job.data;
 
-    this.logger.log(`Checking campaign status for ${campaignId}`);
+    this.logger.log(
+      `${formatAuditLogContext({
+        job,
+        orderId: campaignId,
+      })} Checking campaign status`,
+    );
 
     const campaign = await this.campaignService.findById(campaignId);
 
     if (!campaign) {
-      this.logger.error(`Campaign ${campaignId} not found`);
+      this.logger.error(
+        `${formatAuditLogContext({
+          job,
+          orderId: campaignId,
+        })} Campaign not found`,
+      );
 
       return;
     }
 
     // Check if campaign has ended
     if (new Date() > campaign.endTime && campaign.status === 'active') {
-      this.logger.log(`Campaign ${campaignId} ended. Distributing rewards...`);
+      this.logger.log(
+        `${formatAuditLogContext({
+          job,
+          orderId: campaignId,
+        })} Campaign ended. Distributing rewards...`,
+      );
       await this.campaignService.updateCampaign(campaignId, {
         status: 'completed',
       });
@@ -38,13 +54,19 @@ export class LocalCampaignProcessor {
   }
 
   private async distributeRewards(campaignId: string) {
+    const traceId = `local-campaign:${campaignId}`;
     const campaign = await this.campaignService.findById(campaignId);
     const participations = await this.campaignService.getParticipations(
       campaignId,
     );
 
     if (participations.length === 0) {
-      this.logger.warn(`No participants for campaign ${campaignId}`);
+      this.logger.warn(
+        `${formatAuditLogContext({
+          traceId,
+          orderId: campaignId,
+        })} No participants for campaign`,
+      );
 
       return;
     }
@@ -55,7 +77,12 @@ export class LocalCampaignProcessor {
     );
 
     if (totalContribution.isZero()) {
-      this.logger.warn(`Total contribution is 0 for campaign ${campaignId}`);
+      this.logger.warn(
+        `${formatAuditLogContext({
+          traceId,
+          orderId: campaignId,
+        })} Total contribution is 0 for campaign`,
+      );
 
       return;
     }
@@ -71,7 +98,10 @@ export class LocalCampaignProcessor {
       });
 
       this.logger.log(
-        `Rewarded user ${p.userId} with ${reward.toString()} ${
+        `${formatAuditLogContext({
+          traceId,
+          orderId: campaignId,
+        })} Rewarded user ${p.userId} with ${reward.toString()} ${
           campaign.rewardToken
         }`,
       );

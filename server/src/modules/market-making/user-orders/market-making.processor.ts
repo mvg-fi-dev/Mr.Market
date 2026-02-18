@@ -1,9 +1,9 @@
 import { SafeSnapshot } from '@mixin.dev/mixin-node-sdk';
 import { Process, Processor } from '@nestjs/bull';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import BigNumber from 'bignumber.js';
 import { Job } from 'bull';
-import { ConfigService } from '@nestjs/config';
 import { MarketMakingOrderIntent } from 'src/common/entities/market-making/market-making-order-intent.entity';
 import { MarketMakingPaymentState } from 'src/common/entities/orders/payment-state.entity';
 import { MarketMakingOrder } from 'src/common/entities/orders/user-orders.entity';
@@ -15,22 +15,26 @@ import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
 import { MixinClientService } from 'src/modules/mixin/client/mixin-client.service';
 import { ExchangeService } from 'src/modules/mixin/exchange/exchange.service';
 import { TransactionService } from 'src/modules/mixin/transaction/transaction.service';
-import { WithdrawalService } from 'src/modules/mixin/withdrawal/withdrawal.service';
 import { WalletService } from 'src/modules/mixin/wallet/wallet.service';
-
-import { PauseWithdrawOrchestratorService } from '../orchestration/pause-withdraw-orchestrator.service';
-
-const DEPOSIT_AMOUNT_TOLERANCE = new BigNumber('0.00000001');
+import { WithdrawalService } from 'src/modules/mixin/withdrawal/withdrawal.service';
 import { Repository } from 'typeorm';
 
+import {
+  AuditLogContext,
+  formatAuditLogContext,
+} from 'src/modules/infrastructure/logger/log-context';
+
 import { getRFC3339Timestamp } from '../../../common/helpers/utils';
+import { MMExchangeAllocationService } from '../exchange-allocation/mm-exchange-allocation.service';
 import { FeeService } from '../fee/fee.service';
 import { BalanceLedgerService } from '../ledger/balance-ledger.service';
 import { LocalCampaignService } from '../local-campaign/local-campaign.service';
-import { MMExchangeAllocationService } from '../exchange-allocation/mm-exchange-allocation.service';
 import { NetworkMappingService } from '../network-mapping/network-mapping.service';
+import { PauseWithdrawOrchestratorService } from '../orchestration/pause-withdraw-orchestrator.service';
 import { StrategyService } from '../strategy/strategy.service';
 import { UserOrdersService } from './user-orders.service';
+
+const DEPOSIT_AMOUNT_TOLERANCE = new BigNumber('0.00000001');
 
 interface JobContext {
   orderId: string;
@@ -62,30 +66,14 @@ type RefundTransferCommand = {
   transfer: () => Promise<unknown>;
 };
 
-type LogContext = {
-  traceId?: string;
-  orderId?: string;
-  job?: { id?: string | number; name?: string };
-  exchange?: string;
-  apiKeyId?: string;
-};
-
 @Processor('market-making')
 export class MarketMakingOrderProcessor {
   private readonly logger = new CustomLogger(MarketMakingOrderProcessor.name);
 
-  private logCtx(ctx: LogContext): string {
-    const parts: string[] = [];
-
-    if (ctx.traceId) parts.push(`trace=${ctx.traceId}`);
-    if (ctx.orderId) parts.push(`order=${ctx.orderId}`);
-    if (ctx.job?.name) parts.push(`job=${ctx.job.name}`);
-    if (ctx.job?.id != null) parts.push(`jobId=${ctx.job.id}`);
-    if (ctx.exchange) parts.push(`exchange=${ctx.exchange}`);
-    if (ctx.apiKeyId) parts.push(`apiKeyId=${ctx.apiKeyId}`);
-
-    return parts.length ? `[${parts.join(' ')}]` : '';
+  private logCtx(ctx: AuditLogContext): string {
+    return formatAuditLogContext(ctx);
   }
+
   private readonly PAYMENT_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
   private readonly MAX_PAYMENT_RETRIES = 60; // Check every 10 seconds for 10 minutes
 
@@ -279,10 +267,9 @@ export class MarketMakingOrderProcessor {
 
     try {
       // Step 1.1: Validate trading pair exists
-      const pairConfig =
-        await this.growDataRepository.findMarketMakingPairById(
-          marketMakingPairId,
-        );
+      const pairConfig = await this.growDataRepository.findMarketMakingPairById(
+        marketMakingPairId,
+      );
 
       if (!pairConfig) {
         this.logger.error(`Market making pair ${marketMakingPairId} not found`);
@@ -490,7 +477,11 @@ export class MarketMakingOrderProcessor {
     ).toNumber();
 
     this.logger.log(
-      `${this.logCtx({ traceId: traceId || `mm:${orderId}`, orderId, job })} Checking payment complete (attempt ${attemptNumber}/${maxAttempts})`,
+      `${this.logCtx({
+        traceId: traceId || `mm:${orderId}`,
+        orderId,
+        job,
+      })} Checking payment complete (attempt ${attemptNumber}/${maxAttempts})`,
     );
 
     try {
@@ -504,10 +495,9 @@ export class MarketMakingOrderProcessor {
         return;
       }
 
-      const pairConfig =
-        await this.growDataRepository.findMarketMakingPairById(
-          marketMakingPairId,
-        );
+      const pairConfig = await this.growDataRepository.findMarketMakingPairById(
+        marketMakingPairId,
+      );
 
       if (!pairConfig) {
         this.logger.error(`Pair config not found: ${marketMakingPairId}`);
@@ -537,14 +527,14 @@ export class MarketMakingOrderProcessor {
         paymentState.baseFeeAssetId === paymentState.baseAssetId
           ? baseAssetAmount
           : paymentState.baseFeeAssetId === paymentState.quoteAssetId
-            ? quoteAssetAmount
-            : baseFeeAssetAmount;
+          ? quoteAssetAmount
+          : baseFeeAssetAmount;
       const quoteFeePaidAmount =
         paymentState.quoteFeeAssetId === paymentState.quoteAssetId
           ? quoteAssetAmount
           : paymentState.quoteFeeAssetId === paymentState.baseAssetId
-            ? baseAssetAmount
-            : quoteFeeAssetAmount;
+          ? baseAssetAmount
+          : quoteFeeAssetAmount;
 
       // Check fees (comparing with required amounts)
       const hasBaseFee =
@@ -695,11 +685,19 @@ export class MarketMakingOrderProcessor {
         );
 
         this.logger.log(
-          `${this.logCtx({ traceId: job.data.traceId || `mm:${orderId}`, orderId, job })} Payment complete, queued withdrawal`,
+          `${this.logCtx({
+            traceId: job.data.traceId || `mm:${orderId}`,
+            orderId,
+            job,
+          })} Payment complete, queued withdrawal`,
         );
       } else {
         this.logger.log(
-          `${this.logCtx({ traceId: job.data.traceId || `mm:${orderId}`, orderId, job })} Payment complete, withdrawal queueing disabled`,
+          `${this.logCtx({
+            traceId: job.data.traceId || `mm:${orderId}`,
+            orderId,
+            job,
+          })} Payment complete, withdrawal queueing disabled`,
         );
       }
     } catch (error) {
@@ -719,7 +717,11 @@ export class MarketMakingOrderProcessor {
     const { orderId, marketMakingPairId, traceId } = job.data;
 
     this.logger.log(
-      `${this.logCtx({ traceId: traceId || `mm:${orderId}`, orderId, job })} Withdrawing to exchange`,
+      `${this.logCtx({
+        traceId: traceId || `mm:${orderId}`,
+        orderId,
+        job,
+      })} Withdrawing to exchange`,
     );
 
     try {
@@ -732,10 +734,9 @@ export class MarketMakingOrderProcessor {
         where: { orderId },
       });
 
-      const pairConfig =
-        await this.growDataRepository.findMarketMakingPairById(
-          marketMakingPairId,
-        );
+      const pairConfig = await this.growDataRepository.findMarketMakingPairById(
+        marketMakingPairId,
+      );
 
       if (!paymentState || !pairConfig) {
         throw new Error('Payment state or pair config not found');
@@ -744,15 +745,22 @@ export class MarketMakingOrderProcessor {
       const exchangeName = pairConfig.exchange_id;
 
       // Get API key for this exchange
-      const apiKey =
-        await this.exchangeService.findFirstAPIKeyByExchange(exchangeName);
+      const apiKey = await this.exchangeService.findFirstAPIKeyByExchange(
+        exchangeName,
+      );
 
       if (!apiKey) {
         throw new Error(`No API key found for exchange ${exchangeName}`);
       }
 
       this.logger.log(
-        `${this.logCtx({ traceId: traceId || `mm:${orderId}`, orderId, job, exchange: exchangeName, apiKeyId: apiKey.key_id })} Using exchange api key`,
+        `${this.logCtx({
+          traceId: traceId || `mm:${orderId}`,
+          orderId,
+          job,
+          exchange: exchangeName,
+          apiKeyId: apiKey.key_id,
+        })} Using exchange api key`,
       );
 
       // Get accurate network identifiers using NetworkMappingService
@@ -914,8 +922,9 @@ export class MarketMakingOrderProcessor {
         'joining_campaign',
       );
 
-      const order =
-        await this.userOrdersService.findMarketMakingByOrderId(orderId);
+      const order = await this.userOrdersService.findMarketMakingByOrderId(
+        orderId,
+      );
 
       if (!order) {
         throw new Error(`Order ${orderId} not found`);
@@ -1014,11 +1023,16 @@ export class MarketMakingOrderProcessor {
     const { userId, orderId } = job.data;
 
     this.logger.log(
-      `${this.logCtx({ traceId: `mm:${orderId}`, orderId, job })} Starting MM for user ${userId}`,
+      `${this.logCtx({
+        traceId: `mm:${orderId}`,
+        orderId,
+        job,
+      })} Starting MM for user ${userId}`,
     );
 
-    const order =
-      await this.userOrdersService.findMarketMakingByOrderId(orderId);
+    const order = await this.userOrdersService.findMarketMakingByOrderId(
+      orderId,
+    );
 
     if (!order) {
       this.logger.error(`MM Order ${orderId} not found`);
@@ -1054,7 +1068,11 @@ export class MarketMakingOrderProcessor {
     const { userId, orderId } = job.data;
 
     this.logger.log(
-      `${this.logCtx({ traceId: `mm:${orderId}`, orderId, job })} Stopping MM for user ${userId}`,
+      `${this.logCtx({
+        traceId: `mm:${orderId}`,
+        orderId,
+        job,
+      })} Stopping MM for user ${userId}`,
     );
 
     await this.strategyService.stopStrategyForUser(
@@ -1084,11 +1102,16 @@ export class MarketMakingOrderProcessor {
     const exitTraceId = `mm:exit:${orderId}`;
 
     this.logger.log(
-      `${this.logCtx({ traceId: exitTraceId, orderId, job })} Exit withdrawal requested by user ${userId}`,
+      `${this.logCtx({
+        traceId: exitTraceId,
+        orderId,
+        job,
+      })} Exit withdrawal requested by user ${userId}`,
     );
 
-    const order =
-      await this.userOrdersService.findMarketMakingByOrderId(orderId);
+    const order = await this.userOrdersService.findMarketMakingByOrderId(
+      orderId,
+    );
 
     if (!order) {
       throw new Error(`MM Order ${orderId} not found`);
@@ -1096,7 +1119,11 @@ export class MarketMakingOrderProcessor {
 
     if (order.state === 'exit_complete') {
       this.logger.log(
-        `${this.logCtx({ traceId: exitTraceId, orderId, job })} Exit already completed, skipping`,
+        `${this.logCtx({
+          traceId: exitTraceId,
+          orderId,
+          job,
+        })} Exit already completed, skipping`,
       );
 
       return;
@@ -1104,7 +1131,11 @@ export class MarketMakingOrderProcessor {
 
     if (['exit_withdrawing', 'exit_refunding'].includes(order.state)) {
       this.logger.log(
-        `${this.logCtx({ traceId: exitTraceId, orderId, job })} Exit already in progress (${order.state}), skipping re-withdraw`,
+        `${this.logCtx({
+          traceId: exitTraceId,
+          orderId,
+          job,
+        })} Exit already in progress (${order.state}), skipping re-withdraw`,
       );
 
       return;
@@ -1139,7 +1170,11 @@ export class MarketMakingOrderProcessor {
 
     if (!allowedStates.includes(order.state)) {
       throw new Error(
-        `${this.logCtx({ traceId: exitTraceId, orderId, job })} Exit not allowed in state ${order.state}`,
+        `${this.logCtx({
+          traceId: exitTraceId,
+          orderId,
+          job,
+        })} Exit not allowed in state ${order.state}`,
       );
     }
 
@@ -1157,17 +1192,29 @@ export class MarketMakingOrderProcessor {
 
     const exchangeName = pairConfig.exchange_id;
 
-    const apiKey =
-      await this.exchangeService.findFirstAPIKeyByExchange(exchangeName);
+    const apiKey = await this.exchangeService.findFirstAPIKeyByExchange(
+      exchangeName,
+    );
 
     if (!apiKey) {
       throw new Error(
-        `${this.logCtx({ traceId: exitTraceId, orderId, job, exchange: exchangeName })} No API key found for exchange`,
+        `${this.logCtx({
+          traceId: exitTraceId,
+          orderId,
+          job,
+          exchange: exchangeName,
+        })} No API key found for exchange`,
       );
     }
 
     this.logger.log(
-      `${this.logCtx({ traceId: exitTraceId, orderId, job, exchange: exchangeName, apiKeyId: apiKey.key_id })} Using exchange api key`,
+      `${this.logCtx({
+        traceId: exitTraceId,
+        orderId,
+        job,
+        exchange: exchangeName,
+        apiKeyId: apiKey.key_id,
+      })} Using exchange api key`,
     );
 
     // Determine exchange networks (ccxt) for base/quote
@@ -1315,8 +1362,9 @@ export class MarketMakingOrderProcessor {
     const elapsed = Date.now() - startedAt;
 
     // State gate: do not refund if the order is not in exit-related states.
-    const order =
-      await this.userOrdersService.findMarketMakingByOrderId(orderId);
+    const order = await this.userOrdersService.findMarketMakingByOrderId(
+      orderId,
+    );
 
     if (!order) {
       throw new Error(`MM Order ${orderId} not found`);
@@ -1324,7 +1372,11 @@ export class MarketMakingOrderProcessor {
 
     if (order.state === 'exit_complete') {
       this.logger.log(
-        `${this.logCtx({ traceId: traceId || `mm:exit:${orderId}`, orderId, job })} Exit already completed, skipping refund`,
+        `${this.logCtx({
+          traceId: traceId || `mm:exit:${orderId}`,
+          orderId,
+          job,
+        })} Exit already completed, skipping refund`,
       );
 
       return;
@@ -1380,7 +1432,11 @@ export class MarketMakingOrderProcessor {
       quoteExpected.isLessThanOrEqualTo(0) || !!quoteSnapshot;
 
     this.logger.log(
-      `${this.logCtx({ traceId: traceId || `mm:exit:${orderId}`, orderId, job })} Exit deposit status - Base: ${
+      `${this.logCtx({
+        traceId: traceId || `mm:exit:${orderId}`,
+        orderId,
+        job,
+      })} Exit deposit status - Base: ${
         baseConfirmed ? 'confirmed' : 'pending'
       }, Quote: ${quoteConfirmed ? 'confirmed' : 'pending'}`,
     );
@@ -1553,9 +1609,11 @@ export class MarketMakingOrderProcessor {
     const retryCount = job.attemptsMade || 0;
 
     this.logger.log(
-      `${this.logCtx({ traceId: traceId || `mm:${orderId}`, orderId, job })} Monitoring MM withdrawals (attempt ${
-        retryCount + 1
-      })`,
+      `${this.logCtx({
+        traceId: traceId || `mm:${orderId}`,
+        orderId,
+        job,
+      })} Monitoring MM withdrawals (attempt ${retryCount + 1})`,
     );
 
     try {
@@ -1570,7 +1628,11 @@ export class MarketMakingOrderProcessor {
         : { confirmed: false };
 
       this.logger.log(
-        `${this.logCtx({ traceId: traceId || `mm:${orderId}`, orderId, job })} Withdrawal status - Base: ${
+        `${this.logCtx({
+          traceId: traceId || `mm:${orderId}`,
+          orderId,
+          job,
+        })} Withdrawal status - Base: ${
           baseStatus.confirmed ? 'confirmed' : 'pending'
         }, Quote: ${quoteStatus.confirmed ? 'confirmed' : 'pending'}`,
       );
@@ -1594,7 +1656,11 @@ export class MarketMakingOrderProcessor {
       // If both confirmed, proceed to monitor exchange deposits
       if (baseStatus.confirmed && quoteStatus.confirmed) {
         this.logger.log(
-          `${this.logCtx({ traceId: traceId || `mm:${orderId}`, orderId, job })} Both withdrawals confirmed, proceeding to monitor exchange deposits`,
+          `${this.logCtx({
+            traceId: traceId || `mm:${orderId}`,
+            orderId,
+            job,
+          })} Both withdrawals confirmed, proceeding to monitor exchange deposits`,
         );
 
         await this.userOrdersService.updateMarketMakingOrderState(
@@ -1674,9 +1740,11 @@ export class MarketMakingOrderProcessor {
     const retryCount = job.attemptsMade || 0;
 
     this.logger.log(
-      `${this.logCtx({ traceId: traceId || `mm:${orderId}`, orderId, job })} Monitoring exchange deposits (attempt ${
-        retryCount + 1
-      })`,
+      `${this.logCtx({
+        traceId: traceId || `mm:${orderId}`,
+        orderId,
+        job,
+      })} Monitoring exchange deposits (attempt ${retryCount + 1})`,
     );
 
     const elapsed = Date.now() - startedAt;
@@ -1694,17 +1762,17 @@ export class MarketMakingOrderProcessor {
       return;
     }
 
-    const order =
-      await this.userOrdersService.findMarketMakingByOrderId(orderId);
+    const order = await this.userOrdersService.findMarketMakingByOrderId(
+      orderId,
+    );
 
     if (!order) {
       throw new Error(`Order ${orderId} not found`);
     }
 
-    const pairConfig =
-      await this.growDataRepository.findMarketMakingPairById(
-        marketMakingPairId,
-      );
+    const pairConfig = await this.growDataRepository.findMarketMakingPairById(
+      marketMakingPairId,
+    );
 
     if (!pairConfig) {
       throw new Error(`Market making pair ${marketMakingPairId} not found`);
@@ -1727,15 +1795,22 @@ export class MarketMakingOrderProcessor {
       throw new Error('unsupported exchange for deposit monitor');
     }
 
-    const apiKey =
-      await this.exchangeService.findFirstAPIKeyByExchange(exchangeName);
+    const apiKey = await this.exchangeService.findFirstAPIKeyByExchange(
+      exchangeName,
+    );
 
     if (!apiKey) {
       throw new Error(`No API key found for exchange ${exchangeName}`);
     }
 
     this.logger.log(
-      `${this.logCtx({ traceId: traceId || `mm:${orderId}`, orderId, job, exchange: exchangeName, apiKeyId: apiKey.key_id })} Using exchange api key`,
+      `${this.logCtx({
+        traceId: traceId || `mm:${orderId}`,
+        orderId,
+        job,
+        exchange: exchangeName,
+        apiKeyId: apiKey.key_id,
+      })} Using exchange api key`,
     );
 
     const [baseNetwork, quoteNetwork] = await Promise.all([
@@ -1828,7 +1903,13 @@ export class MarketMakingOrderProcessor {
     );
 
     this.logger.log(
-      `${this.logCtx({ traceId: traceId || `mm:${orderId}`, orderId, job, exchange: exchangeName, apiKeyId: apiKey.key_id })} Exchange deposit status - Base: ${
+      `${this.logCtx({
+        traceId: traceId || `mm:${orderId}`,
+        orderId,
+        job,
+        exchange: exchangeName,
+        apiKeyId: apiKey.key_id,
+      })} Exchange deposit status - Base: ${
         baseDeposit ? 'confirmed' : 'pending'
       }, Quote: ${quoteDeposit ? 'confirmed' : 'pending'}`,
     );
