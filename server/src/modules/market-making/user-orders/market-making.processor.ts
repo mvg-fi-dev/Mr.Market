@@ -1231,28 +1231,39 @@ export class MarketMakingOrderProcessor {
         limit: 200,
       } as any);
 
-    const baseSnapshot = this.findMatchingMixinDeposit({
-      snapshots,
-      assetId: baseAssetId,
-      expectedAmount: expectedBaseAmount,
-      expectedTxHash: expectedBaseTxHash,
-      startedAt,
-    });
-    const quoteSnapshot = this.findMatchingMixinDeposit({
-      snapshots,
-      assetId: quoteAssetId,
-      expectedAmount: expectedQuoteAmount,
-      expectedTxHash: expectedQuoteTxHash,
-      startedAt,
-    });
+    const baseExpected = new BigNumber(expectedBaseAmount || 0);
+    const quoteExpected = new BigNumber(expectedQuoteAmount || 0);
+
+    const baseSnapshot = baseExpected.isGreaterThan(0)
+      ? this.findMatchingMixinDeposit({
+          snapshots,
+          assetId: baseAssetId,
+          expectedAmount: expectedBaseAmount,
+          expectedTxHash: expectedBaseTxHash,
+          startedAt,
+        })
+      : null;
+    const quoteSnapshot = quoteExpected.isGreaterThan(0)
+      ? this.findMatchingMixinDeposit({
+          snapshots,
+          assetId: quoteAssetId,
+          expectedAmount: expectedQuoteAmount,
+          expectedTxHash: expectedQuoteTxHash,
+          startedAt,
+        })
+      : null;
+
+    const baseConfirmed = baseExpected.isLessThanOrEqualTo(0) || !!baseSnapshot;
+    const quoteConfirmed =
+      quoteExpected.isLessThanOrEqualTo(0) || !!quoteSnapshot;
 
     this.logger.log(
       `Exit deposit status for order ${orderId} - Base: ${
-        baseSnapshot ? 'confirmed' : 'pending'
-      }, Quote: ${quoteSnapshot ? 'confirmed' : 'pending'}`,
+        baseConfirmed ? 'confirmed' : 'pending'
+      }, Quote: ${quoteConfirmed ? 'confirmed' : 'pending'}`,
     );
 
-    if (!baseSnapshot || !quoteSnapshot) {
+    if (!baseConfirmed || !quoteConfirmed) {
       throw new Error('Exit deposits not fully confirmed yet');
     }
 
@@ -1261,37 +1272,41 @@ export class MarketMakingOrderProcessor {
       'exit_refunding',
     );
 
-    await this.executeRefundTransfer({
-      userId,
-      assetId: baseAssetId,
-      amount: new BigNumber(baseSnapshot.amount).toFixed(),
-      debitIdempotencyKey: `mm-exit-refund:${orderId}:${baseAssetId}`,
-      refType: 'market_making_exit_refund',
-      refId: orderId,
-      transfer: async () =>
-        await this.transactionService.transfer(
-          userId,
-          baseAssetId,
-          new BigNumber(baseSnapshot.amount).toFixed(),
-          `ExitRefund:${orderId}:base`,
-        ),
-    });
+    if (baseSnapshot) {
+      await this.executeRefundTransfer({
+        userId,
+        assetId: baseAssetId,
+        amount: new BigNumber(baseSnapshot.amount).toFixed(),
+        debitIdempotencyKey: `mm-exit-refund:${orderId}:${baseAssetId}`,
+        refType: 'market_making_exit_refund',
+        refId: orderId,
+        transfer: async () =>
+          await this.transactionService.transfer(
+            userId,
+            baseAssetId,
+            new BigNumber(baseSnapshot.amount).toFixed(),
+            `ExitRefund:${orderId}:base`,
+          ),
+      });
+    }
 
-    await this.executeRefundTransfer({
-      userId,
-      assetId: quoteAssetId,
-      amount: new BigNumber(quoteSnapshot.amount).toFixed(),
-      debitIdempotencyKey: `mm-exit-refund:${orderId}:${quoteAssetId}`,
-      refType: 'market_making_exit_refund',
-      refId: orderId,
-      transfer: async () =>
-        await this.transactionService.transfer(
-          userId,
-          quoteAssetId,
-          new BigNumber(quoteSnapshot.amount).toFixed(),
-          `ExitRefund:${orderId}:quote`,
-        ),
-    });
+    if (quoteSnapshot) {
+      await this.executeRefundTransfer({
+        userId,
+        assetId: quoteAssetId,
+        amount: new BigNumber(quoteSnapshot.amount).toFixed(),
+        debitIdempotencyKey: `mm-exit-refund:${orderId}:${quoteAssetId}`,
+        refType: 'market_making_exit_refund',
+        refId: orderId,
+        transfer: async () =>
+          await this.transactionService.transfer(
+            userId,
+            quoteAssetId,
+            new BigNumber(quoteSnapshot.amount).toFixed(),
+            `ExitRefund:${orderId}:quote`,
+          ),
+      });
+    }
 
     await this.userOrdersService.updateMarketMakingOrderState(
       orderId,
