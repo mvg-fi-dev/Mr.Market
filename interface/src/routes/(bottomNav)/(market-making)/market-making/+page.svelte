@@ -30,24 +30,18 @@
   let marketMakingOrders: any[] = [];
   let isLoadingOrders = false;
   let ordersError: string | null = null;
+  let lastLoadedUserId: string | null = null;
 
   $: noMarketMakingCreated = marketMakingOrders.length === 0;
 
-  onMount(async () => {
+  const loadOrders = async (userId: string) => {
     try {
       ordersError = null;
-
-      const u = $user;
-      const userId = u?.user_id;
-
-      if (!$mixinConnected || !userId) {
-        marketMakingOrders = [];
-        return;
-      }
-
       isLoadingOrders = true;
+
       const orders = await getAllMarketMakingByUser(userId);
       marketMakingOrders = Array.isArray(orders) ? orders : [];
+      lastLoadedUserId = userId;
 
       // If user already has orders, don't block them behind the "first time" intro.
       if (marketMakingOrders.length > 0) {
@@ -57,10 +51,32 @@
       console.error("Failed to load market making orders:", e);
       ordersError = "Failed to load orders";
       marketMakingOrders = [];
+      lastLoadedUserId = null;
     } finally {
       isLoadingOrders = false;
     }
+  };
+
+  // Load on mount, and also reactively reload once wallet/user becomes available
+  // (e.g. after oauth/connect, or after returning from create flow).
+  onMount(async () => {
+    const userId = $user?.user_id;
+    if ($mixinConnected && userId) {
+      await loadOrders(userId);
+    }
   });
+
+  $: {
+    const userId = $user?.user_id;
+
+    if (!$mixinConnected) {
+      marketMakingOrders = [];
+      lastLoadedUserId = null;
+    } else if (userId && userId !== lastLoadedUserId && !isLoadingOrders) {
+      // user store may be populated after mount
+      loadOrders(userId);
+    }
+  }
 </script>
 
 <!-- If not connected, show start market making, button redirect to connect wallet -->
