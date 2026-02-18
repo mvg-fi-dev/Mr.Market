@@ -29,6 +29,7 @@ import { RewardLedger } from './common/entities/ledger/reward-ledger.entity';
 import { ShareLedgerEntry } from './common/entities/ledger/share-ledger-entry.entity';
 import { ArbitrageHistory } from './common/entities/market-making/arbitrage-order.entity';
 import { MarketMakingHistory } from './common/entities/market-making/market-making-order.entity';
+import { MMExchangeAllocation } from './common/entities/market-making/mm-exchange-allocation.entity';
 import { MarketMakingOrderIntent } from './common/entities/market-making/market-making-order-intent.entity';
 import { Performance } from './common/entities/market-making/performance.entity';
 import { StrategyInstance } from './common/entities/market-making/strategy-instances.entity';
@@ -125,6 +126,7 @@ dotenv.config();
         Campaign,
         CampaignParticipation,
         MarketMakingOrderIntent,
+        MMExchangeAllocation,
         LedgerEntry,
         BalanceReadModel,
         OutboxEvent,

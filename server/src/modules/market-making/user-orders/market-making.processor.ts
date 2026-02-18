@@ -25,6 +25,7 @@ import { getRFC3339Timestamp } from '../../../common/helpers/utils';
 import { FeeService } from '../fee/fee.service';
 import { BalanceLedgerService } from '../ledger/balance-ledger.service';
 import { LocalCampaignService } from '../local-campaign/local-campaign.service';
+import { MMExchangeAllocationService } from '../exchange-allocation/mm-exchange-allocation.service';
 import { NetworkMappingService } from '../network-mapping/network-mapping.service';
 import { StrategyService } from '../strategy/strategy.service';
 import { UserOrdersService } from './user-orders.service';
@@ -99,6 +100,7 @@ export class MarketMakingOrderProcessor {
     private readonly networkMappingService: NetworkMappingService,
     private readonly mixinClientService: MixinClientService,
     private readonly walletService: WalletService,
+    private readonly allocationService: MMExchangeAllocationService,
     private readonly configService: ConfigService,
     @InjectRepository(MarketMakingPaymentState)
     private readonly paymentStateRepository: Repository<MarketMakingPaymentState>,
@@ -1191,23 +1193,16 @@ export class MarketMakingOrderProcessor {
       return amount.toFixed();
     };
 
-    const baseFree = await this.exchangeService.getBalanceBySymbol(
-      exchangeName,
-      apiKey.api_key,
-      apiKey.api_secret,
-      pairConfig.base_symbol,
-    );
-    const quoteFree = await this.exchangeService.getBalanceBySymbol(
-      exchangeName,
-      apiKey.api_key,
-      apiKey.api_secret,
-      pairConfig.quote_symbol,
-    );
+    const allocation = await this.allocationService.getByOrderId(orderId);
 
-    const baseAmount = toWithdrawalAmount(baseFree?.[pairConfig.base_symbol]);
-    const quoteAmount = toWithdrawalAmount(
-      quoteFree?.[pairConfig.quote_symbol],
-    );
+    if (!allocation) {
+      throw new Error(
+        `Missing exchange allocation for order ${orderId}. Refusing to withdraw shared account funds without per-order allocation.`,
+      );
+    }
+
+    const baseAmount = toWithdrawalAmount(allocation.baseAllocatedAmount);
+    const quoteAmount = toWithdrawalAmount(allocation.quoteAllocatedAmount);
 
     const baseWithdrawal = new BigNumber(baseAmount).isGreaterThan(0)
       ? await this.exchangeService.createWithdrawal({
@@ -1824,6 +1819,20 @@ export class MarketMakingOrderProcessor {
         orderId,
         'deposit_confirmed',
       );
+
+      await this.allocationService.getOrCreate({
+        orderId,
+        userId: order.userId,
+        exchange: exchangeName,
+        baseAssetId: paymentState.baseAssetId,
+        baseSymbol: pairConfig.base_symbol,
+        baseAllocatedAmount: paymentState.baseAssetAmount,
+        quoteAssetId: paymentState.quoteAssetId,
+        quoteSymbol: pairConfig.quote_symbol,
+        quoteAllocatedAmount: paymentState.quoteAssetAmount,
+      });
+
+      await this.allocationService.markExchangeDepositConfirmed(orderId);
 
       await (job.queue as any).add(
         'start_mm',

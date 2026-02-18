@@ -93,6 +93,11 @@ describe('MarketMakingOrderProcessor', () => {
           .fn()
           .mockResolvedValue({ address: 'addr', memo: '' }),
       } as any,
+      {
+        getByOrderId: jest.fn(),
+        getOrCreate: jest.fn(),
+        markExchangeDepositConfirmed: jest.fn(),
+      } as any,
       { get: jest.fn().mockReturnValue(false) } as any,
       paymentStateRepository as any,
       { update: jest.fn(), findOne: jest.fn(), save: jest.fn() } as any,
@@ -372,16 +377,10 @@ describe('MarketMakingOrderProcessor', () => {
       processor as any
     ).networkMappingService.getNetworkForAsset.mockResolvedValueOnce('ERC20');
 
-    (processor as any).exchangeService.getBalanceBySymbol.mockResolvedValueOnce(
-      {
-        BTC: '1',
-      },
-    );
-    (processor as any).exchangeService.getBalanceBySymbol.mockResolvedValueOnce(
-      {
-        USDT: '2',
-      },
-    );
+    (processor as any).allocationService.getByOrderId.mockResolvedValueOnce({
+      baseAllocatedAmount: '1',
+      quoteAllocatedAmount: '2',
+    });
 
     (processor as any).exchangeService.createWithdrawal.mockResolvedValueOnce({
       txid: '0xbase',
