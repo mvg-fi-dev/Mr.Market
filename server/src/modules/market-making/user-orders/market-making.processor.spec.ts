@@ -300,13 +300,11 @@ describe('MarketMakingOrderProcessor', () => {
     expect(queue.add).not.toHaveBeenCalled();
   });
 
-  it('queues start_mm when both exchange deposits are confirmed', async () => {
+  it('queues start_mm when both exchange deposits are confirmed (mexc)', async () => {
     const { processor, userOrdersService, paymentStateRepository } =
       createProcessor();
 
-    (
-      processor as any
-    ).growDataRepository.findMarketMakingPairById.mockResolvedValueOnce({
+    (processor as any).growDataRepository.findMarketMakingPairById.mockResolvedValueOnce({
       exchange_id: 'mexc',
       base_symbol: 'BTC',
       quote_symbol: 'USDT',
@@ -319,17 +317,9 @@ describe('MarketMakingOrderProcessor', () => {
       baseAssetAmount: '1',
       quoteAssetAmount: '2',
     });
-
-    (
-      processor as any
-    ).networkMappingService.getNetworkForAsset.mockResolvedValueOnce('ERC20');
-    (
-      processor as any
-    ).networkMappingService.getNetworkForAsset.mockResolvedValueOnce('ERC20');
-
-    (
-      processor as any
-    ).exchangeService.findFirstAPIKeyByExchange.mockResolvedValueOnce({
+    (processor as any).networkMappingService.getNetworkForAsset.mockResolvedValueOnce('ERC20');
+    (processor as any).networkMappingService.getNetworkForAsset.mockResolvedValueOnce('ERC20');
+    (processor as any).exchangeService.findFirstAPIKeyByExchange.mockResolvedValueOnce({
       key_id: 'key-1',
     });
 
@@ -364,21 +354,13 @@ describe('MarketMakingOrderProcessor', () => {
 
   it('enqueues exit deposit monitor after exit withdrawal', async () => {
     const { processor, userOrdersService } = createProcessor();
-
-    (
-      processor as any
-    ).exchangeService.findFirstAPIKeyByExchange.mockResolvedValueOnce({
+    (processor as any).exchangeService.findFirstAPIKeyByExchange.mockResolvedValueOnce({
       key_id: 'key-1',
       api_key: 'k',
       api_secret: 's',
     });
-
-    (
-      processor as any
-    ).networkMappingService.getNetworkForAsset.mockResolvedValueOnce('ERC20');
-    (
-      processor as any
-    ).networkMappingService.getNetworkForAsset.mockResolvedValueOnce('ERC20');
+    (processor as any).networkMappingService.getNetworkForAsset.mockResolvedValueOnce('ERC20');
+    (processor as any).networkMappingService.getNetworkForAsset.mockResolvedValueOnce('ERC20');
 
     (processor as any).allocationService.getByOrderId.mockResolvedValueOnce({
       baseAllocatedAmount: '1',
@@ -466,13 +448,11 @@ describe('MarketMakingOrderProcessor', () => {
     } as any);
   });
 
-  it('prefers tx hash matching for deposits when provided', async () => {
+  it('prefers tx hash matching for deposits when provided (mexc)', async () => {
     const { processor, userOrdersService, paymentStateRepository } =
       createProcessor();
 
-    (
-      processor as any
-    ).growDataRepository.findMarketMakingPairById.mockResolvedValueOnce({
+    (processor as any).growDataRepository.findMarketMakingPairById.mockResolvedValueOnce({
       exchange_id: 'mexc',
       base_symbol: 'BTC',
       quote_symbol: 'USDT',
@@ -486,17 +466,9 @@ describe('MarketMakingOrderProcessor', () => {
       baseAssetAmount: '999',
       quoteAssetAmount: '999',
     });
-
-    (
-      processor as any
-    ).networkMappingService.getNetworkForAsset.mockResolvedValueOnce('ERC20');
-    (
-      processor as any
-    ).networkMappingService.getNetworkForAsset.mockResolvedValueOnce('ERC20');
-
-    (
-      processor as any
-    ).exchangeService.findFirstAPIKeyByExchange.mockResolvedValueOnce({
+    (processor as any).networkMappingService.getNetworkForAsset.mockResolvedValueOnce('ERC20');
+    (processor as any).networkMappingService.getNetworkForAsset.mockResolvedValueOnce('ERC20');
+    (processor as any).exchangeService.findFirstAPIKeyByExchange.mockResolvedValueOnce({
       key_id: 'key-1',
     });
 

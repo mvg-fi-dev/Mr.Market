@@ -379,7 +379,11 @@ export class ExchangeService {
       params.network = data.network;
     }
 
-    return await e.fetchDeposits(data.symbol, data.since, data.limit, params);
+    // Some exchanges require `symbol` to be undefined/null to return all deposits.
+    // Passing an empty string may cause errors or unexpected filtering.
+    const symbol = data.symbol && data.symbol.trim().length > 0 ? data.symbol : undefined;
+
+    return await e.fetchDeposits(symbol as any, data.since, data.limit, params);
   }
 
   async _getDepositAddress({

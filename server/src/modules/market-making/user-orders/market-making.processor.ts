@@ -1788,13 +1788,6 @@ export class MarketMakingOrderProcessor {
 
     const exchangeName = pairConfig.exchange_id;
 
-    if (exchangeName !== 'mexc') {
-      this.logger.warn(
-        `Exchange deposit monitor currently only implemented for mexc. Got ${exchangeName}.`,
-      );
-      throw new Error('unsupported exchange for deposit monitor');
-    }
-
     const apiKey = await this.exchangeService.findFirstAPIKeyByExchange(
       exchangeName,
     );
