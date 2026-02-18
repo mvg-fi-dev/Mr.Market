@@ -97,6 +97,8 @@ describe('MarketMakingOrderProcessor', () => {
         getByOrderId: jest.fn(),
         getOrCreate: jest.fn(),
         markExchangeDepositConfirmed: jest.fn(),
+        markExitWithdrawing: jest.fn(),
+        markExitComplete: jest.fn(),
       } as any,
       { get: jest.fn().mockReturnValue(false) } as any,
       paymentStateRepository as any,

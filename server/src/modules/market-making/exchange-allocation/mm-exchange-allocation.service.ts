@@ -67,4 +67,27 @@ export class MMExchangeAllocationService {
       { state: 'exchange_deposit_confirmed', updatedAt: now },
     );
   }
+
+  async markExitWithdrawing(orderId: string): Promise<void> {
+    const now = getRFC3339Timestamp();
+
+    await this.repository.update(
+      { orderId },
+      { state: 'exit_withdrawing', updatedAt: now },
+    );
+  }
+
+  async markExitComplete(orderId: string): Promise<void> {
+    const now = getRFC3339Timestamp();
+
+    await this.repository.update(
+      { orderId },
+      {
+        state: 'exit_complete',
+        baseAllocatedAmount: '0',
+        quoteAllocatedAmount: '0',
+        updatedAt: now,
+      },
+    );
+  }
 }

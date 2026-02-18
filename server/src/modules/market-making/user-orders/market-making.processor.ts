@@ -1233,6 +1233,8 @@ export class MarketMakingOrderProcessor {
       'exit_withdrawing',
     );
 
+    await this.allocationService.markExitWithdrawing(orderId);
+
     await (job.queue as any).add(
       'monitor_exit_mixin_deposit',
       {
@@ -1417,6 +1419,8 @@ export class MarketMakingOrderProcessor {
       orderId,
       'exit_complete',
     );
+
+    await this.allocationService.markExitComplete(orderId);
   }
 
   private pickTxHash(withdrawal: any): string | undefined {
