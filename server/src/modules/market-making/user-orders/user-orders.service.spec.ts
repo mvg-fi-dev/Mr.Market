@@ -294,14 +294,15 @@ describe('UserOrdersService', () => {
 
     await service.exitMarketMaking('user1', 'order-1');
 
+    expect(marketMakingRepository.update).toHaveBeenCalledWith(
+      { orderId: 'order-1' },
+      { state: 'exit_requested' },
+    );
+
     expect(queueAddSpy).toHaveBeenCalledWith(
       'exit_withdrawal',
       { userId: 'user1', orderId: 'order-1' },
       expect.objectContaining({ jobId: 'exit_withdrawal_order-1' }),
-    );
-    expect(marketMakingRepository.update).toHaveBeenCalledWith(
-      { orderId: 'order-1' },
-      { state: 'exit_requested' },
     );
   });
 });
