@@ -48,6 +48,8 @@ Queue `market-making`:
 - `join_campaign` (local participation only; optional)
 - `start_mm`
 - `stop_mm`
+- `exit_withdrawal`
+- `monitor_exit_mixin_deposit`
 
 ## End-to-End Flow to Validate
 
@@ -122,6 +124,15 @@ Assert:
 (Optionally) local participation:
 
 - `join_campaign` may create a local campaign participation record, but HuFi join is handled by cron.
+
+### B5. Exit withdrawal (exchange -> bot Mixin -> user)
+
+Assert:
+
+- `exit_withdrawal` stops strategy and submits exchange withdrawals to bot Mixin deposit addresses.
+- `monitor_exit_mixin_deposit` waits for confirmed Mixin snapshots (prefers tx hash match; falls back to amount tolerance).
+- once both base and quote deposits are confirmed, processor transfers funds back to the user via Mixin safe transfer.
+- order state transitions: `exit_withdrawing -> exit_refunding -> exit_complete`.
 
 ### B3. Tick -> intents -> exchange execution
 

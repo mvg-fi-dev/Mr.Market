@@ -42,7 +42,7 @@ The old queue self-loop `execute_mm_cycle` has been removed.
 
 Current behavior:
 
-- After `payment_complete`, the system *may* queue `withdraw_to_exchange` depending on config (`strategy.queue_withdraw_on_payment_complete`).
+- After `payment_complete`, the system _may_ queue `withdraw_to_exchange` depending on config (`strategy.queue_withdraw_on_payment_complete`).
 - The `withdraw_to_exchange` handler may execute real withdrawals or refund/fail depending on config (`strategy.withdraw_to_exchange_enabled`).
 - If withdrawal queueing is disabled, the order can remain at `payment_complete` until another job/flow advances the lifecycle.
 
@@ -64,7 +64,7 @@ Note on campaigns:
 - HuFi campaign joining is handled by the CampaignService hourly cron (not the MM order queue).
 - The MM queue job `join_campaign` creates a **local** participation record and queues `start_mm`, but is not required for starting market making.
 
-### 4) Start and stop market making
+### 4) Start, stop, and exit market making
 
 `start_mm`:
 
@@ -73,10 +73,19 @@ Note on campaigns:
 - Calls `strategyService.executePureMarketMakingStrategy(...)`.
 - Does not enqueue `execute_mm_cycle`.
 
-`stop_mm`:
+`stop_mm` (soft stop):
 
 - Calls `strategyService.stopStrategyForUser(...)`.
 - Sets order state to `stopped`.
+
+`exit_withdrawal` (exit + withdraw back to user on Mixin):
+
+- Stops strategy.
+- Withdraws base+quote from exchange back to **bot** Mixin deposit addresses.
+- Queues `monitor_exit_mixin_deposit`, which:
+  - waits for confirmed Mixin snapshots (prefers tx hash match; falls back to amount tolerance)
+  - transfers funds back to user on Mixin
+- State transitions: `exit_withdrawing -> exit_refunding -> exit_complete`.
 
 ### 5) Tick-driven strategy execution
 
@@ -100,6 +109,8 @@ Queue: `market-making`
 - `join_campaign` (local participation only; optional)
 - `start_mm`
 - `stop_mm`
+- `exit_withdrawal`
+- `monitor_exit_mixin_deposit`
 
 Removed from runtime flow:
 
