@@ -11,6 +11,10 @@ import { PriceSourceType } from 'src/common/enum/pricesourcetype';
 import { MarketMakingCreateMemoDetails } from 'src/common/types/memo/memo';
 import { CampaignService } from 'src/modules/campaign/campaign.service';
 import { GrowdataRepository } from 'src/modules/data/grow-data/grow-data.repository';
+import {
+  AuditLogContext,
+  formatAuditLogContext,
+} from 'src/modules/infrastructure/logger/log-context';
 import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
 import { MixinClientService } from 'src/modules/mixin/client/mixin-client.service';
 import { ExchangeService } from 'src/modules/mixin/exchange/exchange.service';
@@ -18,11 +22,6 @@ import { TransactionService } from 'src/modules/mixin/transaction/transaction.se
 import { WalletService } from 'src/modules/mixin/wallet/wallet.service';
 import { WithdrawalService } from 'src/modules/mixin/withdrawal/withdrawal.service';
 import { Repository } from 'typeorm';
-
-import {
-  AuditLogContext,
-  formatAuditLogContext,
-} from 'src/modules/infrastructure/logger/log-context';
 
 import { getRFC3339Timestamp } from '../../../common/helpers/utils';
 import { MMExchangeAllocationService } from '../exchange-allocation/mm-exchange-allocation.service';
@@ -1107,7 +1106,10 @@ export class MarketMakingOrderProcessor {
       'pureMarketMaking',
     );
 
-    await this.userOrdersService.updateMarketMakingOrderState(orderId, 'paused');
+    await this.userOrdersService.updateMarketMakingOrderState(
+      orderId,
+      'paused',
+    );
   }
 
   /**
@@ -1277,6 +1279,52 @@ export class MarketMakingOrderProcessor {
       );
     }
 
+    // If we previously started an exit-withdrawal, do not create a second exchange withdrawal.
+    // Instead, re-enqueue the deposit monitor using the persisted tx hashes / startedAt.
+    if (
+      allocation.state === 'exit_withdrawing' &&
+      (allocation.exitExpectedBaseTxHash || allocation.exitExpectedQuoteTxHash)
+    ) {
+      this.logger.warn(
+        `${this.logCtx({
+          traceId: exitTraceId,
+          orderId,
+          job,
+        })} Exit already withdrawing; re-enqueueing monitor_exit_mixin_deposit without re-withdraw`,
+      );
+
+      const persistedStartedAt = allocation.exitWithdrawalStartedAt
+        ? Date.parse(allocation.exitWithdrawalStartedAt)
+        : Date.now();
+
+      await (job.queue as any).add(
+        'monitor_exit_mixin_deposit',
+        {
+          userId,
+          orderId,
+          exchangeName,
+          baseAssetId: pairConfig.base_asset_id,
+          quoteAssetId: pairConfig.quote_asset_id,
+          expectedBaseAmount: allocation.baseAllocatedAmount,
+          expectedQuoteAmount: allocation.quoteAllocatedAmount,
+          expectedBaseTxHash: allocation.exitExpectedBaseTxHash,
+          expectedQuoteTxHash: allocation.exitExpectedQuoteTxHash,
+          traceId: exitTraceId,
+          startedAt: Number.isFinite(persistedStartedAt)
+            ? persistedStartedAt
+            : Date.now(),
+        },
+        {
+          jobId: `monitor_exit_mixin_deposit_${orderId}`,
+          attempts: 120,
+          backoff: { type: 'fixed', delay: this.RETRY_DELAY_MS },
+          removeOnComplete: false,
+        },
+      );
+
+      return;
+    }
+
     const baseAmount = toWithdrawalAmount(allocation.baseAllocatedAmount);
     const quoteAmount = toWithdrawalAmount(allocation.quoteAllocatedAmount);
 
@@ -1314,12 +1362,22 @@ export class MarketMakingOrderProcessor {
         })
       : null;
 
+    const exitStartedAt = Date.now();
+    const expectedBaseTxHash = this.pickTxHash(baseWithdrawal);
+    const expectedQuoteTxHash = this.pickTxHash(quoteWithdrawal);
+
     await this.userOrdersService.updateMarketMakingOrderState(
       orderId,
       'exit_withdrawing',
     );
 
-    await this.allocationService.markExitWithdrawing(orderId);
+    // Persist expected tx hashes + start time to make exit-withdrawal idempotent across retries/crashes.
+    await this.allocationService.markExitWithdrawing({
+      orderId,
+      exitWithdrawalStartedAt: getRFC3339Timestamp(),
+      exitExpectedBaseTxHash: expectedBaseTxHash,
+      exitExpectedQuoteTxHash: expectedQuoteTxHash,
+    });
 
     await (job.queue as any).add(
       'monitor_exit_mixin_deposit',
@@ -1331,10 +1389,10 @@ export class MarketMakingOrderProcessor {
         quoteAssetId: pairConfig.quote_asset_id,
         expectedBaseAmount: baseAmount,
         expectedQuoteAmount: quoteAmount,
-        expectedBaseTxHash: this.pickTxHash(baseWithdrawal),
-        expectedQuoteTxHash: this.pickTxHash(quoteWithdrawal),
+        expectedBaseTxHash,
+        expectedQuoteTxHash,
         traceId: exitTraceId,
-        startedAt: Date.now(),
+        startedAt: exitStartedAt,
       },
       {
         jobId: `monitor_exit_mixin_deposit_${orderId}`,

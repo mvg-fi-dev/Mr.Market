@@ -19,6 +19,7 @@ describe('SnapshotsProcessor', () => {
       log: jest.fn(),
       debug: jest.fn(),
     };
+
     (processor as any).logger = logger;
 
     return { processor, logger };

@@ -11,7 +11,9 @@ export class LocalCampaignController {
   constructor(private readonly campaignService: LocalCampaignService) {}
 
   @Post()
-  async createCampaign(@Body() data: CreateLocalCampaignDto): Promise<Campaign> {
+  async createCampaign(
+    @Body() data: CreateLocalCampaignDto,
+  ): Promise<Campaign> {
     return this.campaignService.createCampaign(data);
   }
 

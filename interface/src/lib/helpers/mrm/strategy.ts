@@ -81,7 +81,9 @@ export const stopArbitrage = async (userId: string, clientId: string) => {
 
 export const getAllMarketMakingByUser = async (userId: string) => {
   try {
-    const response = await fetch(`${MRM_BACKEND_URL}/strategy/market_making/all?userId=${userId}`);
+    const response = await fetch(
+      `${MRM_BACKEND_URL}/user-orders/market-making/all?userId=${userId}`,
+    );
     return await handleResponse(response);
   } catch (error) {
     console.error('Error fetching all market making by user:', error);

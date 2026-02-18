@@ -304,7 +304,9 @@ describe('MarketMakingOrderProcessor', () => {
     const { processor, userOrdersService, paymentStateRepository } =
       createProcessor();
 
-    (processor as any).growDataRepository.findMarketMakingPairById.mockResolvedValueOnce({
+    (
+      processor as any
+    ).growDataRepository.findMarketMakingPairById.mockResolvedValueOnce({
       exchange_id: 'mexc',
       base_symbol: 'BTC',
       quote_symbol: 'USDT',
@@ -317,9 +319,15 @@ describe('MarketMakingOrderProcessor', () => {
       baseAssetAmount: '1',
       quoteAssetAmount: '2',
     });
-    (processor as any).networkMappingService.getNetworkForAsset.mockResolvedValueOnce('ERC20');
-    (processor as any).networkMappingService.getNetworkForAsset.mockResolvedValueOnce('ERC20');
-    (processor as any).exchangeService.findFirstAPIKeyByExchange.mockResolvedValueOnce({
+    (
+      processor as any
+    ).networkMappingService.getNetworkForAsset.mockResolvedValueOnce('ERC20');
+    (
+      processor as any
+    ).networkMappingService.getNetworkForAsset.mockResolvedValueOnce('ERC20');
+    (
+      processor as any
+    ).exchangeService.findFirstAPIKeyByExchange.mockResolvedValueOnce({
       key_id: 'key-1',
     });
 
@@ -354,17 +362,25 @@ describe('MarketMakingOrderProcessor', () => {
 
   it('enqueues exit deposit monitor after exit withdrawal', async () => {
     const { processor, userOrdersService } = createProcessor();
-    (processor as any).exchangeService.findFirstAPIKeyByExchange.mockResolvedValueOnce({
+
+    (
+      processor as any
+    ).exchangeService.findFirstAPIKeyByExchange.mockResolvedValueOnce({
       key_id: 'key-1',
       api_key: 'k',
       api_secret: 's',
     });
-    (processor as any).networkMappingService.getNetworkForAsset.mockResolvedValueOnce('ERC20');
-    (processor as any).networkMappingService.getNetworkForAsset.mockResolvedValueOnce('ERC20');
+    (
+      processor as any
+    ).networkMappingService.getNetworkForAsset.mockResolvedValueOnce('ERC20');
+    (
+      processor as any
+    ).networkMappingService.getNetworkForAsset.mockResolvedValueOnce('ERC20');
 
     (processor as any).allocationService.getByOrderId.mockResolvedValueOnce({
       baseAllocatedAmount: '1',
       quoteAllocatedAmount: '2',
+      state: 'exchange_deposit_confirmed',
     });
 
     (processor as any).exchangeService.createWithdrawal.mockResolvedValueOnce({
@@ -395,6 +411,16 @@ describe('MarketMakingOrderProcessor', () => {
         expectedQuoteTxHash: '0xquote',
       }),
       expect.objectContaining({ jobId: 'monitor_exit_mixin_deposit_order-1' }),
+    );
+
+    expect(
+      (processor as any).allocationService.markExitWithdrawing,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderId: 'order-1',
+        exitExpectedBaseTxHash: '0xbase',
+        exitExpectedQuoteTxHash: '0xquote',
+      }),
     );
   });
 
@@ -452,7 +478,9 @@ describe('MarketMakingOrderProcessor', () => {
     const { processor, userOrdersService, paymentStateRepository } =
       createProcessor();
 
-    (processor as any).growDataRepository.findMarketMakingPairById.mockResolvedValueOnce({
+    (
+      processor as any
+    ).growDataRepository.findMarketMakingPairById.mockResolvedValueOnce({
       exchange_id: 'mexc',
       base_symbol: 'BTC',
       quote_symbol: 'USDT',
@@ -466,9 +494,15 @@ describe('MarketMakingOrderProcessor', () => {
       baseAssetAmount: '999',
       quoteAssetAmount: '999',
     });
-    (processor as any).networkMappingService.getNetworkForAsset.mockResolvedValueOnce('ERC20');
-    (processor as any).networkMappingService.getNetworkForAsset.mockResolvedValueOnce('ERC20');
-    (processor as any).exchangeService.findFirstAPIKeyByExchange.mockResolvedValueOnce({
+    (
+      processor as any
+    ).networkMappingService.getNetworkForAsset.mockResolvedValueOnce('ERC20');
+    (
+      processor as any
+    ).networkMappingService.getNetworkForAsset.mockResolvedValueOnce('ERC20');
+    (
+      processor as any
+    ).exchangeService.findFirstAPIKeyByExchange.mockResolvedValueOnce({
       key_id: 'key-1',
     });
 

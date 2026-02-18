@@ -72,7 +72,9 @@ describe('ReconciliationService', () => {
 
   it('detects reward consistency mismatch when allocations exceed reward amount', async () => {
     const service = makeService({
-      rewards: [{ txHash: 'tx-1', amount: '100', campaignId: 'c1', dayIndex: 1 }],
+      rewards: [
+        { txHash: 'tx-1', amount: '100', campaignId: 'c1', dayIndex: 1 },
+      ],
       allocations: [
         { rewardTxHash: 'tx-1', amount: '80' },
         { rewardTxHash: 'tx-1', amount: '30' },

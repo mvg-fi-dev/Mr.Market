@@ -1,6 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddMMExchangeAllocations1771100000000 implements MigrationInterface {
+export class AddMMExchangeAllocations1771100000000
+  implements MigrationInterface
+{
   name = 'AddMMExchangeAllocations1771100000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

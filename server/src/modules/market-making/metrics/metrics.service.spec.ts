@@ -83,7 +83,6 @@ describe('MetricsService', () => {
     ]);
   });
 
-
   it('builds sqlite-safe execution report queries with optional time window', async () => {
     repository.query
       .mockResolvedValueOnce([

@@ -216,10 +216,9 @@ export class UserOrdersService {
       throw new BadRequestException('marketMakingPairId is required');
     }
 
-    const pair =
-      await this.growdataRepository.findMarketMakingPairById(
-        marketMakingPairId,
-      );
+    const pair = await this.growdataRepository.findMarketMakingPairById(
+      marketMakingPairId,
+    );
 
     if (!pair || !pair.enable) {
       throw new NotFoundException('Market making pair not found');
@@ -370,11 +369,16 @@ export class UserOrdersService {
   }) {
     const { name, data, opts } = params;
 
-    if (opts.jobId && typeof (this.marketMakingQueue as any).getJob === 'function') {
+    if (
+      opts.jobId &&
+      typeof (this.marketMakingQueue as any).getJob === 'function'
+    ) {
       const existing = await (this.marketMakingQueue as any).getJob(opts.jobId);
 
       if (existing) {
-        this.logger.log(`Queue job already exists: ${name} jobId=${opts.jobId}`);
+        this.logger.log(
+          `Queue job already exists: ${name} jobId=${opts.jobId}`,
+        );
 
         return existing;
       }
@@ -443,7 +447,11 @@ export class UserOrdersService {
 
     // Idempotency + safety:
     // Never regress exit states back to exit_requested. That could re-enable withdrawals.
-    if (['exit_withdrawing', 'exit_refunding', 'exit_complete'].includes(order.state)) {
+    if (
+      ['exit_withdrawing', 'exit_refunding', 'exit_complete'].includes(
+        order.state,
+      )
+    ) {
       this.logger.log(
         `Exit already in progress/completed for order ${orderId} (state=${order.state}), skipping`,
       );

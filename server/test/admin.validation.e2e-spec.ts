@@ -2,11 +2,11 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 
 import { ValidationAuditFilter } from '../src/common/filters/validation-audit.filter';
-import { JwtAuthGuard } from '../src/modules/auth/jwt-auth.guard';
 import { AdminController } from '../src/modules/admin/admin.controller';
-import { AdminGrowService } from '../src/modules/admin/growdata/adminGrow.service';
 import { AdminSpotService } from '../src/modules/admin/admin-spot-management/admin-spot-management.service';
+import { AdminGrowService } from '../src/modules/admin/growdata/adminGrow.service';
 import { AdminStrategyService } from '../src/modules/admin/strategy/adminStrategy.service';
+import { JwtAuthGuard } from '../src/modules/auth/jwt-auth.guard';
 
 // supertest's typings are easiest to consume via require in this repo's TS config.
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -252,7 +252,9 @@ describe('Admin validation (e2e)', () => {
 
   it('rejects extra inbound fields on POST /admin/grow/market-making/update/:id', async () => {
     await request(app.getHttpServer())
-      .post('/admin/grow/market-making/update/123e4567-e89b-12d3-a456-426614174000')
+      .post(
+        '/admin/grow/market-making/update/123e4567-e89b-12d3-a456-426614174000',
+      )
       .send({
         // provide a minimal valid payload plus one disallowed field
         id: '123e4567-e89b-12d3-a456-426614174000',
@@ -277,7 +279,9 @@ describe('Admin validation (e2e)', () => {
 
   it('rejects extra inbound fields on POST /admin/grow/simply-grow/update/:asset_id', async () => {
     await request(app.getHttpServer())
-      .post('/admin/grow/simply-grow/update/123e4567-e89b-12d3-a456-426614174000')
+      .post(
+        '/admin/grow/simply-grow/update/123e4567-e89b-12d3-a456-426614174000',
+      )
       .send({
         enable: true,
         unexpectedField: 'should-not-be-accepted',
@@ -292,7 +296,9 @@ describe('Admin validation (e2e)', () => {
 
   it('rejects extra inbound fields on POST /admin/spot/trading-pair/update/:id', async () => {
     await request(app.getHttpServer())
-      .post('/admin/spot/trading-pair/update/123e4567-e89b-12d3-a456-426614174000')
+      .post(
+        '/admin/spot/trading-pair/update/123e4567-e89b-12d3-a456-426614174000',
+      )
       .send({
         enable: true,
         unexpectedField: 'should-not-be-accepted',

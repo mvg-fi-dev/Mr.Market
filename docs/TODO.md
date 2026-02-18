@@ -55,7 +55,7 @@ _DoD: exit is safe, bounded, and idempotent; no cross-order balance leakage; eve
 
 - [x] Define idempotency + retry rules for stop/exit state transitions (avoid double-withdraw / double-start). (server: `server/src/modules/market-making/user-orders/*`, `server/src/modules/market-making/ledger/*`)
   - Implemented: controller methods now dedupe by jobId+`queue.getJob(jobId)` (stop/pause/resume/exit) and `exitMarketMaking` will not regress `exit_*` states back to `exit_requested`.
-  - Remaining: exchange withdrawal idempotency should be made durable (persist withdrawal request/tx hashes to avoid re-withdraw on crash mid-exit).
+  - Remaining: exchange withdrawal idempotency should be made durable (persist withdrawal request/tx hashes to avoid re-withdraw on crash mid-exit). (DONE: persisted exit expected tx hashes + start time in mm_exchange_allocations; see `MMExchangeAllocation.exitExpected*`)
 - [x] Document failure-mode handling: exchange downtime/timeouts, insufficient balance, partial fills. (docs: `docs/execution/flow/MARKET_MAKING_FLOW.md`, `docs/tests/MARKET_MAKING.md`)
 
 ### 1.3 Campaign join semantics (explicit decision)

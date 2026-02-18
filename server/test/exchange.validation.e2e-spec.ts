@@ -1,6 +1,7 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
-import { ValidationAuditFilter } from '../src/common/filters/validation-audit.filter';
 import { Test, TestingModule } from '@nestjs/testing';
+
+import { ValidationAuditFilter } from '../src/common/filters/validation-audit.filter';
 // supertest's typings are easiest to consume via require in this repo's TS config.
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const request = require('supertest');

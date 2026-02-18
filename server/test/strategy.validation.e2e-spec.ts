@@ -152,7 +152,9 @@ describe('Strategy validation (e2e)', () => {
       .expect((res) => {
         if (res.statusCode !== 200) {
           throw new Error(
-            `expected 200 OK but got ${res.statusCode}: ${JSON.stringify(res.body)}`,
+            `expected 200 OK but got ${res.statusCode}: ${JSON.stringify(
+              res.body,
+            )}`,
           );
         }
       });

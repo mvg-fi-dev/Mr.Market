@@ -292,12 +292,10 @@ describe('UserOrdersService', () => {
       { state: 'stopped' },
     );
 
-    jest
-      .spyOn(marketMakingRepository, 'findOneBy')
-      .mockResolvedValueOnce({
-        orderId: 'order-1',
-        state: 'running',
-      } as any);
+    jest.spyOn(marketMakingRepository, 'findOneBy').mockResolvedValueOnce({
+      orderId: 'order-1',
+      state: 'running',
+    } as any);
 
     await service.exitMarketMaking('user1', 'order-1');
 

@@ -8,13 +8,11 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-
 import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { MarketMakingHistory } from 'src/common/entities/market-making/market-making-order.entity';
 import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
 
 import { ExitMarketMakingDto, StopMarketMakingDto } from './user-orders.dto';
-
 import { CreateMarketMakingIntentDto } from './user-orders.dto';
 import { UserOrdersService } from './user-orders.service';
 

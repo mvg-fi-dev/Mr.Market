@@ -50,6 +50,16 @@ export class MMExchangeAllocation {
   @Column({ default: 'created' })
   state: MMExchangeAllocationState;
 
+  // Exit withdrawal durability (prevents double-withdraw on retries and allows re-enqueue of monitor)
+  @Column({ nullable: true })
+  exitWithdrawalStartedAt?: string;
+
+  @Column({ nullable: true })
+  exitExpectedBaseTxHash?: string;
+
+  @Column({ nullable: true })
+  exitExpectedQuoteTxHash?: string;
+
   @Column()
   createdAt: string;
 

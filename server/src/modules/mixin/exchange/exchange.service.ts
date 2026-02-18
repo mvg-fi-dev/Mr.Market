@@ -313,7 +313,9 @@ export class ExchangeService {
     });
   }
 
-  async getDepositsFromRequest(data: ExchangeDepositsRequestDto): Promise<any[]> {
+  async getDepositsFromRequest(
+    data: ExchangeDepositsRequestDto,
+  ): Promise<any[]> {
     const key = await this.findFirstAPIKeyByExchange(data.exchange);
 
     if (!key) {
@@ -381,7 +383,8 @@ export class ExchangeService {
 
     // Some exchanges require `symbol` to be undefined/null to return all deposits.
     // Passing an empty string may cause errors or unexpected filtering.
-    const symbol = data.symbol && data.symbol.trim().length > 0 ? data.symbol : undefined;
+    const symbol =
+      data.symbol && data.symbol.trim().length > 0 ? data.symbol : undefined;
 
     return await e.fetchDeposits(symbol as any, data.since, data.limit, params);
   }
@@ -571,8 +574,9 @@ export class ExchangeService {
     amount: string,
   ): Promise<SuccessResponse | ErrorResponse> {
     const symbol = ''; // getSymbolByAssetID(asset_id);
-    const apiKeys =
-      await this.exchangeRepository.readAllAPIKeysByExchange(exchange);
+    const apiKeys = await this.exchangeRepository.readAllAPIKeysByExchange(
+      exchange,
+    );
 
     apiKeys.forEach(async (key) => {
       if (
@@ -734,8 +738,9 @@ export class ExchangeService {
   async findFirstAPIKeyByExchange(
     exchange: string,
   ): Promise<APIKeysConfig | null> {
-    const apiKeys =
-      await this.exchangeRepository.readAllAPIKeysByExchange(exchange);
+    const apiKeys = await this.exchangeRepository.readAllAPIKeysByExchange(
+      exchange,
+    );
 
     if (!apiKeys) {
       return null;

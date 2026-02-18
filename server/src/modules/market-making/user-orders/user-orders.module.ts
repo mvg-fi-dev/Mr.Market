@@ -19,9 +19,9 @@ import { TransactionModule } from 'src/modules/mixin/transaction/transaction.mod
 import { WalletModule } from 'src/modules/mixin/wallet/wallet.module';
 import { WithdrawalModule } from 'src/modules/mixin/withdrawal/withdrawal.module';
 
+import { MMExchangeAllocationModule } from '../exchange-allocation/mm-exchange-allocation.module';
 import { FeeModule } from '../fee/fee.module';
 import { LedgerModule } from '../ledger/ledger.module';
-import { MMExchangeAllocationModule } from '../exchange-allocation/mm-exchange-allocation.module';
 import { LocalCampaignModule } from '../local-campaign/local-campaign.module';
 import { NetworkMappingModule } from '../network-mapping/network-mapping.module';
 import { OrchestrationModule } from '../orchestration/orchestration.module';

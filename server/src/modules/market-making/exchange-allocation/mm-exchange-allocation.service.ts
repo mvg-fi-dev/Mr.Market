@@ -68,12 +68,23 @@ export class MMExchangeAllocationService {
     );
   }
 
-  async markExitWithdrawing(orderId: string): Promise<void> {
+  async markExitWithdrawing(params: {
+    orderId: string;
+    exitWithdrawalStartedAt?: string;
+    exitExpectedBaseTxHash?: string;
+    exitExpectedQuoteTxHash?: string;
+  }): Promise<void> {
     const now = getRFC3339Timestamp();
 
     await this.repository.update(
-      { orderId },
-      { state: 'exit_withdrawing', updatedAt: now },
+      { orderId: params.orderId },
+      {
+        state: 'exit_withdrawing',
+        exitWithdrawalStartedAt: params.exitWithdrawalStartedAt,
+        exitExpectedBaseTxHash: params.exitExpectedBaseTxHash,
+        exitExpectedQuoteTxHash: params.exitExpectedQuoteTxHash,
+        updatedAt: now,
+      },
     );
   }
 
