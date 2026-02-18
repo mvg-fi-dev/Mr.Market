@@ -81,6 +81,7 @@ Note on campaigns:
 `exit_withdrawal` (exit + withdraw back to user on Mixin):
 
 - Stops strategy.
+- Validates current order state (only allows exit from known non-terminal states).
 - Withdraws base+quote from exchange back to **bot** Mixin deposit addresses.
 - Queues `monitor_exit_mixin_deposit`, which:
   - waits for confirmed Mixin snapshots (prefers tx hash match; falls back to amount tolerance)

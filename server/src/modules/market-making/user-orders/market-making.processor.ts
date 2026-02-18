@@ -1063,6 +1063,33 @@ export class MarketMakingOrderProcessor {
       return;
     }
 
+    // State gate: only allow exit from known non-terminal states.
+    // (We intentionally allow running/paused/stopped/payment_* so users can always exit.)
+    const allowedStates: Array<typeof order.state> = [
+      'payment_pending',
+      'payment_incomplete',
+      'payment_complete',
+      'created',
+      'running',
+      'paused',
+      'stopped',
+      'withdrawing',
+      'withdrawal_confirmed',
+      'deposit_confirming',
+      'deposit_confirmed',
+      'joining_campaign',
+      'campaign_joined',
+      'exit_requested',
+      'exit_withdrawing',
+      'exit_refunding',
+    ];
+
+    if (!allowedStates.includes(order.state)) {
+      throw new Error(
+        `Exit not allowed for order ${orderId} in state ${order.state}`,
+      );
+    }
+
     const pairConfig =
       await this.growDataRepository.findMarketMakingPairByExchangeAndSymbol(
         order.exchangeName,
@@ -1220,18 +1247,7 @@ export class MarketMakingOrderProcessor {
 
     const elapsed = Date.now() - startedAt;
 
-    if (elapsed > this.EXIT_WITHDRAWAL_TIMEOUT_MS) {
-      this.logger.error(
-        `Exit withdrawal timeout for order ${orderId} after ${elapsed}ms`,
-      );
-      await this.userOrdersService.updateMarketMakingOrderState(
-        orderId,
-        'failed',
-      );
-
-      return;
-    }
-
+    // State gate: do not refund if the order is not in exit-related states.
     const order =
       await this.userOrdersService.findMarketMakingByOrderId(orderId);
 
@@ -1242,6 +1258,24 @@ export class MarketMakingOrderProcessor {
     if (order.state === 'exit_complete') {
       this.logger.log(
         `Exit already completed for order ${orderId}, skipping refund`,
+      );
+
+      return;
+    }
+
+    if (!['exit_withdrawing', 'exit_refunding'].includes(order.state)) {
+      throw new Error(
+        `Exit deposit monitor not allowed for order ${orderId} in state ${order.state}`,
+      );
+    }
+
+    if (elapsed > this.EXIT_WITHDRAWAL_TIMEOUT_MS) {
+      this.logger.error(
+        `Exit withdrawal timeout for order ${orderId} after ${elapsed}ms`,
+      );
+      await this.userOrdersService.updateMarketMakingOrderState(
+        orderId,
+        'failed',
       );
 
       return;
