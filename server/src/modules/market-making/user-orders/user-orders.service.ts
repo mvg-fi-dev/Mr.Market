@@ -298,10 +298,18 @@ export class UserOrdersService {
 
     if (activeMM) {
       activeMM.forEach(async (mm) => {
-        await this.marketMakingQueue.add('start_mm', {
-          userId: mm.userId,
-          orderId: mm.orderId,
-        });
+        await this.marketMakingQueue.add(
+          'start_mm',
+          {
+            userId: mm.userId,
+            orderId: mm.orderId,
+          },
+          {
+            jobId: `start_mm_${mm.orderId}`,
+            attempts: 3,
+            removeOnComplete: false,
+          },
+        );
       });
     }
 
@@ -311,10 +319,18 @@ export class UserOrdersService {
 
     if (pausedMM) {
       pausedMM.forEach(async (mm) => {
-        await this.marketMakingQueue.add('stop_mm', {
-          userId: mm.userId,
-          orderId: mm.orderId,
-        });
+        await this.marketMakingQueue.add(
+          'stop_mm',
+          {
+            userId: mm.userId,
+            orderId: mm.orderId,
+          },
+          {
+            jobId: `stop_mm_${mm.orderId}`,
+            attempts: 3,
+            removeOnComplete: false,
+          },
+        );
       });
     }
   }

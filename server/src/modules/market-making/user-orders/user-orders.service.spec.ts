@@ -230,14 +230,22 @@ describe('UserOrdersService', () => {
     // Execute the method under test
     await service.updateExecutionBasedOnOrders();
 
-    expect(queueAddSpy).toHaveBeenCalledWith('start_mm', {
-      userId: 'user1',
-      orderId: 'mm1',
-    });
-    expect(queueAddSpy).toHaveBeenCalledWith('stop_mm', {
-      userId: 'user1',
-      orderId: 'mm1',
-    });
+    expect(queueAddSpy).toHaveBeenCalledWith(
+      'start_mm',
+      {
+        userId: 'user1',
+        orderId: 'mm1',
+      },
+      expect.objectContaining({ jobId: 'start_mm_mm1' }),
+    );
+    expect(queueAddSpy).toHaveBeenCalledWith(
+      'stop_mm',
+      {
+        userId: 'user1',
+        orderId: 'mm1',
+      },
+      expect.objectContaining({ jobId: 'stop_mm_mm1' }),
+    );
   });
 
   it('queues pause/resume/stop jobs and updates state', async () => {
