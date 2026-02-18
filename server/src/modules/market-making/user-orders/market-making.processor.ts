@@ -29,21 +29,23 @@ import { NetworkMappingService } from '../network-mapping/network-mapping.servic
 import { StrategyService } from '../strategy/strategy.service';
 import { UserOrdersService } from './user-orders.service';
 
-interface ProcessSnapshotJobData {
-  snapshotId: string;
+interface JobContext {
   orderId: string;
+  traceId?: string;
+}
+
+interface ProcessSnapshotJobData extends JobContext {
+  snapshotId: string;
   marketMakingPairId: string;
   memoDetails: MarketMakingCreateMemoDetails;
   snapshot: SafeSnapshot;
 }
 
-interface CheckPaymentJobData {
-  orderId: string;
+interface CheckPaymentJobData extends JobContext {
   marketMakingPairId: string;
 }
 
-interface WithdrawJobData {
-  orderId: string;
+interface WithdrawJobData extends JobContext {
   marketMakingPairId: string;
 }
 
@@ -423,6 +425,7 @@ export class MarketMakingOrderProcessor {
           {
             orderId,
             marketMakingPairId,
+            traceId: `mm:${orderId}`,
           } as CheckPaymentJobData,
           {
             jobId: checkJobId,
@@ -655,6 +658,7 @@ export class MarketMakingOrderProcessor {
           {
             orderId,
             marketMakingPairId,
+            traceId: job.data.traceId || `mm:${orderId}`,
           } as WithdrawJobData,
           {
             jobId: `withdraw_${orderId}`,
@@ -686,9 +690,11 @@ export class MarketMakingOrderProcessor {
    */
   @Process('withdraw_to_exchange')
   async handleWithdrawToExchange(job: Job<WithdrawJobData>) {
-    const { orderId, marketMakingPairId } = job.data;
+    const { orderId, marketMakingPairId, traceId } = job.data;
 
-    this.logger.log(`Withdrawing to exchange for order ${orderId}`);
+    this.logger.log(
+      `[trace=${traceId || `mm:${orderId}`}] Withdrawing to exchange for order ${orderId}`,
+    );
 
     try {
       await this.userOrdersService.updateMarketMakingOrderState(
@@ -829,6 +835,7 @@ export class MarketMakingOrderProcessor {
           marketMakingPairId,
           baseWithdrawalTxId: baseTxId,
           quoteWithdrawalTxId: quoteTxId,
+          traceId: traceId || `mm:${orderId}`,
         },
         {
           jobId: `monitor_withdrawal_${orderId}`,
@@ -1198,6 +1205,7 @@ export class MarketMakingOrderProcessor {
         expectedQuoteAmount: quoteAmount,
         expectedBaseTxHash: this.pickTxHash(baseWithdrawal),
         expectedQuoteTxHash: this.pickTxHash(quoteWithdrawal),
+        traceId: `mm:exit:${orderId}`,
         startedAt: Date.now(),
       },
       {
@@ -1226,6 +1234,7 @@ export class MarketMakingOrderProcessor {
       expectedQuoteAmount?: string;
       expectedBaseTxHash?: string;
       expectedQuoteTxHash?: string;
+      traceId?: string;
       startedAt?: number;
     }>,
   ) {
@@ -1238,6 +1247,7 @@ export class MarketMakingOrderProcessor {
       expectedQuoteAmount,
       expectedBaseTxHash,
       expectedQuoteTxHash,
+      traceId,
     } = job.data;
     const startedAt = job.data.startedAt ?? Date.now();
 
@@ -1313,7 +1323,7 @@ export class MarketMakingOrderProcessor {
       quoteExpected.isLessThanOrEqualTo(0) || !!quoteSnapshot;
 
     this.logger.log(
-      `Exit deposit status for order ${orderId} - Base: ${
+      `[trace=${traceId || `mm:exit:${orderId}`}] Exit deposit status for order ${orderId} - Base: ${
         baseConfirmed ? 'confirmed' : 'pending'
       }, Quote: ${quoteConfirmed ? 'confirmed' : 'pending'}`,
     );
@@ -1465,6 +1475,7 @@ export class MarketMakingOrderProcessor {
       baseWithdrawalTxHash?: string;
       quoteWithdrawalTxHash?: string;
       startedAt?: number;
+      traceId?: string;
     }>,
   ) {
     const {
@@ -1473,6 +1484,7 @@ export class MarketMakingOrderProcessor {
       quoteWithdrawalTxId,
       baseWithdrawalTxHash,
       quoteWithdrawalTxHash,
+      traceId,
     } = job.data;
     const startedAt = job.data.startedAt ?? Date.now();
 
@@ -1482,7 +1494,7 @@ export class MarketMakingOrderProcessor {
     const retryCount = job.attemptsMade || 0;
 
     this.logger.log(
-      `Monitoring MM withdrawals for order ${orderId} (attempt ${
+      `[trace=${traceId || `mm:${orderId}`}] Monitoring MM withdrawals for order ${orderId} (attempt ${
         retryCount + 1
       })`,
     );
@@ -1523,7 +1535,7 @@ export class MarketMakingOrderProcessor {
       // If both confirmed, proceed to monitor exchange deposits
       if (baseStatus.confirmed && quoteStatus.confirmed) {
         this.logger.log(
-          `Both withdrawals confirmed for order ${orderId}, proceeding to monitor exchange deposits`,
+          `[trace=${traceId || `mm:${orderId}`}] Both withdrawals confirmed for order ${orderId}, proceeding to monitor exchange deposits`,
         );
 
         await this.userOrdersService.updateMarketMakingOrderState(
@@ -1543,6 +1555,7 @@ export class MarketMakingOrderProcessor {
             marketMakingPairId: job.data.marketMakingPairId,
             baseWithdrawalTxHash: baseStatus.txHash,
             quoteWithdrawalTxHash: quoteStatus.txHash,
+            traceId: traceId || `mm:${orderId}`,
             startedAt,
           },
           {
@@ -1583,6 +1596,7 @@ export class MarketMakingOrderProcessor {
       baseWithdrawalTxHash?: string;
       quoteWithdrawalTxHash?: string;
       startedAt?: number;
+      traceId?: string;
     }>,
   ) {
     const {
@@ -1590,6 +1604,7 @@ export class MarketMakingOrderProcessor {
       marketMakingPairId,
       baseWithdrawalTxHash,
       quoteWithdrawalTxHash,
+      traceId,
     } = job.data;
     const startedAt = job.data.startedAt ?? Date.now();
 
@@ -1600,7 +1615,7 @@ export class MarketMakingOrderProcessor {
     const retryCount = job.attemptsMade || 0;
 
     this.logger.log(
-      `Monitoring exchange deposits for order ${orderId} (attempt ${
+      `[trace=${traceId || `mm:${orderId}`}] Monitoring exchange deposits for order ${orderId} (attempt ${
         retryCount + 1
       })`,
     );
