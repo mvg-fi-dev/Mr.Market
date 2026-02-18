@@ -369,4 +369,21 @@ export class UserOrdersService {
 
     await this.updateMarketMakingOrderState(orderId, 'created');
   }
+
+  async exitMarketMaking(userId: string, orderId: string) {
+    await this.marketMakingQueue.add(
+      'exit_withdrawal',
+      {
+        userId,
+        orderId,
+      },
+      {
+        jobId: `exit_withdrawal_${orderId}`,
+        attempts: 1,
+        removeOnComplete: false,
+      },
+    );
+
+    await this.updateMarketMakingOrderState(orderId, 'exit_withdrawing');
+  }
 }

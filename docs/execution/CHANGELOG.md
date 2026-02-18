@@ -1,5 +1,9 @@
 # Execution Flow Changelog
 
+## 2026-02-18
+
+- Add market-making soft control endpoints (pause/resume/stop) and begin wiring exit-withdrawal flow (exchange -> bot Mixin -> user)
+
 ## 2026-02-17
 
 - Add architecture doc for HuFi + Mr.Market + EasyEnclave responsibilities and integration flow

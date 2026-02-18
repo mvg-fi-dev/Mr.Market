@@ -55,6 +55,10 @@ export type MarketMakingStates =
   | 'running' // Market making is running
   | 'paused' // Paused by user
   | 'stopped' // Stopped by user
+  // Exit/Withdrawal States
+  | 'exit_withdrawing' // Exiting by withdrawing back to bot Mixin
+  | 'exit_refunding' // Refunding back to user on Mixin
+  | 'exit_complete' // Exit completed
   // Error/Terminal States
   | 'failed' // Failed at some step
   | 'refunded' // Refunded to user

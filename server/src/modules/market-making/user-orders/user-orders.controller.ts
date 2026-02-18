@@ -9,7 +9,7 @@ import {
   Query,
 } from '@nestjs/common';
 
-import { StopMarketMakingDto } from './user-orders.dto';
+import { ExitMarketMakingDto, StopMarketMakingDto } from './user-orders.dto';
 import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { MarketMakingHistory } from 'src/common/entities/market-making/market-making-order.entity';
 
@@ -161,6 +161,25 @@ export class UserOrdersController {
     @Body() body: StopMarketMakingDto,
   ) {
     await this.userOrdersService.resumeMarketMaking(body.userId, orderId);
+
+    return { ok: true };
+  }
+
+  @Post('/market-making/:orderId/exit-withdrawal')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Exit market making by withdrawing back to user Mixin',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Market making exit withdrawal queued.',
+  })
+  @ApiResponse({ status: 400, description: 'Bad request.' })
+  async exitMarketMaking(
+    @Param('orderId') orderId: string,
+    @Body() body: ExitMarketMakingDto,
+  ) {
+    await this.userOrdersService.exitMarketMaking(body.userId, orderId);
 
     return { ok: true };
   }

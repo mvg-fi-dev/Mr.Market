@@ -6,6 +6,12 @@ export class StopMarketMakingDto {
   userId: string;
 }
 
+export class ExitMarketMakingDto {
+  @IsString()
+  @IsNotEmpty()
+  userId: string;
+}
+
 export class CreateMarketMakingIntentDto {
   @IsString()
   @IsNotEmpty()

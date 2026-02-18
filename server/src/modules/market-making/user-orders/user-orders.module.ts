@@ -16,6 +16,7 @@ import { MixinClientModule } from 'src/modules/mixin/client/mixin-client.module'
 import { ExchangeModule } from 'src/modules/mixin/exchange/exchange.module';
 import { SnapshotsModule } from 'src/modules/mixin/snapshots/snapshots.module';
 import { TransactionModule } from 'src/modules/mixin/transaction/transaction.module';
+import { WalletModule } from 'src/modules/mixin/wallet/wallet.module';
 import { WithdrawalModule } from 'src/modules/mixin/withdrawal/withdrawal.module';
 
 import { FeeModule } from '../fee/fee.module';
@@ -47,6 +48,7 @@ import { UserOrdersService } from './user-orders.service';
     SnapshotsModule,
     TransactionModule,
     WithdrawalModule,
+    WalletModule,
     LocalCampaignModule,
     ExchangeModule,
     NetworkMappingModule,

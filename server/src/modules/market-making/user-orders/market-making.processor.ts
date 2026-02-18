@@ -16,6 +16,7 @@ import { MixinClientService } from 'src/modules/mixin/client/mixin-client.servic
 import { ExchangeService } from 'src/modules/mixin/exchange/exchange.service';
 import { TransactionService } from 'src/modules/mixin/transaction/transaction.service';
 import { WithdrawalService } from 'src/modules/mixin/withdrawal/withdrawal.service';
+import { WalletService } from 'src/modules/mixin/wallet/wallet.service';
 
 const DEPOSIT_AMOUNT_TOLERANCE = new BigNumber('0.00000001');
 import { Repository } from 'typeorm';
@@ -74,6 +75,7 @@ export class MarketMakingOrderProcessor {
     private readonly exchangeService: ExchangeService,
     private readonly networkMappingService: NetworkMappingService,
     private readonly mixinClientService: MixinClientService,
+    private readonly walletService: WalletService,
     private readonly configService: ConfigService,
     @InjectRepository(MarketMakingPaymentState)
     private readonly paymentStateRepository: Repository<MarketMakingPaymentState>,
@@ -1026,6 +1028,131 @@ export class MarketMakingOrderProcessor {
       orderId,
       'stopped',
     );
+  }
+
+  /**
+   * Exit: stop market making and withdraw funds back to user via bot Mixin.
+   * MVP:
+   * - stop strategy (soft)
+   * - withdraw all exchange free balance of base+quote to bot deposit address
+   * - refund to user after bot receives deposits (TODO: monitor + transfer)
+   */
+  @Process('exit_withdrawal')
+  async handleExitWithdrawal(job: Job<{ userId: string; orderId: string }>) {
+    const { userId, orderId } = job.data;
+
+    this.logger.log(`Exit withdrawal for user ${userId}, order ${orderId}`);
+
+    await this.strategyService.stopStrategyForUser(
+      userId,
+      orderId,
+      'pureMarketMaking',
+    );
+
+    const order =
+      await this.userOrdersService.findMarketMakingByOrderId(orderId);
+
+    if (!order) {
+      throw new Error(`MM Order ${orderId} not found`);
+    }
+
+    const pairConfig =
+      await this.growDataRepository.findMarketMakingPairByExchangeAndSymbol(
+        order.exchangeName,
+        order.pair,
+      );
+
+    if (!pairConfig) {
+      throw new Error(
+        `Market making pair config not found for ${order.exchangeName} ${order.pair}`,
+      );
+    }
+
+    const exchangeName = pairConfig.exchange_id;
+
+    const apiKey =
+      await this.exchangeService.findFirstAPIKeyByExchange(exchangeName);
+
+    if (!apiKey) {
+      throw new Error(`No API key found for exchange ${exchangeName}`);
+    }
+
+    // Determine exchange networks (ccxt) for base/quote
+    const [baseNetwork, quoteNetwork] = await Promise.all([
+      this.networkMappingService.getNetworkForAsset(
+        pairConfig.base_asset_id,
+        pairConfig.base_symbol,
+      ),
+      this.networkMappingService.getNetworkForAsset(
+        pairConfig.quote_asset_id,
+        pairConfig.quote_symbol,
+      ),
+    ]);
+
+    // Bot deposit address on Mixin is derived by asset_id -> chain_id
+    const [baseDeposit, quoteDeposit] = await Promise.all([
+      this.walletService.depositAddress(pairConfig.base_asset_id),
+      this.walletService.depositAddress(pairConfig.quote_asset_id),
+    ]);
+
+    const toWithdrawalAmount = (value: any): string => {
+      const amount = new BigNumber(value || 0);
+
+      if (!amount.isFinite() || amount.isLessThanOrEqualTo(0)) {
+        return '0';
+      }
+
+      return amount.toFixed();
+    };
+
+    const baseFree = await this.exchangeService.getBalanceBySymbol(
+      exchangeName,
+      apiKey.api_key,
+      apiKey.api_secret,
+      pairConfig.base_symbol,
+    );
+    const quoteFree = await this.exchangeService.getBalanceBySymbol(
+      exchangeName,
+      apiKey.api_key,
+      apiKey.api_secret,
+      pairConfig.quote_symbol,
+    );
+
+    const baseAmount = toWithdrawalAmount(baseFree?.[pairConfig.base_symbol]);
+    const quoteAmount = toWithdrawalAmount(
+      quoteFree?.[pairConfig.quote_symbol],
+    );
+
+    if (new BigNumber(baseAmount).isGreaterThan(0)) {
+      await this.exchangeService.createWithdrawal({
+        exchange: exchangeName,
+        apiKeyId: apiKey.key_id,
+        symbol: pairConfig.base_symbol,
+        network: baseNetwork,
+        address: baseDeposit.address,
+        tag: baseDeposit.memo || '',
+        amount: baseAmount,
+      });
+    }
+
+    if (new BigNumber(quoteAmount).isGreaterThan(0)) {
+      await this.exchangeService.createWithdrawal({
+        exchange: exchangeName,
+        apiKeyId: apiKey.key_id,
+        symbol: pairConfig.quote_symbol,
+        network: quoteNetwork,
+        address: quoteDeposit.address,
+        tag: quoteDeposit.memo || '',
+        amount: quoteAmount,
+      });
+    }
+
+    await this.userOrdersService.updateMarketMakingOrderState(
+      orderId,
+      'exit_withdrawing',
+    );
+
+    // TODO: monitor mixin deposits + transfer back to user.
   }
 
   /**
