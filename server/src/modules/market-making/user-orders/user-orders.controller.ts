@@ -9,9 +9,11 @@ import {
   Query,
 } from '@nestjs/common';
 
-import { ExitMarketMakingDto, StopMarketMakingDto } from './user-orders.dto';
 import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { MarketMakingHistory } from 'src/common/entities/market-making/market-making-order.entity';
+import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
+
+import { ExitMarketMakingDto, StopMarketMakingDto } from './user-orders.dto';
 
 import { CreateMarketMakingIntentDto } from './user-orders.dto';
 import { UserOrdersService } from './user-orders.service';
@@ -19,6 +21,8 @@ import { UserOrdersService } from './user-orders.service';
 @ApiTags('Trading Engine')
 @Controller('user-orders')
 export class UserOrdersController {
+  private readonly logger = new CustomLogger(UserOrdersController.name);
+
   constructor(private readonly userOrdersService: UserOrdersService) {}
 
   @Get('/all')
@@ -124,6 +128,8 @@ export class UserOrdersController {
     @Param('orderId') orderId: string,
     @Body() body: StopMarketMakingDto,
   ) {
+    this.logger.log(`Soft stop market making requested: orderId=${orderId}`);
+
     await this.userOrdersService.stopMarketMaking(body.userId, orderId);
 
     return { ok: true };
@@ -143,6 +149,8 @@ export class UserOrdersController {
     @Param('orderId') orderId: string,
     @Body() body: StopMarketMakingDto,
   ) {
+    this.logger.log(`Pause market making requested: orderId=${orderId}`);
+
     await this.userOrdersService.pauseMarketMaking(body.userId, orderId);
 
     return { ok: true };
@@ -160,6 +168,8 @@ export class UserOrdersController {
     @Param('orderId') orderId: string,
     @Body() body: StopMarketMakingDto,
   ) {
+    this.logger.log(`Resume market making requested: orderId=${orderId}`);
+
     await this.userOrdersService.resumeMarketMaking(body.userId, orderId);
 
     return { ok: true };
@@ -179,6 +189,8 @@ export class UserOrdersController {
     @Param('orderId') orderId: string,
     @Body() body: ExitMarketMakingDto,
   ) {
+    this.logger.log(`Exit withdrawal requested: orderId=${orderId}`);
+
     await this.userOrdersService.exitMarketMaking(body.userId, orderId);
 
     return { ok: true };
