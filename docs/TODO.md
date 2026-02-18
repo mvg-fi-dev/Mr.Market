@@ -74,7 +74,7 @@ _DoD: one written policy + state diagram; code matches policy (tests), and UI te
 
 _DoD: given an orderId and time window, we can produce a reproducible report bundle referencing raw exchange facts._
 
-- [ ] Execution report v0: per-order periodic metrics snapshot + audit fields + references to exchange facts. (server: `server/src/modules/market-making/metrics/*`, `server/src/modules/market-making/performance/*`)
+- [x] Execution report v0: per-order periodic metrics snapshot + audit fields + references to exchange facts. (server: `server/src/modules/market-making/metrics/*`, `server/src/modules/market-making/performance/*`)
 - [ ] Order lifecycle transparency: place/cancel logs, fills, active orders, error taxonomy, safe retries. (server: `server/src/modules/market-making/trade/*`, `server/src/modules/market-making/trackers/*`)
 - [ ] Profit/balance tracking v0: realized/unrealized PnL (even if not paid out), volume, counts. (server: `server/src/modules/market-making/ledger/*`, `server/src/modules/market-making/performance/performance.service.ts`)
 - [ ] Risk controls v0: max exposure, max order count, kill-switch, price sanity checks. (server: `server/src/modules/market-making/strategy/*`, `server/src/modules/market-making/orchestration/*`)

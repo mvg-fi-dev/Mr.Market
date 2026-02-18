@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
 
@@ -16,5 +16,25 @@ export class MetricsController {
   @ApiResponse({ status: 200, description: 'Metrics' })
   getMetrics() {
     return this.metricsService.getStrategyMetrics();
+  }
+
+  @Get('execution-report')
+  @ApiOperation({
+    summary: 'Get execution report v0 (per orderId + time window)',
+  })
+  @ApiResponse({ status: 200, description: 'Execution report bundle' })
+  getExecutionReport(
+    @Query('orderId') orderId: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    if (!orderId) {
+      return {
+        ok: false,
+        error: 'Missing required query param: orderId',
+      };
+    }
+
+    return this.metricsService.getExecutionReport({ orderId, from, to });
   }
 }
