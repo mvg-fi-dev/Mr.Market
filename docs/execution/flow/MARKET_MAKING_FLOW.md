@@ -64,6 +64,31 @@ Note on campaigns:
 - HuFi campaign joining is handled by the CampaignService hourly cron (not the MM order queue).
 - The MM queue job `join_campaign` creates a **local** participation record and queues `start_mm`, but is not required for starting market making.
 
+### Campaign join policy (P0 decision)
+
+**Decision:** `join_campaign` is **optional bookkeeping** and must **never** be a gating step for starting market making.
+
+Rationale:
+
+- The core MM safety property is: once funds are confirmed on exchange, MM can start deterministically.
+- HuFi campaign joining is external-web3 + best-effort and can fail transiently; those failures must not strand user funds.
+
+Implementation policy:
+
+- Canonical lifecycle: `deposit_confirmed -> start_mm -> running`.
+- HuFi join is handled asynchronously by `CampaignService` cron (hourly), not by the MM order queue.
+- The queue job `join_campaign` (if/when invoked) should only:
+  - create/refresh a local participation record, and
+  - optionally schedule HuFi join (best-effort), and
+  - then queue `start_mm` (idempotent by `start_mm_<orderId>`), never blocking.
+
+State diagram (effective runtime):
+
+- Main path:
+  - `payment_* -> (withdrawing -> withdrawal_confirmed -> deposit_confirming -> deposit_confirmed) -> running`
+- Optional campaign bookkeeping path (only if explicitly invoked):
+  - `deposit_confirmed -> joining_campaign -> campaign_joined -> running`
+
 ### 4) Start, stop, and exit market making
 
 `start_mm`:
