@@ -1070,10 +1070,12 @@ export class MarketMakingOrderProcessor {
 
   /**
    * Exit: stop market making and withdraw funds back to user via bot Mixin.
-   * MVP:
+   *
+   * Flow:
    * - stop strategy (soft)
-   * - withdraw all exchange free balance of base+quote to bot deposit address
-   * - refund to user after bot receives deposits (TODO: monitor + transfer)
+   * - withdraw per-order allocated base+quote from exchange to bot Mixin deposit address
+   * - monitor Mixin deposit snapshots (tx hash preferred; amount tolerance fallback)
+   * - refund back to the user on Mixin
    */
   @Process('exit_withdrawal')
   async handleExitWithdrawal(job: Job<{ userId: string; orderId: string }>) {
