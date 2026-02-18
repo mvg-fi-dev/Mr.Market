@@ -333,6 +333,27 @@ export class UserOrdersService {
         );
       });
     }
+
+    const exiting = await this.marketMakingRepository.findBy({
+      state: 'exit_requested',
+    });
+
+    if (exiting) {
+      exiting.forEach(async (mm) => {
+        await this.marketMakingQueue.add(
+          'exit_withdrawal',
+          {
+            userId: mm.userId,
+            orderId: mm.orderId,
+          },
+          {
+            jobId: `exit_withdrawal_${mm.orderId}`,
+            attempts: 1,
+            removeOnComplete: false,
+          },
+        );
+      });
+    }
   }
 
   async stopMarketMaking(userId: string, orderId: string) {
