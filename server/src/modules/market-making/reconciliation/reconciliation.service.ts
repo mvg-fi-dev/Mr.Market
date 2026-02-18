@@ -1,11 +1,16 @@
+import { InjectQueue } from '@nestjs/bull';
 import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import BigNumber from 'bignumber.js';
+import type { Queue } from 'bull';
 import { BalanceReadModel } from 'src/common/entities/ledger/balance-read-model.entity';
 import { RewardAllocation } from 'src/common/entities/ledger/reward-allocation.entity';
 import { RewardLedger } from 'src/common/entities/ledger/reward-ledger.entity';
 import { StrategyOrderIntentEntity } from 'src/common/entities/market-making/strategy-order-intent.entity';
+import { MarketMakingOrder } from 'src/common/entities/orders/user-orders.entity';
+import type { MarketMakingStates } from 'src/common/types/orders/states';
+import { GrowdataRepository } from 'src/modules/data/grow-data/grow-data.repository';
 import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
 import { Repository } from 'typeorm';
 
@@ -14,6 +19,11 @@ import { ExchangeOrderTrackerService } from '../trackers/exchange-order-tracker.
 type ReconciliationReport = {
   checked: number;
   violations: number;
+};
+
+type DepositConfirmingRepairReport = {
+  checked: number;
+  repaired: number;
 };
 
 @Injectable()
@@ -30,6 +40,10 @@ export class ReconciliationService {
     private readonly rewardAllocationRepository: Repository<RewardAllocation>,
     @InjectRepository(StrategyOrderIntentEntity)
     private readonly strategyOrderIntentRepository: Repository<StrategyOrderIntentEntity>,
+    @InjectRepository(MarketMakingOrder)
+    private readonly marketMakingOrderRepository: Repository<MarketMakingOrder>,
+    @InjectQueue('market-making') private readonly marketMakingQueue: Queue,
+    private readonly growdataRepository: GrowdataRepository,
   ) {}
 
   @Cron(CronExpression.EVERY_5_MINUTES)
@@ -37,9 +51,10 @@ export class ReconciliationService {
     const ledger = await this.reconcileLedgerInvariants();
     const rewards = await this.reconcileRewardConsistency();
     const intents = await this.reconcileIntentLifecycleConsistency();
+    const depositConfirming = await this.reconcileDepositConfirmingOrders();
 
     this.logger.log(
-      `Ledger reconciliation checked=${ledger.checked} violations=${ledger.violations}; reward checked=${rewards.checked} violations=${rewards.violations}; intent checked=${intents.checked} violations=${intents.violations}`,
+      `Ledger reconciliation checked=${ledger.checked} violations=${ledger.violations}; reward checked=${rewards.checked} violations=${rewards.violations}; intent checked=${intents.checked} violations=${intents.violations}; deposit_confirming checked=${depositConfirming.checked} repaired=${depositConfirming.repaired}`,
     );
   }
 
@@ -123,6 +138,69 @@ export class ReconciliationService {
     return {
       checked: intents.length,
       violations,
+    };
+  }
+
+  /**
+   * Repair worker for a known failure mode:
+   * - order is stuck in `deposit_confirming` (exchange deposits already happened)
+   * - `monitor_exchange_deposit` job was missed/lost (queue outage/restart)
+   *
+   * This periodically re-enqueues the monitor job (idempotent by jobId).
+   */
+  async reconcileDepositConfirmingOrders(): Promise<DepositConfirmingRepairReport> {
+    const statesToRepair: MarketMakingStates[] = ['deposit_confirming'];
+
+    const orders = await this.marketMakingOrderRepository.findBy({
+      state: statesToRepair[0],
+    });
+
+    let repaired = 0;
+
+    for (const order of orders) {
+      try {
+        const pairConfig =
+          await this.growdataRepository.findMarketMakingPairByExchangeAndSymbol(
+            order.exchangeName,
+            order.pair,
+          );
+
+        if (!pairConfig) {
+          this.logger.warn(
+            `Reconciliation: deposit_confirming order ${order.orderId} missing pair config (${order.exchangeName} ${order.pair})`,
+          );
+          continue;
+        }
+
+        await this.marketMakingQueue.add(
+          'monitor_exchange_deposit',
+          {
+            orderId: order.orderId,
+            marketMakingPairId: pairConfig.id,
+            traceId: `mm:reconcile:${order.orderId}`,
+            // using order.createdAt makes matching less fragile across restarts
+            startedAt: Date.parse(order.createdAt) || Date.now(),
+          },
+          {
+            jobId: `monitor_exchange_deposit_${order.orderId}`,
+            attempts: 120,
+            backoff: { type: 'fixed', delay: 30000 },
+            removeOnComplete: false,
+          },
+        );
+
+        repaired += 1;
+      } catch (error) {
+        this.logger.error(
+          `Reconciliation: failed to re-enqueue monitor_exchange_deposit for order ${order.orderId}: ${error.message}`,
+          error.stack,
+        );
+      }
+    }
+
+    return {
+      checked: orders.length,
+      repaired,
     };
   }
 }

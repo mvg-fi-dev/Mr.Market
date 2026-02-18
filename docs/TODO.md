@@ -44,7 +44,7 @@ _DoD: with withdrawal enabled in a staging environment, a fresh order can reach 
     - Polling-based (near real-time), not websocket-driven.
   - [x] Propagate correlation/tracing id across `withdraw_to_exchange -> monitor_mixin_withdrawal -> monitor_exchange_deposit`. (server: `server/src/modules/market-making/user-orders/market-making.processor.ts`)
   - [x] Extend `monitor_exchange_deposit` beyond MEXC (per-exchange matching rules for `network`, `txid`, amount tolerance). (server: `server/src/modules/mixin/exchange/exchange.service.ts`, MM deposit monitor)
-  - [ ] Add reconciliation job: periodic refresh + repair missed events. (server: `server/src/modules/market-making/reconciliation/*`)
+  - [x] Add reconciliation job: periodic refresh + repair missed events. (server: `server/src/modules/market-making/reconciliation/*`)
 
 - [x] Start MM automatically after deposit confirmation. (server: `server/src/modules/market-making/user-orders/market-making.processor.ts`)
   - Current behavior: `deposit_confirmed -> start_mm` is queued; `join_campaign` is optional and must not block start.
