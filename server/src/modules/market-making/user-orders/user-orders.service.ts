@@ -356,71 +356,117 @@ export class UserOrdersService {
     }
   }
 
+  private async addQueueJobOnce<T>(params: {
+    name: string;
+    data: T;
+    opts: {
+      jobId?: string;
+      attempts?: number;
+      backoff?: any;
+      delay?: number;
+      removeOnComplete?: boolean;
+      removeOnFail?: boolean;
+    };
+  }) {
+    const { name, data, opts } = params;
+
+    if (opts.jobId && typeof (this.marketMakingQueue as any).getJob === 'function') {
+      const existing = await (this.marketMakingQueue as any).getJob(opts.jobId);
+
+      if (existing) {
+        this.logger.log(`Queue job already exists: ${name} jobId=${opts.jobId}`);
+
+        return existing;
+      }
+    }
+
+    return await (this.marketMakingQueue as any).add(name, data, opts);
+  }
+
   async stopMarketMaking(userId: string, orderId: string) {
-    await this.marketMakingQueue.add(
-      'stop_mm',
-      {
+    await this.addQueueJobOnce({
+      name: 'stop_mm',
+      data: {
         userId,
         orderId,
       },
-      {
+      opts: {
         jobId: `stop_mm_${orderId}`,
         attempts: 3,
         removeOnComplete: false,
       },
-    );
+    });
 
     await this.updateMarketMakingOrderState(orderId, 'stopped');
   }
 
   async pauseMarketMaking(userId: string, orderId: string) {
-    await this.marketMakingQueue.add(
-      'pause_mm',
-      {
+    await this.addQueueJobOnce({
+      name: 'pause_mm',
+      data: {
         userId,
         orderId,
       },
-      {
+      opts: {
         jobId: `pause_mm_${orderId}`,
         attempts: 3,
         removeOnComplete: false,
       },
-    );
+    });
 
     await this.updateMarketMakingOrderState(orderId, 'paused');
   }
 
   async resumeMarketMaking(userId: string, orderId: string) {
-    await this.marketMakingQueue.add(
-      'start_mm',
-      {
+    await this.addQueueJobOnce({
+      name: 'start_mm',
+      data: {
         userId,
         orderId,
       },
-      {
+      opts: {
         jobId: `resume_mm_${orderId}`,
         attempts: 3,
         removeOnComplete: false,
       },
-    );
+    });
 
     await this.updateMarketMakingOrderState(orderId, 'created');
   }
 
   async exitMarketMaking(userId: string, orderId: string) {
-    await this.updateMarketMakingOrderState(orderId, 'exit_requested');
+    const order = await this.findMarketMakingByOrderId(orderId);
 
-    await this.marketMakingQueue.add(
-      'exit_withdrawal',
-      {
+    if (!order) {
+      throw new NotFoundException('Market making order not found');
+    }
+
+    // Idempotency + safety:
+    // Never regress exit states back to exit_requested. That could re-enable withdrawals.
+    if (['exit_withdrawing', 'exit_refunding', 'exit_complete'].includes(order.state)) {
+      this.logger.log(
+        `Exit already in progress/completed for order ${orderId} (state=${order.state}), skipping`,
+      );
+
+      return;
+    }
+
+    // If already requested, ensure the job exists (e.g. previous worker crash).
+    if (order.state !== 'exit_requested') {
+      await this.updateMarketMakingOrderState(orderId, 'exit_requested');
+    }
+
+    await this.addQueueJobOnce({
+      name: 'exit_withdrawal',
+      data: {
         userId,
         orderId,
       },
-      {
+      opts: {
         jobId: `exit_withdrawal_${orderId}`,
         attempts: 1,
         removeOnComplete: false,
       },
-    );
+    });
   }
 }

@@ -16,7 +16,7 @@ export class AddMMExchangeAllocations1771100000000 implements MigrationInterface
         "quoteAssetId" varchar NOT NULL,
         "quoteSymbol" varchar NOT NULL,
         "quoteAllocatedAmount" varchar NOT NULL DEFAULT (0),
-        "state" varchar NOT NULL DEFAULT (created),
+        "state" varchar NOT NULL DEFAULT ('created'),
         "createdAt" varchar NOT NULL,
         "updatedAt" varchar NOT NULL
       )
