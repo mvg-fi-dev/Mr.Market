@@ -56,6 +56,7 @@ export type MarketMakingStates =
   | 'paused' // Paused by user
   | 'stopped' // Stopped by user
   // Exit/Withdrawal States
+  | 'exit_requested' // Exit requested (job queued)
   | 'exit_withdrawing' // Exiting by withdrawing back to bot Mixin
   | 'exit_refunding' // Refunding back to user on Mixin
   | 'exit_complete' // Exit completed

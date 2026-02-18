@@ -85,7 +85,7 @@ Note on campaigns:
 - Queues `monitor_exit_mixin_deposit`, which:
   - waits for confirmed Mixin snapshots (prefers tx hash match; falls back to amount tolerance)
   - transfers funds back to user on Mixin
-- State transitions: `exit_withdrawing -> exit_refunding -> exit_complete`.
+- State transitions: `exit_requested -> exit_withdrawing -> exit_refunding -> exit_complete`.
 
 ### 5) Tick-driven strategy execution
 

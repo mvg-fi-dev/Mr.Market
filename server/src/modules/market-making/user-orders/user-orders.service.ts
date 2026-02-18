@@ -384,6 +384,6 @@ export class UserOrdersService {
       },
     );
 
-    await this.updateMarketMakingOrderState(orderId, 'exit_withdrawing');
+    await this.updateMarketMakingOrderState(orderId, 'exit_requested');
   }
 }

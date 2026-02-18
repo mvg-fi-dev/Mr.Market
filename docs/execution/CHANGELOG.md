@@ -4,6 +4,7 @@
 
 - Add market-making soft control endpoints (pause/resume/stop)
 - Implement exit-withdrawal flow: exchange withdrawal back to bot Mixin, then refund back to user on Mixin (monitor via snapshots)
+- Harden exit withdrawal state machine with `exit_requested` to avoid conflating queueing vs execution
 
 ## 2026-02-17
 

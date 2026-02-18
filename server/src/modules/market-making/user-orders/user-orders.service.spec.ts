@@ -293,7 +293,7 @@ describe('UserOrdersService', () => {
     );
     expect(marketMakingRepository.update).toHaveBeenCalledWith(
       { orderId: 'order-1' },
-      { state: 'exit_withdrawing' },
+      { state: 'exit_requested' },
     );
   });
 });

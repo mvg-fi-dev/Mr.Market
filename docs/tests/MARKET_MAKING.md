@@ -132,7 +132,7 @@ Assert:
 - `exit_withdrawal` stops strategy and submits exchange withdrawals to bot Mixin deposit addresses.
 - `monitor_exit_mixin_deposit` waits for confirmed Mixin snapshots (prefers tx hash match; falls back to amount tolerance).
 - once both base and quote deposits are confirmed, processor transfers funds back to the user via Mixin safe transfer.
-- order state transitions: `exit_withdrawing -> exit_refunding -> exit_complete`.
+- order state transitions: `exit_requested -> exit_withdrawing -> exit_refunding -> exit_complete`.
 
 ### B3. Tick -> intents -> exchange execution
 
