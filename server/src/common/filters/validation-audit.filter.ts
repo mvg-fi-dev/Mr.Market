@@ -39,12 +39,19 @@ export class ValidationAuditFilter implements ExceptionFilter {
     const req = ctx.getRequest();
     const res = ctx.getResponse();
 
-    // Audit log: attempts to pass db-only apiKeyId through external HTTP request bodies.
+    // Audit log: attempts to pass sensitive or internal-only fields through external HTTP bodies.
+    // Note: this filter only runs after a BadRequestException (e.g. ValidationPipe forbidNonWhitelisted).
     try {
-      const hasApiKeyId = containsKey(req?.body, 'apiKeyId');
-      if (hasApiKeyId) {
+      const auditKeys = ['apiKeyId', 'api_key', 'api_secret', 'apiKey', 'apiSecret'] as const;
+      const found: string[] = [];
+
+      for (const key of auditKeys) {
+        if (containsKey(req?.body, key)) found.push(key);
+      }
+
+      if (found.length) {
         this.logger.warn(
-          `AUDIT: rejected request containing apiKeyId in body: ${req?.method} ${req?.url}`,
+          `AUDIT: rejected request containing disallowed keys in body: keys=${found.join(',')} ${req?.method} ${req?.url}`,
         );
       }
     } catch (e) {

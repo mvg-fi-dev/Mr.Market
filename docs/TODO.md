@@ -37,7 +37,7 @@ _DoD: with withdrawal enabled in a staging environment, a fresh order can reach 
     - Live withdrawals are gated by `strategy.withdraw_to_exchange_enabled`. (server: `server/src/modules/market-making/user-orders/market-making.processor.ts`)
   - [x] DB-only exchange API key lookup for MM flows (no raw key/secret in request payloads for queue handlers). (server: `server/src/modules/mixin/exchange/exchange.service.ts`, `server/src/modules/market-making/user-orders/market-making.processor.ts`)
   - [ ] Add audit log fields consistently (exchange, api_key_id, order_id, traceId). (server: `server/src/modules/infrastructure/logger/*`, MM queue processors)
-  - [ ] Add request validation at the HTTP boundary: reject inbound payloads that include raw exchange key/secret fields; only allow referencing stored `api_key_id` (if/where applicable). (server controllers + DTOs)
+  - [x] Add request validation at the HTTP boundary: reject inbound payloads that include raw exchange key/secret fields; only allow referencing stored `api_key_id` (if/where applicable). (server controllers + DTOs)
 
 - [x] Exchange deposit confirmation tracking (MEXC-only today). (server: `server/src/modules/market-making/user-orders/market-making.processor.ts`, `server/src/modules/market-making/network-mapping/*`)
   - Notes:
