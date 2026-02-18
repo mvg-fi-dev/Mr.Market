@@ -1532,7 +1532,7 @@ export class MarketMakingOrderProcessor {
         : { confirmed: false };
 
       this.logger.log(
-        `Order ${orderId} withdrawal status - Base: ${
+        `${this.logCtx({ traceId: traceId || `mm:${orderId}`, orderId, job })} Withdrawal status - Base: ${
           baseStatus.confirmed ? 'confirmed' : 'pending'
         }, Quote: ${quoteStatus.confirmed ? 'confirmed' : 'pending'}`,
       );
@@ -1696,6 +1696,10 @@ export class MarketMakingOrderProcessor {
       throw new Error(`No API key found for exchange ${exchangeName}`);
     }
 
+    this.logger.log(
+      `${this.logCtx({ traceId: traceId || `mm:${orderId}`, orderId, job, exchange: exchangeName, apiKeyId: apiKey.key_id })} Using exchange api key`,
+    );
+
     const [baseNetwork, quoteNetwork] = await Promise.all([
       this.networkMappingService.getNetworkForAsset(
         paymentState.baseAssetId,
@@ -1786,7 +1790,7 @@ export class MarketMakingOrderProcessor {
     );
 
     this.logger.log(
-      `Order ${orderId} exchange deposit status - Base: ${
+      `${this.logCtx({ traceId: traceId || `mm:${orderId}`, orderId, job, exchange: exchangeName, apiKeyId: apiKey.key_id })} Exchange deposit status - Base: ${
         baseDeposit ? 'confirmed' : 'pending'
       }, Quote: ${quoteDeposit ? 'confirmed' : 'pending'}`,
     );
