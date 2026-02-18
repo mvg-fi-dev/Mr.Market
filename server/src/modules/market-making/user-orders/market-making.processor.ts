@@ -1008,7 +1008,9 @@ export class MarketMakingOrderProcessor {
   async handleStartMM(job: Job<{ userId: string; orderId: string }>) {
     const { userId, orderId } = job.data;
 
-    this.logger.log(`Starting MM for user ${userId}, order ${orderId}`);
+    this.logger.log(
+      `${this.logCtx({ traceId: `mm:${orderId}`, orderId, job })} Starting MM for user ${userId}`,
+    );
 
     const order =
       await this.userOrdersService.findMarketMakingByOrderId(orderId);
@@ -1046,7 +1048,9 @@ export class MarketMakingOrderProcessor {
   async handleStopMM(job: Job<{ userId: string; orderId: string }>) {
     const { userId, orderId } = job.data;
 
-    this.logger.log(`Stopping MM for user ${userId}, order ${orderId}`);
+    this.logger.log(
+      `${this.logCtx({ traceId: `mm:${orderId}`, orderId, job })} Stopping MM for user ${userId}`,
+    );
 
     await this.strategyService.stopStrategyForUser(
       userId,
@@ -1076,12 +1080,6 @@ export class MarketMakingOrderProcessor {
       `${this.logCtx({ traceId: exitTraceId, orderId, job })} Exit withdrawal requested by user ${userId}`,
     );
 
-    await this.strategyService.stopStrategyForUser(
-      userId,
-      orderId,
-      'pureMarketMaking',
-    );
-
     const order =
       await this.userOrdersService.findMarketMakingByOrderId(orderId);
 
@@ -1096,6 +1094,20 @@ export class MarketMakingOrderProcessor {
 
       return;
     }
+
+    if (['exit_withdrawing', 'exit_refunding'].includes(order.state)) {
+      this.logger.log(
+        `${this.logCtx({ traceId: exitTraceId, orderId, job })} Exit already in progress (${order.state}), skipping re-withdraw`,
+      );
+
+      return;
+    }
+
+    await this.strategyService.stopStrategyForUser(
+      userId,
+      orderId,
+      'pureMarketMaking',
+    );
 
     // State gate: only allow exit from known non-terminal states.
     // (We intentionally allow running/paused/stopped/payment_* so users can always exit.)
