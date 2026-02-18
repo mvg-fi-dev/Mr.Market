@@ -88,6 +88,7 @@ export class MarketMakingOrderProcessor {
 
   private readonly WITHDRAWAL_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
   private readonly DEPOSIT_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+  private readonly EXIT_WITHDRAWAL_TIMEOUT_MS = 60 * 60 * 1000; // 60 minutes
   private readonly RETRY_DELAY_MS = 30000; // 30 seconds
 
   private async refundUser(snapshot: SafeSnapshot, reason: string) {
@@ -1123,36 +1124,56 @@ export class MarketMakingOrderProcessor {
       quoteFree?.[pairConfig.quote_symbol],
     );
 
-    if (new BigNumber(baseAmount).isGreaterThan(0)) {
-      await this.exchangeService.createWithdrawal({
-        exchange: exchangeName,
-        apiKeyId: apiKey.key_id,
-        symbol: pairConfig.base_symbol,
-        network: baseNetwork,
-        address: baseDeposit.address,
-        tag: baseDeposit.memo || '',
-        amount: baseAmount,
-      });
-    }
+    const baseWithdrawal = new BigNumber(baseAmount).isGreaterThan(0)
+      ? await this.exchangeService.createWithdrawal({
+          exchange: exchangeName,
+          apiKeyId: apiKey.key_id,
+          symbol: pairConfig.base_symbol,
+          network: baseNetwork,
+          address: baseDeposit.address,
+          tag: baseDeposit.memo || '',
+          amount: baseAmount,
+        })
+      : null;
 
-    if (new BigNumber(quoteAmount).isGreaterThan(0)) {
-      await this.exchangeService.createWithdrawal({
-        exchange: exchangeName,
-        apiKeyId: apiKey.key_id,
-        symbol: pairConfig.quote_symbol,
-        network: quoteNetwork,
-        address: quoteDeposit.address,
-        tag: quoteDeposit.memo || '',
-        amount: quoteAmount,
-      });
-    }
+    const quoteWithdrawal = new BigNumber(quoteAmount).isGreaterThan(0)
+      ? await this.exchangeService.createWithdrawal({
+          exchange: exchangeName,
+          apiKeyId: apiKey.key_id,
+          symbol: pairConfig.quote_symbol,
+          network: quoteNetwork,
+          address: quoteDeposit.address,
+          tag: quoteDeposit.memo || '',
+          amount: quoteAmount,
+        })
+      : null;
 
     await this.userOrdersService.updateMarketMakingOrderState(
       orderId,
       'exit_withdrawing',
     );
 
-    // TODO: monitor mixin deposits + transfer back to user.
+    await (job.queue as any).add(
+      'monitor_exit_mixin_deposit',
+      {
+        userId,
+        orderId,
+        exchangeName,
+        baseAssetId: pairConfig.base_asset_id,
+        quoteAssetId: pairConfig.quote_asset_id,
+        expectedBaseAmount: baseAmount,
+        expectedQuoteAmount: quoteAmount,
+        expectedBaseTxHash: this.pickTxHash(baseWithdrawal),
+        expectedQuoteTxHash: this.pickTxHash(quoteWithdrawal),
+        startedAt: Date.now(),
+      },
+      {
+        jobId: `monitor_exit_mixin_deposit_${orderId}`,
+        attempts: 120,
+        backoff: { type: 'fixed', delay: this.RETRY_DELAY_MS },
+        removeOnComplete: false,
+      },
+    );
   }
 
   /**
@@ -1160,6 +1181,210 @@ export class MarketMakingOrderProcessor {
    * This handler checks both base and quote withdrawal confirmations
    * and proceeds to monitor_exchange_deposit once both are confirmed
    */
+  @Process('monitor_exit_mixin_deposit')
+  async handleMonitorExitMixinDeposit(
+    job: Job<{
+      userId: string;
+      orderId: string;
+      exchangeName: string;
+      baseAssetId: string;
+      quoteAssetId: string;
+      expectedBaseAmount?: string;
+      expectedQuoteAmount?: string;
+      expectedBaseTxHash?: string;
+      expectedQuoteTxHash?: string;
+      startedAt?: number;
+    }>,
+  ) {
+    const {
+      userId,
+      orderId,
+      baseAssetId,
+      quoteAssetId,
+      expectedBaseAmount,
+      expectedQuoteAmount,
+      expectedBaseTxHash,
+      expectedQuoteTxHash,
+    } = job.data;
+    const startedAt = job.data.startedAt ?? Date.now();
+
+    if (!job.data.startedAt) {
+      await job.update({ ...job.data, startedAt });
+    }
+
+    const elapsed = Date.now() - startedAt;
+
+    if (elapsed > this.EXIT_WITHDRAWAL_TIMEOUT_MS) {
+      this.logger.error(
+        `Exit withdrawal timeout for order ${orderId} after ${elapsed}ms`,
+      );
+      await this.userOrdersService.updateMarketMakingOrderState(
+        orderId,
+        'failed',
+      );
+
+      return;
+    }
+
+    const snapshots =
+      await this.mixinClientService.client.safe.fetchSafeSnapshots({
+        limit: 200,
+      } as any);
+
+    const baseSnapshot = this.findMatchingMixinDeposit({
+      snapshots,
+      assetId: baseAssetId,
+      expectedAmount: expectedBaseAmount,
+      expectedTxHash: expectedBaseTxHash,
+      startedAt,
+    });
+    const quoteSnapshot = this.findMatchingMixinDeposit({
+      snapshots,
+      assetId: quoteAssetId,
+      expectedAmount: expectedQuoteAmount,
+      expectedTxHash: expectedQuoteTxHash,
+      startedAt,
+    });
+
+    this.logger.log(
+      `Exit deposit status for order ${orderId} - Base: ${
+        baseSnapshot ? 'confirmed' : 'pending'
+      }, Quote: ${quoteSnapshot ? 'confirmed' : 'pending'}`,
+    );
+
+    if (!baseSnapshot || !quoteSnapshot) {
+      throw new Error('Exit deposits not fully confirmed yet');
+    }
+
+    await this.userOrdersService.updateMarketMakingOrderState(
+      orderId,
+      'exit_refunding',
+    );
+
+    await this.executeRefundTransfer({
+      userId,
+      assetId: baseAssetId,
+      amount: new BigNumber(baseSnapshot.amount).toFixed(),
+      debitIdempotencyKey: `mm-exit-refund:${orderId}:${baseAssetId}`,
+      refType: 'market_making_exit_refund',
+      refId: orderId,
+      transfer: async () =>
+        await this.transactionService.transfer(
+          userId,
+          baseAssetId,
+          new BigNumber(baseSnapshot.amount).toFixed(),
+          `ExitRefund:${orderId}:base`,
+        ),
+    });
+
+    await this.executeRefundTransfer({
+      userId,
+      assetId: quoteAssetId,
+      amount: new BigNumber(quoteSnapshot.amount).toFixed(),
+      debitIdempotencyKey: `mm-exit-refund:${orderId}:${quoteAssetId}`,
+      refType: 'market_making_exit_refund',
+      refId: orderId,
+      transfer: async () =>
+        await this.transactionService.transfer(
+          userId,
+          quoteAssetId,
+          new BigNumber(quoteSnapshot.amount).toFixed(),
+          `ExitRefund:${orderId}:quote`,
+        ),
+    });
+
+    await this.userOrdersService.updateMarketMakingOrderState(
+      orderId,
+      'exit_complete',
+    );
+  }
+
+  private pickTxHash(withdrawal: any): string | undefined {
+    if (!withdrawal || typeof withdrawal !== 'object') {
+      return undefined;
+    }
+
+    return (
+      withdrawal.txid ||
+      withdrawal.txHash ||
+      withdrawal.hash ||
+      withdrawal.transactionHash ||
+      undefined
+    );
+  }
+
+  private findMatchingMixinDeposit(params: {
+    snapshots: any[];
+    assetId: string;
+    expectedAmount?: string;
+    expectedTxHash?: string;
+    startedAt: number;
+  }): any | null {
+    const { snapshots, assetId, expectedAmount, expectedTxHash, startedAt } =
+      params;
+
+    const startedAtMs = startedAt;
+
+    const isAfterStart = (createdAt?: string) => {
+      if (!createdAt) {
+        return false;
+      }
+
+      const ms = Date.parse(createdAt);
+
+      if (!Number.isFinite(ms)) {
+        return false;
+      }
+
+      return ms >= startedAtMs;
+    };
+
+    const expectedAmountBn = expectedAmount
+      ? new BigNumber(expectedAmount)
+      : null;
+    const tolerance = new BigNumber('1e-8');
+
+    for (const s of snapshots || []) {
+      if (!s || s.asset_id !== assetId) {
+        continue;
+      }
+
+      if (!isAfterStart(s.created_at)) {
+        continue;
+      }
+
+      if (s.confirmations != null && Number(s.confirmations) < 1) {
+        continue;
+      }
+
+      if (expectedTxHash && s.transaction_hash) {
+        if (String(s.transaction_hash) === String(expectedTxHash)) {
+          return s;
+        }
+
+        continue;
+      }
+
+      if (!expectedAmountBn || !expectedAmountBn.isFinite()) {
+        continue;
+      }
+
+      const amountBn = new BigNumber(s.amount || 0);
+
+      if (!amountBn.isFinite() || amountBn.isLessThanOrEqualTo(0)) {
+        continue;
+      }
+
+      if (
+        amountBn.minus(expectedAmountBn).abs().isLessThanOrEqualTo(tolerance)
+      ) {
+        return s;
+      }
+    }
+
+    return null;
+  }
+
   @Process('monitor_mixin_withdrawal')
   async handleMonitorMMWithdrawal(
     job: Job<{

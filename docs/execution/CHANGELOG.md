@@ -2,7 +2,8 @@
 
 ## 2026-02-18
 
-- Add market-making soft control endpoints (pause/resume/stop) and begin wiring exit-withdrawal flow (exchange -> bot Mixin -> user)
+- Add market-making soft control endpoints (pause/resume/stop)
+- Implement exit-withdrawal flow: exchange withdrawal back to bot Mixin, then refund back to user on Mixin (monitor via snapshots)
 
 ## 2026-02-17
 
