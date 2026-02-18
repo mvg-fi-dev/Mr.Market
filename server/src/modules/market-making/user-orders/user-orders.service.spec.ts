@@ -239,12 +239,12 @@ describe('UserOrdersService', () => {
       expect.objectContaining({ jobId: 'start_mm_mm1' }),
     );
     expect(queueAddSpy).toHaveBeenCalledWith(
-      'stop_mm',
+      'pause_mm',
       {
         userId: 'user1',
         orderId: 'mm1',
       },
-      expect.objectContaining({ jobId: 'stop_mm_mm1' }),
+      expect.objectContaining({ jobId: 'pause_mm_mm1' }),
     );
   });
 
@@ -259,7 +259,7 @@ describe('UserOrdersService', () => {
     await service.pauseMarketMaking('user1', 'order-1');
 
     expect(queueAddSpy).toHaveBeenCalledWith(
-      'stop_mm',
+      'pause_mm',
       { userId: 'user1', orderId: 'order-1' },
       expect.objectContaining({ jobId: 'pause_mm_order-1' }),
     );

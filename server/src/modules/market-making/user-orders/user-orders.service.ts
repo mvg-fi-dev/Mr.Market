@@ -320,13 +320,13 @@ export class UserOrdersService {
     if (pausedMM) {
       pausedMM.forEach(async (mm) => {
         await this.marketMakingQueue.add(
-          'stop_mm',
+          'pause_mm',
           {
             userId: mm.userId,
             orderId: mm.orderId,
           },
           {
-            jobId: `stop_mm_${mm.orderId}`,
+            jobId: `pause_mm_${mm.orderId}`,
             attempts: 3,
             removeOnComplete: false,
           },
@@ -375,7 +375,7 @@ export class UserOrdersService {
 
   async pauseMarketMaking(userId: string, orderId: string) {
     await this.marketMakingQueue.add(
-      'stop_mm',
+      'pause_mm',
       {
         userId,
         orderId,

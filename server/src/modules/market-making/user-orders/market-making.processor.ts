@@ -1065,6 +1065,9 @@ export class MarketMakingOrderProcessor {
 
   @Process('stop_mm')
   async handleStopMM(job: Job<{ userId: string; orderId: string }>) {
+    // Backwards-compatible: some schedulers/clients still enqueue stop_mm for paused orders.
+    // We keep this handler as the canonical stop behavior.
+
     const { userId, orderId } = job.data;
 
     this.logger.log(
@@ -1084,6 +1087,27 @@ export class MarketMakingOrderProcessor {
       orderId,
       'stopped',
     );
+  }
+
+  @Process('pause_mm')
+  async handlePauseMM(job: Job<{ userId: string; orderId: string }>) {
+    const { userId, orderId } = job.data;
+
+    this.logger.log(
+      `${this.logCtx({
+        traceId: `mm:${orderId}`,
+        orderId,
+        job,
+      })} Pausing MM for user ${userId}`,
+    );
+
+    await this.strategyService.stopStrategyForUser(
+      userId,
+      orderId,
+      'pureMarketMaking',
+    );
+
+    await this.userOrdersService.updateMarketMakingOrderState(orderId, 'paused');
   }
 
   /**
