@@ -59,9 +59,30 @@ type RefundTransferCommand = {
   transfer: () => Promise<unknown>;
 };
 
+type LogContext = {
+  traceId?: string;
+  orderId?: string;
+  job?: { id?: string | number; name?: string };
+  exchange?: string;
+  apiKeyId?: string;
+};
+
 @Processor('market-making')
 export class MarketMakingOrderProcessor {
   private readonly logger = new CustomLogger(MarketMakingOrderProcessor.name);
+
+  private logCtx(ctx: LogContext): string {
+    const parts: string[] = [];
+
+    if (ctx.traceId) parts.push(`trace=${ctx.traceId}`);
+    if (ctx.orderId) parts.push(`order=${ctx.orderId}`);
+    if (ctx.job?.name) parts.push(`job=${ctx.job.name}`);
+    if (ctx.job?.id != null) parts.push(`jobId=${ctx.job.id}`);
+    if (ctx.exchange) parts.push(`exchange=${ctx.exchange}`);
+    if (ctx.apiKeyId) parts.push(`apiKeyId=${ctx.apiKeyId}`);
+
+    return parts.length ? `[${parts.join(' ')}]` : '';
+  }
   private readonly PAYMENT_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
   private readonly MAX_PAYMENT_RETRIES = 60; // Check every 10 seconds for 10 minutes
 
@@ -693,7 +714,7 @@ export class MarketMakingOrderProcessor {
     const { orderId, marketMakingPairId, traceId } = job.data;
 
     this.logger.log(
-      `[trace=${traceId || `mm:${orderId}`}] Withdrawing to exchange for order ${orderId}`,
+      `${this.logCtx({ traceId: traceId || `mm:${orderId}`, orderId, job })} Withdrawing to exchange`,
     );
 
     try {
@@ -726,7 +747,7 @@ export class MarketMakingOrderProcessor {
       }
 
       this.logger.log(
-        `Using API key ${apiKey.key_id} for exchange ${exchangeName}`,
+        `${this.logCtx({ traceId: traceId || `mm:${orderId}`, orderId, job, exchange: exchangeName, apiKeyId: apiKey.key_id })} Using exchange api key`,
       );
 
       // Get accurate network identifiers using NetworkMappingService
@@ -1323,7 +1344,7 @@ export class MarketMakingOrderProcessor {
       quoteExpected.isLessThanOrEqualTo(0) || !!quoteSnapshot;
 
     this.logger.log(
-      `[trace=${traceId || `mm:exit:${orderId}`}] Exit deposit status for order ${orderId} - Base: ${
+      `${this.logCtx({ traceId: traceId || `mm:exit:${orderId}`, orderId, job })} Exit deposit status - Base: ${
         baseConfirmed ? 'confirmed' : 'pending'
       }, Quote: ${quoteConfirmed ? 'confirmed' : 'pending'}`,
     );
@@ -1494,7 +1515,7 @@ export class MarketMakingOrderProcessor {
     const retryCount = job.attemptsMade || 0;
 
     this.logger.log(
-      `[trace=${traceId || `mm:${orderId}`}] Monitoring MM withdrawals for order ${orderId} (attempt ${
+      `${this.logCtx({ traceId: traceId || `mm:${orderId}`, orderId, job })} Monitoring MM withdrawals (attempt ${
         retryCount + 1
       })`,
     );
@@ -1535,7 +1556,7 @@ export class MarketMakingOrderProcessor {
       // If both confirmed, proceed to monitor exchange deposits
       if (baseStatus.confirmed && quoteStatus.confirmed) {
         this.logger.log(
-          `[trace=${traceId || `mm:${orderId}`}] Both withdrawals confirmed for order ${orderId}, proceeding to monitor exchange deposits`,
+          `${this.logCtx({ traceId: traceId || `mm:${orderId}`, orderId, job })} Both withdrawals confirmed, proceeding to monitor exchange deposits`,
         );
 
         await this.userOrdersService.updateMarketMakingOrderState(
@@ -1615,7 +1636,7 @@ export class MarketMakingOrderProcessor {
     const retryCount = job.attemptsMade || 0;
 
     this.logger.log(
-      `[trace=${traceId || `mm:${orderId}`}] Monitoring exchange deposits for order ${orderId} (attempt ${
+      `${this.logCtx({ traceId: traceId || `mm:${orderId}`, orderId, job })} Monitoring exchange deposits (attempt ${
         retryCount + 1
       })`,
     );
