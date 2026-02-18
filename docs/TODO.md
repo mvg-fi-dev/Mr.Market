@@ -54,7 +54,7 @@ _DoD: with withdrawal enabled in a staging environment, a fresh order can reach 
 _DoD: exit is safe, bounded, and idempotent; no cross-order balance leakage; every fund movement has a ledger entry and traceId._
 
 - [ ] Define idempotency + retry rules for stop/exit state transitions (avoid double-withdraw / double-start). (server: `server/src/modules/market-making/user-orders/*`, `server/src/modules/market-making/ledger/*`)
-- [ ] Document failure-mode handling: exchange downtime/timeouts, insufficient balance, partial fills. (docs: `docs/execution/flow/MARKET_MAKING_FLOW.md`, `docs/tests/MARKET_MAKING.md`)
+- [x] Document failure-mode handling: exchange downtime/timeouts, insufficient balance, partial fills. (docs: `docs/execution/flow/MARKET_MAKING_FLOW.md`, `docs/tests/MARKET_MAKING.md`)
 
 ### 1.3 Campaign join semantics (explicit decision)
 

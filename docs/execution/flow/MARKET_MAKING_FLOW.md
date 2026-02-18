@@ -144,6 +144,76 @@ Failure paths can move to:
 
 Exact transitions depend on which queue branches are enabled in your environment.
 
+## Failure Modes & Handling (P0)
+
+This section documents expected behavior under common failure modes. The goal is **bounded risk + idempotent retries**.
+
+### Exchange downtime / timeouts
+
+Where it can happen:
+
+- Deposit polling (`monitor_exchange_deposit`): `fetchDeposits` / exchange REST timeouts.
+- Tick-driven execution: `createOrder` / `cancelOrder` / balance calls.
+- Exit withdrawal: `exchangeService.createWithdrawal()` (ccxt `withdraw`).
+
+Expected behavior:
+
+- **Retry with backoff** for transient network failures.
+- If retries exhaust, the order should remain in a safe non-terminal state (e.g. `deposit_confirming`, `running`, or `exit_withdrawing`) and produce structured logs with:
+  - `traceId`
+  - `order_id`
+  - `exchange`
+  - `job_id`
+  - error taxonomy (`NetworkError` vs `ExchangeError`)
+
+Notes:
+
+- `ExchangeService._createWithdrawal` maps ccxt exceptions into safe, user-friendly errors. Those errors should be logged and bubbled to job failure to trigger retry.
+- For deposit polling/intent execution, retries should be safe because actions are either read-only (polling) or handled through intent durability.
+
+### Insufficient balance / funds locked in open orders
+
+Symptoms:
+
+- Exchange rejects withdrawals due to insufficient free balance.
+- Withdrawals succeed for one leg but not the other.
+
+Current safeguards:
+
+- Exit path runs `pauseAndDrainOrders(...)` to cancel open orders before withdrawing, to reduce locked-balance risk.
+- Exit path refuses to withdraw shared exchange-account funds without a per-order allocation record.
+
+Operational guidance:
+
+- If free balance is still insufficient after draining orders, treat as a **recoverable failure**:
+  - the job should retry later, or
+  - the operator should inspect locked balances / open orders on exchange.
+
+### Partial fills
+
+Partial fills are normal during runtime and become problematic during exit/stop.
+
+Expected behavior:
+
+- During runtime: trackers/ledger/performance should reflect fills as they occur.
+- During exit: `pauseAndDrainOrders(...)` must keep cancelling until no open orders remain (or timeout). If timeout hits, the order should remain in an exit state and require a retry/repair path.
+
+### Double-action risks (duplicate withdrawals / double-start)
+
+Risk examples:
+
+- Exit withdrawal job crashes after submitting exchange withdrawals but before enqueuing the Mixin deposit monitor.
+- Start/stop commands issued repeatedly by user/UI or cron.
+
+Mitigations in current design:
+
+- Queue job IDs are deterministic (e.g. `exit_withdrawal_<orderId>`, `monitor_exit_mixin_deposit_<orderId>`, `start_mm_<orderId>`), which prevents accidental job fan-out.
+- Exit handler gates on order state and skips if exit is already complete or already in progress.
+
+Remaining gap (to be addressed in code):
+
+- For exit withdrawals, true idempotency ideally needs a durable record of withdrawal request/tx hashes (so a retry can avoid re-withdrawing even if the worker crashed mid-flow).
+
 ## Operational Notes
 
 - `strategy.execute_intents=false` means intents are created and marked processed but no live exchange actions are sent.
@@ -155,5 +225,5 @@ Exact transitions depend on which queue branches are enabled in your environment
 
 ## Last Updated
 
-- Date: 2026-02-11
+- Date: 2026-02-19
 - Status: Active
