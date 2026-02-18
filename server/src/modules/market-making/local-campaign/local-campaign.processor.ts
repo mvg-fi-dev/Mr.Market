@@ -19,7 +19,7 @@ export class LocalCampaignProcessor {
     this.logger.log(
       `${formatAuditLogContext({
         job,
-        orderId: campaignId,
+        campaignId,
       })} Checking campaign status`,
     );
 
@@ -29,7 +29,7 @@ export class LocalCampaignProcessor {
       this.logger.error(
         `${formatAuditLogContext({
           job,
-          orderId: campaignId,
+          campaignId,
         })} Campaign not found`,
       );
 
@@ -41,7 +41,7 @@ export class LocalCampaignProcessor {
       this.logger.log(
         `${formatAuditLogContext({
           job,
-          orderId: campaignId,
+          campaignId,
         })} Campaign ended. Distributing rewards...`,
       );
       await this.campaignService.updateCampaign(campaignId, {
@@ -64,7 +64,7 @@ export class LocalCampaignProcessor {
       this.logger.warn(
         `${formatAuditLogContext({
           traceId,
-          orderId: campaignId,
+          campaignId,
         })} No participants for campaign`,
       );
 
@@ -80,7 +80,7 @@ export class LocalCampaignProcessor {
       this.logger.warn(
         `${formatAuditLogContext({
           traceId,
-          orderId: campaignId,
+          campaignId,
         })} Total contribution is 0 for campaign`,
       );
 
@@ -100,7 +100,7 @@ export class LocalCampaignProcessor {
       this.logger.log(
         `${formatAuditLogContext({
           traceId,
-          orderId: campaignId,
+          campaignId,
         })} Rewarded user ${p.userId} with ${reward.toString()} ${
           campaign.rewardToken
         }`,
