@@ -1,5 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 
+import { AdminOutboxService } from 'src/modules/admin/outbox/admin-outbox.service';
+
 import { StrategyService } from '../strategy/strategy.service';
 import { UserOrdersController } from './user-orders.controller';
 import { UserOrdersService } from './user-orders.service';
@@ -17,12 +19,17 @@ describe('UserOrdersController', () => {
     getOpenOrders: jest.fn(),
   };
 
+  const mockAdminOutboxService = {
+    listOutboxEvents: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UserOrdersController],
       providers: [
         { provide: UserOrdersService, useValue: mockUserOrdersService },
         { provide: StrategyService, useValue: mockStrategyService },
+        { provide: AdminOutboxService, useValue: mockAdminOutboxService },
       ],
     }).compile();
 
@@ -52,6 +59,11 @@ describe('UserOrdersController', () => {
       { exchangeOrderId: 'ex-1', status: 'open' },
     ]);
 
+    mockAdminOutboxService.listOutboxEvents.mockResolvedValueOnce({
+      ok: true,
+      events: [{ eventId: 'e1', topic: 't1' }],
+    });
+
     const res = await (controller as any).getMarketMakingLifecycle('order-1');
 
     expect(
@@ -76,6 +88,11 @@ describe('UserOrdersController', () => {
     expect(res.intents).toHaveLength(1);
     expect(res.openOrders).toHaveLength(1);
     expect(res.history).toHaveLength(1);
+    expect(res.outbox).toHaveLength(1);
+
+    expect(mockAdminOutboxService.listOutboxEvents).toHaveBeenCalledWith(
+      expect.objectContaining({ orderId: 'order-1', limit: 500 }),
+    );
   });
 
   it('returns ok:false when order is not found', async () => {

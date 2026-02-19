@@ -12,6 +12,8 @@ import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { MarketMakingHistory } from 'src/common/entities/market-making/market-making-order.entity';
 import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
 
+import { AdminOutboxService } from 'src/modules/admin/outbox/admin-outbox.service';
+
 import { StrategyService } from '../strategy/strategy.service';
 import { ExitMarketMakingDto, StopMarketMakingDto } from './user-orders.dto';
 import { CreateMarketMakingIntentDto } from './user-orders.dto';
@@ -25,6 +27,7 @@ export class UserOrdersController {
   constructor(
     private readonly userOrdersService: UserOrdersService,
     private readonly strategyService: StrategyService,
+    private readonly adminOutboxService: AdminOutboxService,
   ) {}
 
   @Get('/all')
@@ -252,11 +255,15 @@ export class UserOrdersController {
 
     const strategyKey = `${order.userId}-${orderId}-pureMarketMaking`;
 
-    const [intents, history] = await Promise.all([
+    const [intents, history, outbox] = await Promise.all([
       this.strategyService.listIntentsByClientId(orderId, 500),
       this.userOrdersService.getMarketMakingHistoryByStrategyInstanceId(
         orderId,
       ),
+      this.adminOutboxService.listOutboxEvents({
+        orderId,
+        limit: 500,
+      }),
     ]);
 
     const openOrders = this.strategyService.getOpenOrders(strategyKey);
@@ -268,6 +275,7 @@ export class UserOrdersController {
       intents,
       openOrders,
       history,
+      outbox: outbox.events,
     };
   }
 }
