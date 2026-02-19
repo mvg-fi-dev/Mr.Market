@@ -139,7 +139,12 @@ export class ExchangeOrderTrackerService
         topic: 'market_making.exchange_order.status_changed',
         aggregateType: 'exchange_order',
         aggregateId: order.exchangeOrderId,
-        orderId: order.orderId,
+        /**
+         * First-class audit fields for indexing/search.
+         * (We also keep them in payload for replay/bundling.)
+         */
+        traceId: updated.traceId,
+        orderId: updated.orderId,
         payload: {
           ...updated,
           orderId: order.orderId,

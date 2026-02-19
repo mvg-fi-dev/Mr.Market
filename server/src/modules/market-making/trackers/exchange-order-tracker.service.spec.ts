@@ -5,6 +5,8 @@ describe('ExchangeOrderTrackerService', () => {
     const service = new ExchangeOrderTrackerService();
 
     service.upsertOrder({
+      orderId: 'order-1',
+      traceId: 't-1',
       strategyKey: 'u1-c1-pureMarketMaking',
       exchange: 'binance',
       pair: 'BTC/USDT',
@@ -17,6 +19,8 @@ describe('ExchangeOrderTrackerService', () => {
     });
 
     service.upsertOrder({
+      orderId: 'order-1',
+      traceId: 't-2',
       strategyKey: 'u1-c1-pureMarketMaking',
       exchange: 'binance',
       pair: 'BTC/USDT',
@@ -48,6 +52,8 @@ describe('ExchangeOrderTrackerService', () => {
     );
 
     service.upsertOrder({
+      orderId: 'order-1',
+      traceId: 't-1',
       strategyKey: 'u1-c1-pureMarketMaking',
       exchange: 'binance',
       pair: 'BTC/USDT',
@@ -70,6 +76,8 @@ describe('ExchangeOrderTrackerService', () => {
         topic: 'market_making.exchange_order.status_changed',
         aggregateType: 'exchange_order',
         aggregateId: 'ex-1',
+        traceId: 't-1',
+        orderId: 'order-1',
       }),
     );
   });
@@ -88,6 +96,8 @@ describe('ExchangeOrderTrackerService', () => {
     );
 
     service.upsertOrder({
+      orderId: 'order-1',
+      traceId: 't-1',
       strategyKey: 'u1-c1-pureMarketMaking',
       exchange: 'binance',
       pair: 'BTC/USDT',
@@ -108,6 +118,8 @@ describe('ExchangeOrderTrackerService', () => {
     const service = new ExchangeOrderTrackerService();
 
     service.upsertOrder({
+      orderId: 'order-1',
+      traceId: 't-1',
       strategyKey: 's1',
       exchange: 'binance',
       pair: 'BTC/USDT',
@@ -120,6 +132,8 @@ describe('ExchangeOrderTrackerService', () => {
     });
 
     service.upsertOrder({
+      orderId: 'order-1',
+      traceId: 't-1',
       strategyKey: 's1',
       exchange: 'binance',
       pair: 'BTC/USDT',
@@ -132,6 +146,8 @@ describe('ExchangeOrderTrackerService', () => {
     });
 
     service.upsertOrder({
+      orderId: 'order-1',
+      traceId: 't-1',
       strategyKey: 's1',
       exchange: 'binance',
       pair: 'BTC/USDT',
@@ -144,6 +160,8 @@ describe('ExchangeOrderTrackerService', () => {
     });
 
     service.upsertOrder({
+      orderId: 'order-2',
+      traceId: 't-2',
       strategyKey: 's2',
       exchange: 'binance',
       pair: 'BTC/USDT',
