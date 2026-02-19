@@ -68,6 +68,13 @@ export default () => ({
       ) || 1,
     max_open_orders_per_strategy:
       parseInt(process.env.MARKET_MAKING_MAX_OPEN_ORDERS_PER_STRATEGY, 10) || 50,
+    /**
+     * Global kill-switch for strategy intent execution.
+     * When enabled, intent worker/executor will not place/cancel orders.
+     * Use this for emergency stops without needing to redeploy.
+     */
+    kill_switch_enabled:
+      process.env.MARKET_MAKING_KILL_SWITCH_ENABLED === 'true',
     withdraw_to_exchange_enabled:
       process.env.MARKET_MAKING_WITHDRAW_TO_EXCHANGE_ENABLED === 'true',
     queue_withdraw_on_payment_complete:

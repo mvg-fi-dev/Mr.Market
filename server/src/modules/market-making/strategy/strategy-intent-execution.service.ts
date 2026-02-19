@@ -37,9 +37,13 @@ export class StrategyIntentExecutionService {
     @Optional()
     private readonly exchangeOrderTrackerService?: ExchangeOrderTrackerService,
   ) {
-    this.executeIntents = Boolean(
-      this.configService.get('strategy.execute_intents', false),
+    const killSwitchEnabled = Boolean(
+      this.configService.get('strategy.kill_switch_enabled', false),
     );
+
+    this.executeIntents =
+      Boolean(this.configService.get('strategy.execute_intents', false)) &&
+      !killSwitchEnabled;
     this.maxRetries = Number(
       this.configService.get('strategy.intent_max_retries', 2),
     );
