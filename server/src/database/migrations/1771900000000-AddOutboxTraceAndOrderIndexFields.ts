@@ -1,4 +1,4 @@
-import { MigrationInterface, QueryRunner } from typeorm;
+import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class AddOutboxTraceAndOrderIndexFields1771900000000
   implements MigrationInterface
@@ -9,10 +9,10 @@ export class AddOutboxTraceAndOrderIndexFields1771900000000
     // Improve auditability/replayability: make traceId/orderId queryable without LIKE on JSON.
     // SQLite requires DEFAULT for NOT NULL when adding a column.
     await queryRunner.query(
-      `ALTER TABLE "outbox_event" ADD COLUMN "traceId" varchar NOT NULL DEFAULT ()`,
+      `ALTER TABLE "outbox_event" ADD COLUMN "traceId" varchar NOT NULL DEFAULT ('')`,
     );
     await queryRunner.query(
-      `ALTER TABLE "outbox_event" ADD COLUMN "orderId" varchar NOT NULL DEFAULT ()`,
+      `ALTER TABLE "outbox_event" ADD COLUMN "orderId" varchar NOT NULL DEFAULT ('')`,
     );
 
     await queryRunner.query(
