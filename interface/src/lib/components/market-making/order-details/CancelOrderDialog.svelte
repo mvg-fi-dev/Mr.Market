@@ -18,7 +18,12 @@
     }
 
     function selectTerminate() {
-        dispatch("confirm", { action: "close" });
+        dispatch("confirm", { action: "stop" });
+        close();
+    }
+
+    function selectExit() {
+        dispatch("confirm", { action: "exit" });
         close();
     }
 </script>
@@ -131,7 +136,7 @@
                     </svg>
                 </button>
 
-                <!-- Close Option -->
+                <!-- Stop Option -->
                 <button
                     class="w-full flex items-center gap-4 p-4 bg-base-200 rounded-[20px] hover:bg-red-50 transition-colors text-left group border border-transparent hover:border-red-100"
                     on:click={selectTerminate}
@@ -156,12 +161,61 @@
                     </div>
                     <div class="flex-1">
                         <span class="block font-bold text-red-600 mb-0.5">
-                            {$_("close_order_action")}
+                            Stop
                         </span>
                         <span
                             class="block text-xs text-base-content/60 leading-snug"
                         >
-                            {$_("close_order_desc")}
+                            Stop market making (no exit). You can resume later.
+                        </span>
+                    </div>
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="2"
+                        stroke="currentColor"
+                        class="w-4 h-4 text-base-content/30 group-hover:text-base-content/40"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M8.25 4.5l7.5 7.5-7.5 7.5"
+                        />
+                    </svg>
+                </button>
+
+                <!-- Exit Option -->
+                <button
+                    class="w-full flex items-center gap-4 p-4 bg-base-200 rounded-[20px] hover:bg-red-50 transition-colors text-left group border border-transparent hover:border-red-100"
+                    on:click={selectExit}
+                >
+                    <div
+                        class="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0 group-hover:bg-red-100 transition-colors"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke-width="2.5"
+                            stroke="currentColor"
+                            class="w-6 h-6 text-red-500"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M6 18L18 6M6 6l12 12"
+                            />
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <span class="block font-bold text-red-600 mb-0.5">
+                            Exit
+                        </span>
+                        <span
+                            class="block text-xs text-base-content/60 leading-snug"
+                        >
+                            Stop and withdraw funds back to your wallet.
                         </span>
                     </div>
                     <svg

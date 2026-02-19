@@ -35,6 +35,7 @@
         pauseMarketMakingOrder,
         resumeMarketMakingOrder,
         exitMarketMakingOrder,
+        stopMarketMakingOrder,
     } from "$lib/helpers/mrm/strategy";
     import { user } from "$lib/stores/wallet";
     import { isMarketMakingTerminalState, type MarketMakingState } from "$lib/helpers/mrm/marketMakingState";
@@ -266,6 +267,8 @@
         try {
             if (action === "pause") {
                 await pauseMarketMakingOrder(userId, backendOrder.orderId);
+            } else if (action === "stop") {
+                await stopMarketMakingOrder(userId, backendOrder.orderId);
             } else if (action === "exit") {
                 await exitMarketMakingOrder(userId, backendOrder.orderId);
             } else {

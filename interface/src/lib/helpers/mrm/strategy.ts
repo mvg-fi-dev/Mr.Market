@@ -174,6 +174,22 @@ export const exitMarketMakingOrder = async (userId: string, orderId: string) => 
   }
 };
 
+export const stopMarketMakingOrder = async (userId: string, orderId: string) => {
+  try {
+    const response = await fetch(
+      `${MRM_BACKEND_URL}/user-orders/market-making/${orderId}/stop`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      },
+    );
+    return await handleResponse(response);
+  } catch (error) {
+    console.error('Error stopping market making order:', error);
+  }
+};
+
 export const getMarketMakingHistoryByInstanceId = async (id: string) => {
   try {
     const response = await fetch(
