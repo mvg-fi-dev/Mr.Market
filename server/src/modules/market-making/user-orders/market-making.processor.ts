@@ -955,11 +955,37 @@ export class MarketMakingOrderProcessor {
         chainId: number;
         campaignAddress: string;
       };
+      traceId?: string;
     }>,
   ) {
-    const { orderId, campaignId, hufiCampaign } = job.data;
+    const { orderId, campaignId, hufiCampaign, traceId } = job.data;
 
-    this.logger.log(`Joining campaign for order ${orderId}`);
+    const effectiveTraceId = traceId || `mm:${orderId}`;
+    const idempotencyKey = `mm:join_campaign:${orderId}`;
+
+    this.logger.log(
+      `${this.logCtx({
+        traceId: effectiveTraceId,
+        orderId,
+        job,
+      })} Joining campaign for order ${orderId}`,
+    );
+
+    // Bull jobs can be re-delivered (removeOnComplete=false) or repeated after crashes.
+    // We must not join the campaign (or enqueue start_mm) twice for the same order.
+    if (
+      await this.durabilityService.isProcessed('mm.join_campaign', idempotencyKey)
+    ) {
+      this.logger.warn(
+        `${this.logCtx({
+          traceId: effectiveTraceId,
+          orderId,
+          job,
+        })} join_campaign already processed; skipping`,
+      );
+
+      return;
+    }
 
     try {
       await this.userOrdersService.updateMarketMakingOrderState(
@@ -1049,7 +1075,29 @@ export class MarketMakingOrderProcessor {
         },
       );
 
-      this.logger.log(`Queued market making start for order ${orderId}`);
+      await this.durabilityService.appendOutboxEvent({
+        topic: 'mm.campaign.joined',
+        aggregateType: 'market_making_order',
+        aggregateId: orderId,
+        payload: {
+          traceId: effectiveTraceId,
+          orderId,
+          userId: order.userId,
+          campaignId: localCampaignId,
+          participationId: participation.id,
+          state: 'campaign_joined',
+        },
+      });
+
+      await this.durabilityService.markProcessed('mm.join_campaign', idempotencyKey);
+
+      this.logger.log(
+        `${this.logCtx({
+          traceId: effectiveTraceId,
+          orderId,
+          job,
+        })} Queued market making start for order ${orderId}`,
+      );
     } catch (error) {
       this.logger.error(
         `Error joining campaign for ${orderId}: ${error.message}`,
