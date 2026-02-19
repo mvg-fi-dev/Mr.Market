@@ -6,6 +6,7 @@
 
   import { browser } from "$app/environment";
   import { page } from "$app/stores";
+  import { afterNavigate } from "$app/navigation";
   import { onMount } from "svelte";
   import { mixinConnected } from "$lib/stores/home";
   import { isFirstTimeMarketMaking } from "$lib/stores/market_making";
@@ -58,12 +59,26 @@
   };
 
   // Load on mount, and also reactively reload once wallet/user becomes available
-  // (e.g. after oauth/connect, or after returning from create flow).
+  // (e.g. after oauth/connect).
   onMount(async () => {
     const userId = $user?.user_id;
     if ($mixinConnected && userId) {
       await loadOrders(userId);
     }
+
+    // When user navigates back to /market-making, force a refresh so newly
+    // created orders show up immediately.
+    afterNavigate((nav) => {
+      try {
+        if (nav.to?.url?.pathname !== "/market-making") return;
+        const uid = $user?.user_id;
+        if ($mixinConnected && uid) {
+          loadOrders(uid);
+        }
+      } catch (e) {
+        console.error("afterNavigate loadOrders failed:", e);
+      }
+    });
   });
 
   $: {
