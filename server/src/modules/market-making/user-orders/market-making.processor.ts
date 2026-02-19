@@ -24,6 +24,7 @@ import { WithdrawalService } from 'src/modules/mixin/withdrawal/withdrawal.servi
 import { Repository } from 'typeorm';
 
 import { getRFC3339Timestamp } from '../../../common/helpers/utils';
+import { DurabilityService } from '../durability/durability.service';
 import { MMExchangeAllocationService } from '../exchange-allocation/mm-exchange-allocation.service';
 import { FeeService } from '../fee/fee.service';
 import { BalanceLedgerService } from '../ledger/balance-ledger.service';
@@ -32,7 +33,6 @@ import { NetworkMappingService } from '../network-mapping/network-mapping.servic
 import { PauseWithdrawOrchestratorService } from '../orchestration/pause-withdraw-orchestrator.service';
 import { StrategyService } from '../strategy/strategy.service';
 import { UserOrdersService } from './user-orders.service';
-import { DurabilityService } from '../durability/durability.service';
 
 const DEPOSIT_AMOUNT_TOLERANCE = new BigNumber('0.00000001');
 
@@ -837,6 +837,39 @@ export class MarketMakingOrderProcessor {
         `Executing withdrawals for order ${orderId}: base=${paymentState.baseAssetAmount} ${pairConfig.base_symbol}, quote=${paymentState.quoteAssetAmount} ${pairConfig.quote_symbol}`,
       );
 
+      // Idempotency guard: Bull can re-deliver this job after a crash.
+      // If we already persisted withdrawal tx ids, do NOT execute withdrawals again.
+      if (paymentState.baseWithdrawalTxId && paymentState.quoteWithdrawalTxId) {
+        this.logger.warn(
+          `${this.logCtx({
+            traceId: traceId || `mm:${orderId}`,
+            orderId,
+            job,
+            exchange: exchangeName,
+            apiKeyId: apiKey.key_id,
+          })} Withdrawal already submitted; skipping executeWithdrawal and re-queueing monitor`,
+        );
+
+        await (job.queue as any).add(
+          'monitor_mixin_withdrawal',
+          {
+            orderId,
+            marketMakingPairId,
+            baseWithdrawalTxId: paymentState.baseWithdrawalTxId,
+            quoteWithdrawalTxId: paymentState.quoteWithdrawalTxId,
+            traceId: traceId || `mm:${orderId}`,
+          },
+          {
+            jobId: `monitor_withdrawal_${orderId}`,
+            attempts: 60,
+            backoff: { type: 'fixed', delay: this.RETRY_DELAY_MS },
+            removeOnComplete: false,
+          },
+        );
+
+        return;
+      }
+
       const baseWithdrawalResult =
         await this.withdrawalService.executeWithdrawal(
           paymentState.baseAssetId,
@@ -859,6 +892,16 @@ export class MarketMakingOrderProcessor {
       if (!baseTxId || !quoteTxId) {
         throw new Error('Withdrawal executed but missing request_id');
       }
+
+      // Persist tx ids for crash-safe retries.
+      await this.paymentStateRepository.update(
+        { orderId },
+        {
+          baseWithdrawalTxId: baseTxId,
+          quoteWithdrawalTxId: quoteTxId,
+          updatedAt: getRFC3339Timestamp(),
+        },
+      );
 
       this.logger.log(
         `Withdrawals submitted for order ${orderId}: base=${baseTxId}, quote=${quoteTxId}`,
@@ -1037,7 +1080,9 @@ export class MarketMakingOrderProcessor {
 
     // Bull jobs can be re-delivered (removeOnComplete=false) or repeated after crashes.
     // We must not start the strategy twice for the same order.
-    if (await this.durabilityService.isProcessed('mm.start_mm', idempotencyKey)) {
+    if (
+      await this.durabilityService.isProcessed('mm.start_mm', idempotencyKey)
+    ) {
       this.logger.warn(
         `${this.logCtx({
           traceId,
@@ -1733,6 +1778,16 @@ export class MarketMakingOrderProcessor {
       quoteWithdrawalTxHash,
       traceId,
     } = job.data;
+
+    // Crash-safe: if this job was re-queued without tx ids, recover them from durable payment state.
+    const persisted = await this.paymentStateRepository.findOne({
+      where: { orderId },
+    });
+
+    const effectiveBaseWithdrawalTxId =
+      baseWithdrawalTxId || persisted?.baseWithdrawalTxId;
+    const effectiveQuoteWithdrawalTxId =
+      quoteWithdrawalTxId || persisted?.quoteWithdrawalTxId;
     const startedAt = job.data.startedAt ?? Date.now();
 
     if (!job.data.startedAt) {
@@ -1750,13 +1805,13 @@ export class MarketMakingOrderProcessor {
 
     try {
       // Check base withdrawal confirmation
-      const baseStatus = baseWithdrawalTxId
-        ? await this.checkWithdrawalConfirmation(baseWithdrawalTxId)
+      const baseStatus = effectiveBaseWithdrawalTxId
+        ? await this.checkWithdrawalConfirmation(effectiveBaseWithdrawalTxId)
         : { confirmed: false };
 
       // Check quote withdrawal confirmation
-      const quoteStatus = quoteWithdrawalTxId
-        ? await this.checkWithdrawalConfirmation(quoteWithdrawalTxId)
+      const quoteStatus = effectiveQuoteWithdrawalTxId
+        ? await this.checkWithdrawalConfirmation(effectiveQuoteWithdrawalTxId)
         : { confirmed: false };
 
       this.logger.log(
@@ -1803,6 +1858,16 @@ export class MarketMakingOrderProcessor {
         await this.userOrdersService.updateMarketMakingOrderState(
           orderId,
           'deposit_confirming',
+        );
+
+        // Persist tx hashes for better matching on exchange deposit monitors.
+        await this.paymentStateRepository.update(
+          { orderId },
+          {
+            baseWithdrawalTxHash: baseStatus.txHash,
+            quoteWithdrawalTxHash: quoteStatus.txHash,
+            updatedAt: getRFC3339Timestamp(),
+          },
         );
 
         await (job.queue as any).add(

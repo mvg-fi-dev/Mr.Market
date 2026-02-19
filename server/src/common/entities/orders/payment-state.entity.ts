@@ -53,6 +53,19 @@ export class MarketMakingPaymentState extends PaymentState {
   @Column({ nullable: true })
   baseFeeAssetId: string; // asset ID for base withdrawal fee
 
+  // Withdrawal durability (at-least-once queue): persist tx ids/hashes so retries/restarts don't double-withdraw
+  @Column({ nullable: true })
+  baseWithdrawalTxId?: string;
+
+  @Column({ nullable: true })
+  quoteWithdrawalTxId?: string;
+
+  @Column({ nullable: true })
+  baseWithdrawalTxHash?: string;
+
+  @Column({ nullable: true })
+  quoteWithdrawalTxHash?: string;
+
   @Column({ default: '0' })
   baseFeeAssetAmount: string; // amount of base fee asset received
 
