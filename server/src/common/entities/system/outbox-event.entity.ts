@@ -21,6 +21,21 @@ export class OutboxEvent {
   @Index()
   aggregateId: string;
 
+  /**
+   * First-class fields for auditability/replayability.
+   *
+   * NOTE:
+   * - These duplicate values in payload for indexing/search (avoid SQL LIKE on JSON TEXT).
+   * - Default '' is used for backward compatibility and to keep INSERTs simple.
+   */
+  @Column({ default: '' })
+  @Index()
+  traceId: string;
+
+  @Column({ default: '' })
+  @Index()
+  orderId: string;
+
   @Column({ type: 'text' })
   payload: string;
 

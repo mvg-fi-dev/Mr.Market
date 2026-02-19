@@ -56,6 +56,8 @@ export type OutboxEventDto = {
   topic: string;
   aggregateType: string;
   aggregateId: string;
+  traceId: string;
+  orderId: string;
   payload: string;
   createdAt: string;
 };

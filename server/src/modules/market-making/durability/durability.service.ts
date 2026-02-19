@@ -10,6 +10,12 @@ type AppendOutboxCommand = {
   topic: string;
   aggregateType: string;
   aggregateId: string;
+  /**
+   * Optional extracted fields for indexing/search.
+   * (If omitted, we will best-effort extract from payload.)
+   */
+  traceId?: string;
+  orderId?: string;
   payload: Record<string, unknown>;
 };
 
@@ -23,11 +29,16 @@ export class DurabilityService {
   ) {}
 
   async appendOutboxEvent(command: AppendOutboxCommand): Promise<OutboxEvent> {
+    const payloadTraceId = this.extractString(command.payload?.traceId);
+    const payloadOrderId = this.extractString(command.payload?.orderId);
+
     const event = this.outboxRepository.create({
       eventId: randomUUID(),
       topic: command.topic,
       aggregateType: command.aggregateType,
       aggregateId: command.aggregateId,
+      traceId: command.traceId || payloadTraceId || '',
+      orderId: command.orderId || payloadOrderId || '',
       payload: JSON.stringify(command.payload),
       createdAt: getRFC3339Timestamp(),
     });
@@ -83,6 +94,15 @@ export class DurabilityService {
     });
 
     return Boolean(existing);
+  }
+
+  private extractString(value: unknown): string | undefined {
+    if (typeof value !== 'string') {
+      return undefined;
+    }
+    const v = value.trim();
+
+    return v.length ? v : undefined;
   }
 
   private isUniqueViolation(error: unknown): boolean {

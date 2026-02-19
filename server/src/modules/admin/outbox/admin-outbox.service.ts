@@ -46,18 +46,14 @@ export class AdminOutboxService {
       qb.andWhere('e.createdAt >= :since', { since: query.since });
     }
 
-    // Best-effort grep inside JSON payload.
-    // (SQLite) payload is TEXT so LIKE works.
+    // Prefer indexed first-class fields when available.
+    // Note: legacy rows may have empty traceId/orderId if created before backfill.
     if (query.traceId) {
-      qb.andWhere('e.payload LIKE :traceId', {
-        traceId: `%"traceId":"${query.traceId}"%`,
-      });
+      qb.andWhere('e.traceId = :traceId', { traceId: query.traceId });
     }
 
     if (query.orderId) {
-      qb.andWhere('e.payload LIKE :orderId', {
-        orderId: `%"orderId":"${query.orderId}"%`,
-      });
+      qb.andWhere('e.orderId = :orderId', { orderId: query.orderId });
     }
 
     const events = await qb.getMany();
@@ -69,6 +65,8 @@ export class AdminOutboxService {
         topic: e.topic,
         aggregateType: e.aggregateType,
         aggregateId: e.aggregateId,
+        traceId: (e as any).traceId || '',
+        orderId: (e as any).orderId || '',
         payload: e.payload,
         createdAt: e.createdAt,
       })),

@@ -87,6 +87,26 @@ describe('DurabilityService', () => {
 
     expect(repos.outboxEvents).toHaveLength(1);
     expect(repos.outboxEvents[0].topic).toBe('strategy.intent.created');
+    expect((repos.outboxEvents[0] as any).traceId).toBe('');
+    expect((repos.outboxEvents[0] as any).orderId).toBe('');
+  });
+
+  it('extracts traceId/orderId from payload for indexing', async () => {
+    const repos = createInMemoryRepos();
+    const service = new DurabilityService(
+      repos.outboxRepository as any,
+      repos.consumerReceiptRepository as any,
+    );
+
+    await service.appendOutboxEvent({
+      topic: 'mm.started',
+      aggregateType: 'market_making_order',
+      aggregateId: 'o-1',
+      payload: { traceId: 't-1', orderId: 'o-1', any: 'thing' },
+    });
+
+    expect((repos.outboxEvents[0] as any).traceId).toBe('t-1');
+    expect((repos.outboxEvents[0] as any).orderId).toBe('o-1');
   });
 
   it('marks consumer receipt idempotently', async () => {
