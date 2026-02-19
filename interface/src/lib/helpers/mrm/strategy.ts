@@ -126,6 +126,54 @@ export const stopPureMarketMaking = async (userId: string, clientId: string) => 
   }
 }
 
+export const pauseMarketMakingOrder = async (userId: string, orderId: string) => {
+  try {
+    const response = await fetch(
+      `${MRM_BACKEND_URL}/user-orders/market-making/${orderId}/pause`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      },
+    );
+    return await handleResponse(response);
+  } catch (error) {
+    console.error('Error pausing market making order:', error);
+  }
+};
+
+export const resumeMarketMakingOrder = async (userId: string, orderId: string) => {
+  try {
+    const response = await fetch(
+      `${MRM_BACKEND_URL}/user-orders/market-making/${orderId}/resume`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      },
+    );
+    return await handleResponse(response);
+  } catch (error) {
+    console.error('Error resuming market making order:', error);
+  }
+};
+
+export const exitMarketMakingOrder = async (userId: string, orderId: string) => {
+  try {
+    const response = await fetch(
+      `${MRM_BACKEND_URL}/user-orders/market-making/${orderId}/exit-withdrawal`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      },
+    );
+    return await handleResponse(response);
+  } catch (error) {
+    console.error('Error exiting market making order:', error);
+  }
+};
+
 export const getMarketMakingHistoryByInstanceId = async (id: string) => {
   try {
     const response = await fetch(

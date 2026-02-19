@@ -13,6 +13,7 @@
     import { _ } from "svelte-i18n";
     import BigNumber from "bignumber.js";
     import { onDestroy, onMount } from "svelte";
+    import { get } from "svelte/store";
 
     import { ORDER_STATE_FETCH_INTERVAL, ORDER_STATE_TIMEOUT_DURATION } from "$lib/helpers/constants";
 
@@ -29,7 +30,13 @@
 
         return ORDER_STATE_TIMEOUT_DURATION;
     };
-    import { getUserOrderMarketMakingById } from "$lib/helpers/mrm/strategy";
+    import {
+        getUserOrderMarketMakingById,
+        pauseMarketMakingOrder,
+        resumeMarketMakingOrder,
+        exitMarketMakingOrder,
+    } from "$lib/helpers/mrm/strategy";
+    import { user } from "$lib/stores/wallet";
     import { isMarketMakingTerminalState, type MarketMakingState } from "$lib/helpers/mrm/marketMakingState";
 
     export let data: PageData;
@@ -245,11 +252,48 @@
           }
         : mockOrder;
 
-    function handleCancelConfirm(event: CustomEvent) {
+    async function handleCancelConfirm(event: CustomEvent) {
         const { action } = event.detail;
-        console.log(`Order cancellation confirmed: ${action}`);
-        // TODO: Implement actual pause/close logic here
+
+        const currentUser = get(user);
+        const userId = currentUser?.user_id;
+
+        if (!userId || !backendOrder?.orderId) {
+            console.warn("Missing userId or orderId for cancel action");
+            return;
+        }
+
+        try {
+            if (action === "pause") {
+                await pauseMarketMakingOrder(userId, backendOrder.orderId);
+            } else if (action === "exit") {
+                await exitMarketMakingOrder(userId, backendOrder.orderId);
+            } else {
+                // noop
+            }
+
+            await refreshNow();
+        } catch (e) {
+            console.error("Failed to handle cancel action:", e);
+        }
     }
+
+    const handleResume = async () => {
+        const currentUser = get(user);
+        const userId = currentUser?.user_id;
+
+        if (!userId || !backendOrder?.orderId) {
+            return;
+        }
+
+        try {
+            await resumeMarketMakingOrder(userId, backendOrder.orderId);
+            await refreshNow();
+            resumeAutoRefresh();
+        } catch (e) {
+            console.error("Failed to resume market making:", e);
+        }
+    };
 </script>
 
 <div class="min-h-screen bg-gray-50 pb-10">
@@ -332,6 +376,17 @@
         on:cancel={() => (isCancelDialogOpen = true)}
         on:modify={() => (showModifyModal = true)}
     />
+
+    {#if backendOrder?.state === "paused"}
+        <div class="mx-4 mt-4">
+            <button
+                class="btn btn-primary w-full rounded-full"
+                on:click={handleResume}
+            >
+                Resume
+            </button>
+        </div>
+    {/if}
 
     <ModifyOrderModal
         isOpen={showModifyModal}
