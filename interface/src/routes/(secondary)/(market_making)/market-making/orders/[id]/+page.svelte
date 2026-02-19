@@ -73,6 +73,8 @@
         error: null as string | null,
     };
 
+    let pollTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
     const normalizeOrder = (res: any) => res?.data ?? res;
 
     const shouldPoll = (state?: MarketMakingState | null) => {
@@ -85,6 +87,13 @@
     const schedulePoll = (orderId: string) => {
         const startedAt = polling.startedAt || Date.now();
         polling.startedAt = startedAt;
+
+        const setNext = (fn: () => void, ms: number) => {
+            if (pollTimeoutId) {
+                clearTimeout(pollTimeoutId);
+            }
+            pollTimeoutId = setTimeout(fn, ms);
+        };
 
         const tick = async () => {
             try {
@@ -105,12 +114,12 @@
                 polling.error = e?.message || String(e);
             } finally {
                 if (shouldPoll(backendOrder?.state)) {
-                    setTimeout(tick, ORDER_STATE_FETCH_INTERVAL);
+                    setNext(tick, ORDER_STATE_FETCH_INTERVAL);
                 }
             }
         };
 
-        setTimeout(tick, ORDER_STATE_FETCH_INTERVAL);
+        setNext(tick, ORDER_STATE_FETCH_INTERVAL);
     };
 
     $: ordersPlaced = history.length.toString();
@@ -159,6 +168,9 @@
 
     onDestroy(() => {
         polling.enabled = false;
+        if (pollTimeoutId) {
+            clearTimeout(pollTimeoutId);
+        }
     });
 
     $: order = backendOrder
@@ -166,11 +178,7 @@
               symbol: backendOrder.pair || "---",
               ordersPlaced: ordersPlaced,
               volume: volume,
-              active:
-                  backendOrder.state === "created" ||
-                  backendOrder.state === "resumed" ||
-                  backendOrder.state === "payment_complete" ||
-                  backendOrder.state === "in_progress",
+              active: backendOrder.state === "running",
               totalRevenue: "---", // TODO: Calculate revenue
               pnl: "---", // TODO: Calculate PnL
               profitFromSpreads: "---",
@@ -212,7 +220,12 @@
         on:click={() => (showExecutionDetails = true)}
     />
 
-    <FlowStatusCard state={backendOrder?.state} />
+    <FlowStatusCard
+        state={backendOrder?.state}
+        lastUpdatedAt={polling.lastUpdatedAt}
+        timedOut={polling.timedOut}
+        error={polling.error}
+    />
 
     <RevenueCard
         totalRevenue={order.totalRevenue || "$0.00"}

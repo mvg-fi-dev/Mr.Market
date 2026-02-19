@@ -6,6 +6,9 @@
   } from "$lib/helpers/mrm/marketMakingState";
 
   export let state: MarketMakingState | null | undefined;
+  export let lastUpdatedAt: number | null | undefined = null;
+  export let timedOut: boolean | null | undefined = null;
+  export let error: string | null | undefined = null;
 
   $: display = getMarketMakingStateDisplay(state);
   $: steps = getMarketMakingFlowSteps(state);
@@ -18,6 +21,11 @@
         : display.tone === 'error'
           ? 'bg-red-50 text-red-600 border-red-100'
           : 'bg-blue-50 text-blue-600 border-blue-100';
+
+  const formatTime = (ts?: number | null) => {
+    if (!ts) return '---';
+    return new Date(ts).toLocaleTimeString();
+  };
 </script>
 
 <div class="mx-4 mt-4">
@@ -56,8 +64,15 @@
       </div>
     </div>
 
-    <div class="mt-3 text-xs text-base-content/50">
-      Current state: {state || '---'}
+    <div class="mt-3 text-xs text-base-content/50 space-y-1">
+      <div>Current state: {state || '---'}</div>
+      <div>Last updated: {formatTime(lastUpdatedAt)}</div>
+      {#if timedOut}
+        <div class="text-amber-700">Auto-refresh timed out. Pull to refresh or reopen this page.</div>
+      {/if}
+      {#if error}
+        <div class="text-red-600">Last error: {error}</div>
+      {/if}
     </div>
   </div>
 </div>
