@@ -83,8 +83,11 @@ export class StrategyIntentExecutionService {
           topic: 'strategy.intent.skipped',
           aggregateType: 'strategy_intent',
           aggregateId: intent.intentId,
+          // For market-making, clientId === orderId.
+          orderId: intent.clientId,
           payload: {
             ...intent,
+            orderId: intent.clientId,
             eventType: 'EXECUTION_EVENT',
             eventStatus: 'SKIPPED',
             skipReason: 'MAX_OPEN_ORDERS_REACHED',
@@ -130,7 +133,8 @@ export class StrategyIntentExecutionService {
         topic: 'strategy.intent.skipped',
         aggregateType: 'strategy_intent',
         aggregateId: intent.intentId,
-        payload: intent,
+        orderId: intent.clientId,
+        payload: { ...intent, orderId: intent.clientId },
       });
       await this.durabilityService?.markProcessed(
         'strategy-intent-execution',
@@ -240,8 +244,10 @@ export class StrategyIntentExecutionService {
         topic: 'strategy.intent.executed',
         aggregateType: 'strategy_intent',
         aggregateId: intent.intentId,
+        orderId: intent.clientId,
         payload: {
           ...intent,
+          orderId: intent.clientId,
           eventType: 'EXECUTION_EVENT',
           eventStatus: 'DONE',
           executedMixinOrderId,
@@ -262,8 +268,10 @@ export class StrategyIntentExecutionService {
         topic: 'strategy.intent.failed',
         aggregateType: 'strategy_intent',
         aggregateId: intent.intentId,
+        orderId: intent.clientId,
         payload: {
           ...intent,
+          orderId: intent.clientId,
           eventType: 'EXECUTION_EVENT',
           eventStatus: 'FAILED',
           executedMixinOrderId,
