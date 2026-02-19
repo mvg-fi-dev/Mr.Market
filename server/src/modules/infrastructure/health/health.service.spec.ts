@@ -86,22 +86,31 @@ describe('HealthService', () => {
     );
   });
   describe('getAllHealth', () => {
-    it('should throw error and not handle any additional exchange if any exchange fetch fail', async () => {
-      await expect(service.getAllHealth()).rejects.toThrow(
-        'Exchange bitfinex is dead',
-      );
+    it('should not throw on exchange fetch failures (reports dead instead)', async () => {
+      const result = await service.getAllHealth();
+
+      expect(result.exchanges).toEqual([
+        { name: 'Bitfinex', status: 'dead' },
+        { name: 'MEXC Global', status: 'dead' },
+        { name: 'Binance', status: 'alive' },
+      ]);
+      expect(result.ok).toBe(false);
+      expect(typeof result.timestamp).toBe('string');
     });
+
     it('should handle both alive and dead exchanges fetch', async () => {
       const bitfinexMock = service['exchanges'].get('bitfinex');
 
       bitfinexMock.fetchBalance = jest.fn().mockResolvedValue({ total: 100 });
       const allExchangesHealthResult = await service.getAllHealth();
 
-      expect(allExchangesHealthResult).toEqual([
-        { Bitfinex: 'alive' },
-        { 'MEXC Global': 'dead' },
-        { Binance: 'alive' },
+      expect(allExchangesHealthResult.exchanges).toEqual([
+        { name: 'Bitfinex', status: 'alive' },
+        { name: 'MEXC Global', status: 'dead' },
+        { name: 'Binance', status: 'alive' },
       ]);
+      expect(allExchangesHealthResult.ok).toBe(false);
+      expect(typeof allExchangesHealthResult.timestamp).toBe('string');
     });
   });
   describe('getExchangeHealth', () => {

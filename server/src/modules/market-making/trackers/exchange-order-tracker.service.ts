@@ -6,12 +6,14 @@ import {
 } from '@nestjs/common';
 import { getRFC3339Timestamp } from 'src/common/helpers/utils';
 
+import { DurabilityService } from '../durability/durability.service';
 import { ExchangeConnectorAdapterService } from '../execution/exchange-connector-adapter.service';
 import { ClockTickCoordinatorService } from '../tick/clock-tick-coordinator.service';
 import { TickComponent } from '../tick/tick-component.interface';
 
 type TrackedOrder = {
   strategyKey: string;
+  traceId?: string;
   exchange: string;
   pair: string;
   exchangeOrderId: string;
@@ -33,6 +35,8 @@ export class ExchangeOrderTrackerService
     private readonly clockTickCoordinatorService?: ClockTickCoordinatorService,
     @Optional()
     private readonly exchangeConnectorAdapterService?: ExchangeConnectorAdapterService,
+    @Optional()
+    private readonly durabilityService?: DurabilityService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -63,9 +67,21 @@ export class ExchangeOrderTrackerService
     this.orders.set(order.exchangeOrderId, order);
   }
 
+  countAll(): number {
+    return this.orders.size;
+  }
+
+  countOpen(): number {
+    return [...this.orders.values()].filter(
+      (order) => order.status === 'open' || order.status === 'partially_filled',
+    ).length;
+  }
+
   getOpenOrders(strategyKey: string): TrackedOrder[] {
     return [...this.orders.values()].filter(
-      (order) => order.strategyKey === strategyKey && order.status === 'open',
+      (order) =>
+        order.strategyKey === strategyKey &&
+        (order.status === 'open' || order.status === 'partially_filled'),
     );
   }
 
@@ -91,10 +107,28 @@ export class ExchangeOrderTrackerService
 
       const normalizedStatus = this.normalizeStatus(latest.status);
 
-      this.orders.set(order.exchangeOrderId, {
+      if (normalizedStatus === order.status) {
+        continue;
+      }
+
+      const updated = {
         ...order,
         status: normalizedStatus,
         updatedAt: getRFC3339Timestamp(),
+      };
+
+      this.orders.set(order.exchangeOrderId, updated);
+
+      await this.durabilityService?.appendOutboxEvent({
+        topic: 'market_making.exchange_order.status_changed',
+        aggregateType: 'exchange_order',
+        aggregateId: order.exchangeOrderId,
+        payload: {
+          ...updated,
+          eventType: 'TRACKER_EVENT',
+          prevStatus: order.status,
+          newStatus: normalizedStatus,
+        },
       });
     }
   }

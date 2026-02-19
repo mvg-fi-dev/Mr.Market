@@ -11,6 +11,8 @@ import { getRFC3339Timestamp } from '../../../common/helpers/utils';
 import { ExchangeInitService } from '../exchange-init/exchange-init.service';
 import { CustomLogger } from '../logger/logger.service';
 
+import { HealthSummaryDto } from './health.dto';
+
 type HEALTH_STATE = 'alive' | 'dead';
 
 @Injectable()
@@ -48,40 +50,50 @@ export class HealthService {
     return 'pong';
   }
 
-  async getAllHealth(): Promise<any> {
-    const healthMap = new Map<string, string>();
+  async getAllHealth(): Promise<HealthSummaryDto> {
+    const healthMap = new Map<string, HEALTH_STATE>();
     const allExchanges = Array.from(this.exchanges.values());
-    // Get balance from each exchange to test if API key is valid
-    const allRequests = [];
 
-    for (let i = 0; i < allExchanges.length; i++) {
-      try {
-        allRequests.push(allExchanges[i].fetchBalance());
-      } catch (e) {
-        healthMap.set(allExchanges[i].name, 'dead' as HEALTH_STATE);
-        this.logger.error(`Exchange ${allExchanges[i].name} is dead`);
-      }
-    }
-
-    const responses = await Promise.all(allRequests);
-
-    for (let i = 0; i < responses.length; i++) {
-      if (!responses[i]) {
-        // there is no field like balance in responses[i]
-        healthMap.set(allExchanges[i].name, 'dead' as HEALTH_STATE);
-        this.logger.error(`Exchange ${allExchanges[i].name} is dead`);
-      } else {
-        healthMap.set(allExchanges[i].name, 'alive' as HEALTH_STATE);
-      }
-    }
-
-    const result = Array.from(healthMap, ([key, value]) => ({ [key]: value }));
-
-    if (result.length === 0) {
+    if (allExchanges.length === 0) {
       throw new InternalServerErrorException(`Exchanges are all dead`);
     }
 
-    return result;
+    // Get balance from each exchange to test if API key is valid.
+    // Use allSettled so one broken exchange doesn't break the whole health endpoint.
+    const settled = await Promise.allSettled(
+      allExchanges.map((ex) => Promise.resolve().then(() => ex.fetchBalance())),
+    );
+
+    for (let i = 0; i < settled.length; i++) {
+      const ex = allExchanges[i];
+      const outcome = settled[i];
+
+      if (outcome.status === 'rejected') {
+        healthMap.set(ex.name, 'dead');
+        this.logger.error(`Exchange ${ex.name} is dead`);
+        continue;
+      }
+
+      if (!outcome.value) {
+        // there is no field like balance in outcome.value
+        healthMap.set(ex.name, 'dead');
+        this.logger.error(`Exchange ${ex.name} is dead`);
+        continue;
+      }
+
+      healthMap.set(ex.name, 'alive');
+    }
+
+    const exchanges = Array.from(healthMap.entries()).map(([name, status]) => ({
+      name,
+      status,
+    }));
+
+    return {
+      ok: exchanges.every((e) => e.status === 'alive'),
+      timestamp: getRFC3339Timestamp(),
+      exchanges,
+    };
   }
 
   async getExchangeHealth(exchangeName: string): Promise<any> {

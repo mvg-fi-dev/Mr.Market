@@ -2,6 +2,8 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 
+import { HealthSummaryDto } from './health.dto';
+
 import { HealthService } from './health.service';
 
 @ApiTags('System')
@@ -11,10 +13,10 @@ export class HealthController {
 
   @Get('/')
   @ApiOperation({ summary: 'Get server health status' })
-  @ApiResponse({ status: 200, description: 'Server health' })
+  @ApiResponse({ status: 200, description: 'Server health', type: HealthSummaryDto })
   @ApiResponse({ status: 400, description: 'Bad Request' })
-  async getHealth() {
-    return this.healthService.getAllHealth();
+  async getHealth(): Promise<HealthSummaryDto> {
+    return await this.healthService.getAllHealth();
   }
 
   @Get('/ping')
