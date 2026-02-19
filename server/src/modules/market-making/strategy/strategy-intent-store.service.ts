@@ -27,6 +27,7 @@ export class StrategyIntentStoreService {
       strategyKey: intent.strategyKey,
       userId: intent.userId,
       clientId: intent.clientId,
+      traceId: intent.traceId,
       type: intent.type,
       exchange: intent.exchange,
       pair: intent.pair,

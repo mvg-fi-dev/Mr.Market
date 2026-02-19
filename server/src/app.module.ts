@@ -137,6 +137,7 @@ dotenv.config();
         HufiScoreSnapshot,
         StrategyOrderIntentEntity,
       ],
+      migrations: ['dist/src/database/migrations/*{.ts,.js}'],
       synchronize: false,
       migrationsRun: true,
       extra: {

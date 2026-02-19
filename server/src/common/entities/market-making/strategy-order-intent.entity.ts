@@ -22,6 +22,9 @@ export class StrategyOrderIntentEntity {
   @Column()
   clientId: string;
 
+  @Column({ nullable: true })
+  traceId?: string;
+
   @Column()
   type: string;
 

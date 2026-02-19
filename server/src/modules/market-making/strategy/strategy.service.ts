@@ -763,6 +763,7 @@ export class StrategyService
     return {
       type: 'CREATE_LIMIT_ORDER',
       intentId: `${strategyKey}:${ts}:${suffix}`,
+      traceId: `mm:${strategyKey}:${ts}`,
       strategyInstanceId,
       strategyKey,
       userId,
@@ -799,8 +800,12 @@ export class StrategyService
       await this.strategyIntentExecutionService?.consumeIntents(intents);
     }
 
+    const traceId = intents[0]?.traceId;
+
     this.logger.log(
-      `Published ${intents.length} intents for ${strategyKey} (driver=${intentExecutionDriver})`,
+      `Published ${intents.length} intents for ${strategyKey} (driver=${intentExecutionDriver})${
+        traceId ? ` traceId=${traceId}` : ''
+      }`,
     );
   }
 

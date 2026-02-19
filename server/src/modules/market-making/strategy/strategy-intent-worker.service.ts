@@ -223,6 +223,7 @@ export class StrategyIntentWorkerService
       strategyKey: intentEntity.strategyKey,
       userId: intentEntity.userId,
       clientId: intentEntity.clientId,
+      traceId: intentEntity.traceId,
       exchange: intentEntity.exchange,
       pair: intentEntity.pair,
       side: intentEntity.side as StrategyOrderIntent['side'],
