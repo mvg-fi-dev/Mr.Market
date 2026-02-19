@@ -354,7 +354,7 @@
         <div class="mx-4 mt-4">
             <div class="bg-white rounded-2xl shadow-sm border border-gray-50 p-4">
                 <div class="text-sm font-bold text-gray-500">Lifecycle evidence</div>
-                <div class="mt-3 grid grid-cols-3 gap-3">
+                <div class="mt-3 grid grid-cols-4 gap-3">
                     <div class="text-center">
                         <div class="text-lg font-bold text-base-content">
                             {lifecycle.intents?.length || 0}
@@ -373,7 +373,36 @@
                         </div>
                         <div class="text-xs text-base-content/60">History</div>
                     </div>
+                    <div class="text-center">
+                        <div class="text-lg font-bold text-base-content">
+                            {lifecycle.outboxSummary?.total || lifecycle.outbox?.length || 0}
+                        </div>
+                        <div class="text-xs text-base-content/60">Outbox</div>
+                    </div>
                 </div>
+
+                {#if lifecycle.outboxSummary?.firstCreatedAt || lifecycle.outboxSummary?.lastCreatedAt}
+                    <div class="mt-3 text-xs text-base-content/60">
+                        Outbox range:
+                        {lifecycle.outboxSummary?.firstCreatedAt ? new Date(lifecycle.outboxSummary.firstCreatedAt).toLocaleString() : "---"}
+                        →
+                        {lifecycle.outboxSummary?.lastCreatedAt ? new Date(lifecycle.outboxSummary.lastCreatedAt).toLocaleString() : "---"}
+                    </div>
+                {/if}
+
+                {#if lifecycle.outboxSummary?.topicCounts}
+                    <div class="mt-3">
+                        <div class="text-xs text-base-content/60">Topics</div>
+                        <div class="mt-2 flex flex-wrap gap-2">
+                            {#each Object.entries(lifecycle.outboxSummary.topicCounts) as [topic, count]}
+                                <div class="px-2 py-1 rounded-full bg-base-200 text-xs">
+                                    <span class="font-mono">{topic}</span>
+                                    <span class="ml-1 opacity-70">×{count}</span>
+                                </div>
+                            {/each}
+                        </div>
+                    </div>
+                {/if}
             </div>
         </div>
     {/if}

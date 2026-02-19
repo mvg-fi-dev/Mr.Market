@@ -201,6 +201,13 @@ export const getMarketMakingHistoryByInstanceId = async (id: string) => {
   }
 };
 
+export type OutboxSummaryV0 = {
+  total: number;
+  topicCounts: Record<string, number>;
+  firstCreatedAt?: string;
+  lastCreatedAt?: string;
+};
+
 export type MarketMakingLifecycleBundle =
   | {
       ok: false;
@@ -213,6 +220,8 @@ export type MarketMakingLifecycleBundle =
       intents: unknown[];
       openOrders: unknown[];
       history: unknown[];
+      outboxSummary?: OutboxSummaryV0;
+      outbox?: unknown[];
     };
 
 export const getMarketMakingLifecycleBundle = async (
