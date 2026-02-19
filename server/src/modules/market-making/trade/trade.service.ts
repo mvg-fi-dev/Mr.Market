@@ -4,9 +4,11 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import * as ccxt from 'ccxt';
+import { getRFC3339Timestamp } from 'src/common/helpers/utils';
 import { ExchangeInitService } from 'src/modules/infrastructure/exchange-init/exchange-init.service';
 
 import { CustomLogger } from '../../infrastructure/logger/logger.service';
+import { DurabilityService } from '../durability/durability.service';
 import { LimitTradeDto, MarketTradeDto } from './trade.dto';
 import { TradeRepository } from './trade.repository';
 
@@ -18,6 +20,7 @@ export class TradeService {
   constructor(
     private tradeRepository: TradeRepository,
     private exchangeInitService: ExchangeInitService,
+    private readonly durabilityService: DurabilityService,
   ) {}
 
   private getExchange(exchangeName: string): ccxt.Exchange {
@@ -31,9 +34,13 @@ export class TradeService {
     return exchange;
   }
 
-  async executeMarketTrade(marketTradeDto: MarketTradeDto) {
+  async executeMarketTrade(
+    marketTradeDto: MarketTradeDto,
+  ): Promise<ccxt.Order> {
     const { userId, clientId, traceId, exchange, symbol, side, amount } =
       marketTradeDto;
+
+    const effectiveTraceId = traceId || `trade:${clientId}`;
 
     if (!symbol || !side || !amount) {
       throw new BadRequestException(
@@ -56,7 +63,7 @@ export class TradeService {
         userId,
         clientId,
         exchange,
-        traceId: traceId || '',
+        traceId: effectiveTraceId,
         symbol,
         type: 'market',
         side: side,
@@ -66,9 +73,50 @@ export class TradeService {
         orderId: order.id, // Assuming the order object has an id field
       });
 
-      // return order;
+      await this.durabilityService.appendOutboxEvent({
+        topic: 'market_making.trade.executed',
+        aggregateType: 'trade',
+        aggregateId: `${exchange}:${order.id}`,
+        payload: {
+          eventType: 'TRADE_EXECUTED',
+          traceId: effectiveTraceId,
+          orderId: order.id,
+          exchange,
+          symbol,
+          side,
+          type: 'market',
+          amount: amount.toString(),
+          price: (order.price || 0).toString(),
+          status: order.status,
+          userId,
+          clientId,
+          createdAt: getRFC3339Timestamp(),
+        },
+      });
+
+      return order;
     } catch (error) {
       this.logger.error(`Failed to execute market trade: ${error.message}`);
+
+      await this.durabilityService.appendOutboxEvent({
+        topic: 'market_making.trade.failed',
+        aggregateType: 'trade',
+        aggregateId: `${exchange}:market:${clientId}`,
+        payload: {
+          eventType: 'TRADE_FAILED',
+          traceId: effectiveTraceId,
+          exchange,
+          symbol,
+          side,
+          type: 'market',
+          amount: amount.toString(),
+          userId,
+          clientId,
+          errorMessage: String(error.message || ''),
+          failedAt: getRFC3339Timestamp(),
+        },
+      });
+
       throw new InternalServerErrorException(
         `Trade execution failed: ${error.message}`,
       );
@@ -78,6 +126,8 @@ export class TradeService {
   async executeLimitTrade(limitTradeDto: LimitTradeDto): Promise<ccxt.Order> {
     const { userId, clientId, traceId, exchange, symbol, side, amount, price } =
       limitTradeDto;
+
+    const effectiveTraceId = traceId || `trade:${clientId}`;
 
     if (!symbol || !side || !amount || !price) {
       throw new BadRequestException(
@@ -102,7 +152,7 @@ export class TradeService {
         userId,
         clientId,
         exchange,
-        traceId: traceId || '',
+        traceId: effectiveTraceId,
         symbol,
         side: side,
         type: 'limit',
@@ -112,9 +162,51 @@ export class TradeService {
         orderId: order.id, // Assuming the order object has an id field
       });
 
+      await this.durabilityService.appendOutboxEvent({
+        topic: 'market_making.trade.executed',
+        aggregateType: 'trade',
+        aggregateId: `${exchange}:${order.id}`,
+        payload: {
+          eventType: 'TRADE_EXECUTED',
+          traceId: effectiveTraceId,
+          orderId: order.id,
+          exchange,
+          symbol,
+          side,
+          type: 'limit',
+          amount: amount.toString(),
+          price: price.toString(),
+          status: order.status,
+          userId,
+          clientId,
+          createdAt: getRFC3339Timestamp(),
+        },
+      });
+
       return order;
     } catch (error) {
       this.logger.error(`Failed to execute limit trade: ${error.message}`);
+
+      await this.durabilityService.appendOutboxEvent({
+        topic: 'market_making.trade.failed',
+        aggregateType: 'trade',
+        aggregateId: `${exchange}:limit:${clientId}`,
+        payload: {
+          eventType: 'TRADE_FAILED',
+          traceId: effectiveTraceId,
+          exchange,
+          symbol,
+          side,
+          type: 'limit',
+          amount: amount.toString(),
+          price: price.toString(),
+          userId,
+          clientId,
+          errorMessage: String(error.message || ''),
+          failedAt: getRFC3339Timestamp(),
+        },
+      });
+
       throw new InternalServerErrorException(
         `Trade execution failed: ${error.message}`,
       );
@@ -122,12 +214,44 @@ export class TradeService {
   }
 
   async cancelOrder(orderId: string, symbol: string): Promise<void> {
+    if (!this.exchange) {
+      throw new InternalServerErrorException(
+        'Exchange is not initialized for cancelOrder.',
+      );
+    }
+
     try {
       await this.exchange.cancelOrder(orderId, symbol);
       // update the transaction status in database
       await this.tradeRepository.updateTradeStatus(orderId, 'cancelled');
+
+      await this.durabilityService.appendOutboxEvent({
+        topic: 'market_making.trade.cancelled',
+        aggregateType: 'trade',
+        aggregateId: orderId,
+        payload: {
+          eventType: 'TRADE_CANCELLED',
+          orderId,
+          symbol,
+          cancelledAt: getRFC3339Timestamp(),
+        },
+      });
     } catch (error) {
       this.logger.error(`Failed to cancel order: ${error.message}`);
+
+      await this.durabilityService.appendOutboxEvent({
+        topic: 'market_making.trade.cancel_failed',
+        aggregateType: 'trade',
+        aggregateId: orderId,
+        payload: {
+          eventType: 'TRADE_CANCEL_FAILED',
+          orderId,
+          symbol,
+          errorMessage: String(error.message || ''),
+          failedAt: getRFC3339Timestamp(),
+        },
+      });
+
       throw new InternalServerErrorException(
         `Order cancellation failed: ${error.message}`,
       );

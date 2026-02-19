@@ -1,5 +1,9 @@
 # Execution Flow Changelog
 
+## 2026-02-19
+
+- Emit durable outbox events for trade execute/cancel/fail (traceId-ready)
+
 ## 2026-02-18
 
 - Add market-making soft control endpoints (pause/resume/stop)

@@ -7,6 +7,7 @@ import * as ccxt from 'ccxt';
 import { ExchangeInitService } from 'src/modules/infrastructure/exchange-init/exchange-init.service';
 
 import { CustomLogger } from '../../infrastructure/logger/logger.service';
+import { DurabilityService } from '../durability/durability.service';
 import { LimitTradeDto, MarketTradeDto } from './trade.dto';
 import { TradeRepository } from './trade.repository';
 import { TradeService } from './trade.service';
@@ -18,6 +19,11 @@ describe('TradeService', () => {
   let tradeRepository: TradeRepository;
   let exchangeInitService: ExchangeInitService;
   let exchangeMock;
+  let durabilityService;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -36,6 +42,12 @@ describe('TradeService', () => {
             getExchange: jest.fn(),
           },
         },
+        {
+          provide: DurabilityService,
+          useValue: {
+            appendOutboxEvent: jest.fn(),
+          },
+        },
         CustomLogger,
       ],
     }).compile();
@@ -43,6 +55,7 @@ describe('TradeService', () => {
     service = module.get<TradeService>(TradeService);
     tradeRepository = module.get<TradeRepository>(TradeRepository);
     exchangeInitService = module.get<ExchangeInitService>(ExchangeInitService);
+    durabilityService = module.get(DurabilityService);
     exchangeMock = new ccxt.binance();
   });
 
@@ -67,7 +80,9 @@ describe('TradeService', () => {
       exchangeInitService.getExchange = jest.fn().mockReturnValue(exchangeMock);
       exchangeMock.createOrder = jest.fn().mockResolvedValue(orderMock);
 
-      await service.executeMarketTrade(marketTradeDto);
+      const order = await service.executeMarketTrade(marketTradeDto);
+
+      expect(order).toEqual(orderMock);
 
       expect(exchangeInitService.getExchange).toHaveBeenCalledWith('binance');
       expect(exchangeMock.createOrder).toHaveBeenCalledWith(
@@ -89,6 +104,14 @@ describe('TradeService', () => {
         price: '30000',
         orderId: 'order123',
       });
+
+      expect(durabilityService.appendOutboxEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          topic: 'market_making.trade.executed',
+          aggregateType: 'trade',
+          aggregateId: 'binance:order123',
+        }),
+      );
     });
 
     it('should throw BadRequestException if required parameters are missing', async () => {
@@ -126,6 +149,8 @@ describe('TradeService', () => {
       await expect(service.executeMarketTrade(marketTradeDto)).rejects.toThrow(
         InternalServerErrorException,
       );
+
+      expect(tradeRepository.createTrade).not.toHaveBeenCalled();
     });
   });
 
@@ -151,7 +176,9 @@ describe('TradeService', () => {
       exchangeInitService.getExchange = jest.fn().mockReturnValue(exchangeMock);
       exchangeMock.createOrder = jest.fn().mockResolvedValue(orderMock);
 
-      await service.executeLimitTrade(limitTradeDto);
+      const order = await service.executeLimitTrade(limitTradeDto);
+
+      expect(order).toEqual(orderMock);
 
       expect(exchangeInitService.getExchange).toHaveBeenCalledWith('binance');
       expect(exchangeMock.createOrder).toHaveBeenCalledWith(
@@ -174,6 +201,14 @@ describe('TradeService', () => {
         status: 'open',
         orderId: 'order123',
       });
+
+      expect(durabilityService.appendOutboxEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          topic: 'market_making.trade.executed',
+          aggregateType: 'trade',
+          aggregateId: 'binance:order123',
+        }),
+      );
     });
 
     it('should throw BadRequestException if required parameters are missing', async () => {
@@ -213,6 +248,8 @@ describe('TradeService', () => {
       await expect(service.executeLimitTrade(limitTradeDto)).rejects.toThrow(
         InternalServerErrorException,
       );
+
+      expect(tradeRepository.createTrade).not.toHaveBeenCalled();
     });
   });
 
@@ -232,6 +269,14 @@ describe('TradeService', () => {
         orderId,
         'cancelled',
       );
+
+      expect(durabilityService.appendOutboxEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          topic: 'market_making.trade.cancelled',
+          aggregateType: 'trade',
+          aggregateId: orderId,
+        }),
+      );
     });
 
     it('should throw InternalServerErrorException if order cancellation fails', async () => {
@@ -246,6 +291,14 @@ describe('TradeService', () => {
 
       await expect(service.cancelOrder(orderId, symbol)).rejects.toThrow(
         InternalServerErrorException,
+      );
+
+      expect(durabilityService.appendOutboxEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          topic: 'market_making.trade.cancel_failed',
+          aggregateType: 'trade',
+          aggregateId: orderId,
+        }),
       );
     });
   });
