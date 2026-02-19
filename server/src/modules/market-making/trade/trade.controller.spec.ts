@@ -13,6 +13,7 @@ describe('TradeController', () => {
       executeMarketTrade: jest.fn(),
       executeLimitTrade: jest.fn(),
       cancelOrder: jest.fn(),
+      getTradeHistoryByClientId: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({

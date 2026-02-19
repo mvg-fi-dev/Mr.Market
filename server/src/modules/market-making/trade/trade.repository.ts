@@ -11,12 +11,20 @@ export class TradeRepository {
     private readonly repository: Repository<Trade>,
   ) {}
 
-  async findTradesByUser(userId: string): Promise<Trade[]> {
-    return this.repository.find({ where: { userId } });
+  async findTradesByUser(userId: string, limit = 200): Promise<Trade[]> {
+    return this.repository.find({
+      where: { userId },
+      order: { createdAt: 'DESC', id: 'DESC' },
+      take: limit,
+    });
   }
 
-  async findTradesByClient(clientId: string): Promise<Trade[]> {
-    return this.repository.find({ where: { clientId } });
+  async findTradesByClient(clientId: string, limit = 200): Promise<Trade[]> {
+    return this.repository.find({
+      where: { clientId },
+      order: { createdAt: 'DESC', id: 'DESC' },
+      take: limit,
+    });
   }
 
   async createTrade(transactionData: Partial<Trade>): Promise<Trade> {

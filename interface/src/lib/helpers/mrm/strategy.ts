@@ -220,6 +220,7 @@ export type MarketMakingLifecycleBundle =
       intents: unknown[];
       openOrders: unknown[];
       history: unknown[];
+      trades?: unknown[];
       outboxSummary?: OutboxSummaryV0;
       outbox?: unknown[];
     };

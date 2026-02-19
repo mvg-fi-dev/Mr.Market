@@ -9,6 +9,7 @@ import { ExchangeInitService } from 'src/modules/infrastructure/exchange-init/ex
 
 import { CustomLogger } from '../../infrastructure/logger/logger.service';
 import { DurabilityService } from '../durability/durability.service';
+import { TradeHistoryResponseDto } from './trade-history.dto';
 import { CancelTradeDto, LimitTradeDto, MarketTradeDto } from './trade.dto';
 import { TradeRepository } from './trade.repository';
 import { classifyCcxtError } from './trade-error-taxonomy';
@@ -23,6 +24,44 @@ export class TradeService {
     private exchangeInitService: ExchangeInitService,
     private readonly durabilityService: DurabilityService,
   ) {}
+
+  async getTradeHistoryByClientId(
+    clientId: string,
+    limit = 200,
+  ): Promise<TradeHistoryResponseDto> {
+    const safeLimit = Math.max(1, Math.min(500, Number(limit || 200)));
+
+    const trades = await this.tradeRepository.findTradesByClient(
+      clientId,
+      safeLimit,
+    );
+
+    return {
+      ok: true,
+      clientId,
+      trades: trades.map((t) => ({
+        exchange: t.exchange || '',
+        symbol: t.symbol,
+        side: t.side,
+        type: t.type,
+        amount: t.amount,
+        price: t.price,
+        status: t.status,
+        orderId: t.orderId,
+        traceId: t.traceId || '',
+        createdAt:
+          (t.createdAt instanceof Date ? t.createdAt.toISOString() :
+            typeof (t.createdAt as any) === 'string'
+              ? (t.createdAt as any)
+              : '') || '',
+        updatedAt:
+          (t.updatedAt instanceof Date ? t.updatedAt.toISOString() :
+            typeof (t.updatedAt as any) === 'string'
+              ? (t.updatedAt as any)
+              : '') || '',
+      })),
+    };
+  }
 
   private getExchange(exchangeName: string): ccxt.Exchange {
     const exchange = this.exchangeInitService.getExchange(exchangeName);

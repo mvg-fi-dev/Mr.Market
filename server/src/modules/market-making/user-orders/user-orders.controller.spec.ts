@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AdminOutboxService } from 'src/modules/admin/outbox/admin-outbox.service';
 
 import { StrategyService } from '../strategy/strategy.service';
+import { TradeService } from '../trade/trade.service';
 import { UserOrdersController } from './user-orders.controller';
 import { UserOrdersService } from './user-orders.service';
 
@@ -30,6 +31,12 @@ describe('UserOrdersController', () => {
         { provide: UserOrdersService, useValue: mockUserOrdersService },
         { provide: StrategyService, useValue: mockStrategyService },
         { provide: AdminOutboxService, useValue: mockAdminOutboxService },
+        {
+          provide: TradeService,
+          useValue: {
+            getTradeHistoryByClientId: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -62,6 +69,13 @@ describe('UserOrdersController', () => {
     mockAdminOutboxService.listOutboxEvents.mockResolvedValueOnce({
       ok: true,
       events: [{ eventId: 'e1', topic: 't1' }],
+    });
+
+    const mockTradeService = (controller as any).tradeService;
+    mockTradeService.getTradeHistoryByClientId.mockResolvedValueOnce({
+      ok: true,
+      clientId: 'order-1',
+      trades: [{ orderId: 'ex-1' }],
     });
 
     const res = await (controller as any).getMarketMakingLifecycle('order-1');

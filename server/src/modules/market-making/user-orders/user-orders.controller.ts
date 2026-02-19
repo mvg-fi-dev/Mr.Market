@@ -16,6 +16,7 @@ import { AdminOutboxService } from 'src/modules/admin/outbox/admin-outbox.servic
 
 import { StrategyService } from '../strategy/strategy.service';
 import { buildOutboxSummaryV0 } from './lifecycle-summary';
+import { TradeService } from '../trade/trade.service';
 import { ExitMarketMakingDto, StopMarketMakingDto } from './user-orders.dto';
 import { CreateMarketMakingIntentDto } from './user-orders.dto';
 import { UserOrdersService } from './user-orders.service';
@@ -29,6 +30,7 @@ export class UserOrdersController {
     private readonly userOrdersService: UserOrdersService,
     private readonly strategyService: StrategyService,
     private readonly adminOutboxService: AdminOutboxService,
+    private readonly tradeService: TradeService,
   ) {}
 
   @Get('/all')
@@ -256,7 +258,7 @@ export class UserOrdersController {
 
     const strategyKey = `${order.userId}-${orderId}-pureMarketMaking`;
 
-    const [intents, history, outbox] = await Promise.all([
+    const [intents, history, outbox, trades] = await Promise.all([
       this.strategyService.listIntentsByClientId(orderId, 500),
       this.userOrdersService.getMarketMakingHistoryByStrategyInstanceId(
         orderId,
@@ -265,6 +267,7 @@ export class UserOrdersController {
         orderId,
         limit: 500,
       }),
+      this.tradeService.getTradeHistoryByClientId(orderId, 200),
     ]);
 
     const openOrders = this.strategyService.getOpenOrders(strategyKey);
@@ -278,6 +281,7 @@ export class UserOrdersController {
       intents,
       openOrders,
       history,
+      trades: trades.trades,
       outboxSummary: buildOutboxSummaryV0(outboxEvents),
       outbox: outboxEvents,
     };

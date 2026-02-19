@@ -29,6 +29,7 @@ import { LocalCampaignModule } from '../local-campaign/local-campaign.module';
 import { NetworkMappingModule } from '../network-mapping/network-mapping.module';
 import { OrchestrationModule } from '../orchestration/orchestration.module';
 import { StrategyModule } from '../strategy/strategy.module';
+import { TradeModule } from '../trade/trade.module';
 import { MarketMakingOrderProcessor } from './market-making.processor';
 import { UserOrdersController } from './user-orders.controller';
 import { UserOrdersService } from './user-orders.service';
@@ -48,6 +49,7 @@ import { UserOrdersService } from './user-orders.service';
       name: 'market-making',
     }),
     StrategyModule,
+    TradeModule,
     FeeModule,
     GrowdataModule,
     SnapshotsModule,
