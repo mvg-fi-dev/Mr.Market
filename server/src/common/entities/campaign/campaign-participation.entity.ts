@@ -6,11 +6,13 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 
 @Entity()
+@Index(['userId', 'campaignId', 'orderId'], { unique: true })
 export class CampaignParticipation {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -22,6 +24,7 @@ export class CampaignParticipation {
   userId: string;
 
   @Column({ nullable: true })
+  @Index()
   orderId: string; // Link to specific market making order if applicable
 
   @Column('decimal', { precision: 20, scale: 8, default: 0 })

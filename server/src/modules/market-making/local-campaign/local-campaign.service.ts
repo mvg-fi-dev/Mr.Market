@@ -33,6 +33,20 @@ export class LocalCampaignService {
     campaignId: string,
     orderId?: string,
   ): Promise<CampaignParticipation> {
+    // Idempotency: MM flows can be retried / re-queued at-least-once.
+    // For a given (userId, campaignId, orderId) we should return the existing participation.
+    const existing = await this.participationRepository.findOne({
+      where: {
+        userId,
+        campaignId,
+        orderId,
+      },
+    });
+
+    if (existing) {
+      return existing;
+    }
+
     const participation = this.participationRepository.create({
       userId,
       campaignId,
@@ -40,7 +54,29 @@ export class LocalCampaignService {
       status: 'joined',
     });
 
-    return this.participationRepository.save(participation);
+    try {
+      return await this.participationRepository.save(participation);
+    } catch (error) {
+      // Best-effort unique-violation handling if the underlying DB schema has a unique index.
+      const message = String((error as any)?.message || '').toLowerCase();
+      const code = (error as any)?.code;
+      const isUnique = code === '23505' || message.includes('duplicate');
+
+      if (isUnique) {
+        const after = await this.participationRepository.findOne({
+          where: {
+            userId,
+            campaignId,
+            orderId,
+          },
+        });
+        if (after) {
+          return after;
+        }
+      }
+
+      throw error;
+    }
   }
 
   async monitorCampaigns() {
