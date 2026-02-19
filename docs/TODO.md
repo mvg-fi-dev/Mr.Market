@@ -18,6 +18,7 @@ _DoD: written permission model + enforced gates in code (tests), so operators ca
 - [ ] No identifiable market-making controller: execution attributable to **immutable rules + verifiable nodes**. (future: `repos/easyenclave/*` integration; docs: `docs/plans/2026-02-17-hufi-mrmarket-easyenclave-architecture.md`)
 - [x] No yield / price-support promises in UI/docs; dashboards are **measurement**, not marketing. (interface: `interface/src/i18n/*`, `interface/src/lib/components/**`)
 - [ ] Every critical flow is **auditable + replayable** (traceId, structured logs, durable state transitions, idempotency keys). (server: `server/src/modules/infrastructure/logger/*`, `server/src/modules/market-making/durability/*`)
+  - [x] Lifecycle endpoint reconstructs openOrders from outbox when tracker cache is empty (restart-safe). (server: `server/src/modules/market-making/user-orders/lifecycle-open-orders.ts`)
 - [ ] **Secrets never move** without verification: exchange keys / signing keys provisioned only after **TEE attestation + MRTD allowlist** (EasyEnclave). (current keys: `server/src/modules/mixin/exchange/*`; future: `repos/easyenclave/*`)
 
 ---
