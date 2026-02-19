@@ -78,6 +78,7 @@ describe('TradeService', () => {
       expect(tradeRepository.createTrade).toHaveBeenCalledWith({
         userId: 'user123',
         clientId: 'client123',
+        exchange: 'binance',
         symbol: 'BTC/USDT',
         type: 'market',
         side: 'buy',
@@ -158,6 +159,7 @@ describe('TradeService', () => {
       expect(tradeRepository.createTrade).toHaveBeenCalledWith({
         userId: 'user123',
         clientId: 'client123',
+        exchange: 'binance',
         symbol: 'BTC/USDT',
         side: 'buy',
         type: 'limit',

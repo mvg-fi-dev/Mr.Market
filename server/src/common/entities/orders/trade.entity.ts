@@ -21,6 +21,10 @@ export class Trade {
   @Column()
   clientId: string; // Identifier for the client
 
+  // Exchange where the trade was executed (auditability / replayability)
+  @Column({ default: '' })
+  exchange: string;
+
   @Column()
   symbol: string; // E.g., 'BTC/USD'
 

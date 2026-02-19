@@ -54,6 +54,7 @@ export class TradeService {
       await this.tradeRepository.createTrade({
         userId,
         clientId,
+        exchange,
         symbol,
         type: 'market',
         side: side,
@@ -98,6 +99,7 @@ export class TradeService {
       await this.tradeRepository.createTrade({
         userId,
         clientId,
+        exchange,
         symbol,
         side: side,
         type: 'limit',
