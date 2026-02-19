@@ -8,6 +8,30 @@ import {
   ListOutboxEventsResponseDto,
 } from './admin-outbox.dto';
 
+function clampInt(
+  value: unknown,
+  min: number,
+  max: number,
+  fallback: number,
+) {
+  const n = Number(value);
+
+  // If input is missing/invalid, use fallback.
+  if (!Number.isFinite(n)) return fallback;
+
+  // If input is explicitly out-of-range, clamp (do not fallback).
+  if (n < min) return min;
+  if (n > max) return max;
+
+  return Math.trunc(n);
+}
+
+function buildContainsLikePattern(input: string): string {
+  // Best-effort substring search. This is an ops/audit endpoint; precision is not guaranteed.
+  // NOTE: We intentionally do not attempt cross-dialect escaping here.
+  return `%${input}%`;
+}
+
 @Injectable()
 export class AdminOutboxService {
   constructor(
@@ -18,7 +42,7 @@ export class AdminOutboxService {
   async listOutboxEvents(
     query: ListOutboxEventsQueryDto,
   ): Promise<ListOutboxEventsResponseDto> {
-    const limit = Number(query.limit || 50);
+    const limit = clampInt(query.limit, 1, 500, 50);
 
     const qb = this.outboxRepository
       .createQueryBuilder('e')
@@ -47,13 +71,19 @@ export class AdminOutboxService {
     }
 
     // Prefer indexed first-class fields when available.
-    // Note: legacy rows may have empty traceId/orderId if created before backfill.
+    // Fallback to best-effort payload substring search for legacy rows where traceId/orderId were not extracted.
     if (query.traceId) {
-      qb.andWhere('e.traceId = :traceId', { traceId: query.traceId });
+      qb.andWhere('(e.traceId = :traceId OR e.payload LIKE :traceLike)', {
+        traceId: query.traceId,
+        traceLike: buildContainsLikePattern(query.traceId),
+      });
     }
 
     if (query.orderId) {
-      qb.andWhere('e.orderId = :orderId', { orderId: query.orderId });
+      qb.andWhere('(e.orderId = :orderId OR e.payload LIKE :orderLike)', {
+        orderId: query.orderId,
+        orderLike: buildContainsLikePattern(query.orderId),
+      });
     }
 
     const events = await qb.getMany();
