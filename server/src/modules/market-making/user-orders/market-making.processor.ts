@@ -1023,14 +1023,31 @@ export class MarketMakingOrderProcessor {
   @Process('start_mm')
   async handleStartMM(job: Job<{ userId: string; orderId: string }>) {
     const { userId, orderId } = job.data;
+    const traceId = `mm:${orderId}`;
 
     this.logger.log(
       `${this.logCtx({
-        traceId: `mm:${orderId}`,
+        traceId,
         orderId,
         job,
       })} Starting MM for user ${userId}`,
     );
+
+    const idempotencyKey = `mm:start_mm:${orderId}`;
+
+    // Bull jobs can be re-delivered (removeOnComplete=false) or repeated after crashes.
+    // We must not start the strategy twice for the same order.
+    if (await this.durabilityService.isProcessed('mm.start_mm', idempotencyKey)) {
+      this.logger.warn(
+        `${this.logCtx({
+          traceId,
+          orderId,
+          job,
+        })} start_mm already processed; skipping`,
+      );
+
+      return;
+    }
 
     const order = await this.userOrdersService.findMarketMakingByOrderId(
       orderId,
@@ -1042,27 +1059,57 @@ export class MarketMakingOrderProcessor {
       return;
     }
 
-    await this.userOrdersService.updateMarketMakingOrderState(
-      orderId,
-      'running',
-    );
-
     const toNumber = (value?: string | number | null, fallback = 0) =>
       new BigNumber(value ?? fallback).toNumber();
 
-    await this.strategyService.executePureMarketMakingStrategy({
-      ...order,
-      pair: order.pair.replaceAll('-ERC20', ''),
-      clientId: orderId,
-      bidSpread: toNumber(order.bidSpread),
-      askSpread: toNumber(order.askSpread),
-      orderAmount: toNumber(order.orderAmount),
-      orderRefreshTime: toNumber(order.orderRefreshTime),
-      numberOfLayers: toNumber(order.numberOfLayers),
-      amountChangePerLayer: toNumber(order.amountChangePerLayer),
-      ceilingPrice: toNumber(order.ceilingPrice),
-      floorPrice: toNumber(order.floorPrice),
-    });
+    try {
+      await this.userOrdersService.updateMarketMakingOrderState(
+        orderId,
+        'running',
+      );
+
+      await this.strategyService.executePureMarketMakingStrategy({
+        ...order,
+        pair: order.pair.replaceAll('-ERC20', ''),
+        clientId: orderId,
+        bidSpread: toNumber(order.bidSpread),
+        askSpread: toNumber(order.askSpread),
+        orderAmount: toNumber(order.orderAmount),
+        orderRefreshTime: toNumber(order.orderRefreshTime),
+        numberOfLayers: toNumber(order.numberOfLayers),
+        amountChangePerLayer: toNumber(order.amountChangePerLayer),
+        ceilingPrice: toNumber(order.ceilingPrice),
+        floorPrice: toNumber(order.floorPrice),
+      });
+
+      await this.durabilityService.appendOutboxEvent({
+        topic: 'mm.started',
+        aggregateType: 'market_making_order',
+        aggregateId: orderId,
+        payload: {
+          traceId,
+          orderId,
+          userId,
+          state: 'running',
+        },
+      });
+
+      await this.durabilityService.markProcessed('mm.start_mm', idempotencyKey);
+    } catch (error) {
+      await this.durabilityService.appendOutboxEvent({
+        topic: 'mm.start_mm.failed',
+        aggregateType: 'market_making_order',
+        aggregateId: orderId,
+        payload: {
+          traceId,
+          orderId,
+          userId,
+          error: error instanceof Error ? error.message : 'unknown error',
+        },
+      });
+
+      throw error;
+    }
   }
 
   @Process('stop_mm')

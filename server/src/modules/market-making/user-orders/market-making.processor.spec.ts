@@ -253,7 +253,8 @@ describe('MarketMakingOrderProcessor', () => {
   });
 
   it('starts MM by registering strategy session without execute_mm_cycle queue loop', async () => {
-    const { processor, strategyService, userOrdersService } = createProcessor();
+    const { processor, strategyService, userOrdersService, durabilityService } =
+      createProcessor();
     const queue = {
       add: jest.fn(),
     };
@@ -262,6 +263,11 @@ describe('MarketMakingOrderProcessor', () => {
       data: { userId: 'user-1', orderId: 'order-1' },
       queue,
     } as any);
+
+    expect(durabilityService.isProcessed).toHaveBeenCalledWith(
+      'mm.start_mm',
+      'mm:start_mm:order-1',
+    );
 
     expect(userOrdersService.updateMarketMakingOrderState).toHaveBeenCalledWith(
       'order-1',
@@ -282,6 +288,18 @@ describe('MarketMakingOrderProcessor', () => {
         numberOfLayers: 2,
       }),
     );
+    expect(durabilityService.appendOutboxEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        topic: 'mm.started',
+        aggregateType: 'market_making_order',
+        aggregateId: 'order-1',
+      }),
+    );
+    expect(durabilityService.markProcessed).toHaveBeenCalledWith(
+      'mm.start_mm',
+      'mm:start_mm:order-1',
+    );
+
     expect(queue.add).not.toHaveBeenCalledWith(
       'execute_mm_cycle',
       expect.anything(),
@@ -290,7 +308,8 @@ describe('MarketMakingOrderProcessor', () => {
   });
 
   it('does nothing when start_mm order is missing', async () => {
-    const { processor, strategyService, userOrdersService } = createProcessor();
+    const { processor, strategyService, userOrdersService, durabilityService } =
+      createProcessor();
 
     userOrdersService.findMarketMakingByOrderId.mockResolvedValueOnce(null);
     const queue = {
@@ -301,6 +320,11 @@ describe('MarketMakingOrderProcessor', () => {
       data: { userId: 'user-1', orderId: 'missing' },
       queue,
     } as any);
+
+    expect(durabilityService.isProcessed).toHaveBeenCalledWith(
+      'mm.start_mm',
+      'mm:start_mm:missing',
+    );
 
     expect(
       strategyService.executePureMarketMakingStrategy,
