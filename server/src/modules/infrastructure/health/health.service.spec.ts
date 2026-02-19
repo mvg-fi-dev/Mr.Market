@@ -36,9 +36,21 @@ describe('HealthService', () => {
             getActive: jest.fn(),
             getFailed: jest.fn(),
             getCompleted: jest.fn(),
+            getDelayed: jest.fn(),
             client: {
               get: jest.fn(),
             },
+          },
+        },
+        {
+          provide: 'BullQueue_market-making',
+          useValue: {
+            getWaitingCount: jest.fn(),
+            getActiveCount: jest.fn(),
+            getCompletedCount: jest.fn(),
+            getFailedCount: jest.fn(),
+            getDelayedCount: jest.fn(),
+            isPaused: jest.fn(),
           },
         },
         {

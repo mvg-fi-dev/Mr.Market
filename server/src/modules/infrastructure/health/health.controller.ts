@@ -98,4 +98,12 @@ export class HealthController {
   async getSnapshotPollingHealth() {
     return await this.healthService.checkSnapshotPollingHealth();
   }
+
+  @Get('/market-making')
+  @ApiOperation({ summary: 'Get market-making queue health status' })
+  @ApiResponse({ status: 200, description: 'Market-making queue health' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
+  async getMarketMakingQueueHealth() {
+    return await this.healthService.checkMarketMakingQueueHealth();
+  }
 }

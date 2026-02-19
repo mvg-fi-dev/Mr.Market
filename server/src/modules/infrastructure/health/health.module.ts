@@ -6,6 +6,7 @@ import { HealthController } from './health.controller';
 import { HealthService } from './health.service';
 
 @Module({
+  // NOTE: SnapshotsModule (via MixinModule) registers & exports Bull queues.
   imports: [MixinModule, ExchangeInitModule],
   controllers: [HealthController],
   providers: [HealthService],
