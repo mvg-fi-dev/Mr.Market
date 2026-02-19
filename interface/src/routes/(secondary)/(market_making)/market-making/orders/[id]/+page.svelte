@@ -84,6 +84,30 @@
         return true;
     };
 
+    const refreshNow = async () => {
+        try {
+            polling.error = null;
+            if (!backendOrder?.orderId) return;
+            const res = await getUserOrderMarketMakingById(backendOrder.orderId);
+            const next = normalizeOrder(res);
+            if (next) {
+                backendOrder = next;
+                polling.lastUpdatedAt = Date.now();
+            }
+        } catch (e: any) {
+            polling.error = e?.message || String(e);
+        }
+    };
+
+    const resumeAutoRefresh = () => {
+        polling.timedOut = false;
+        polling.startedAt = Date.now();
+        polling.error = null;
+        if (backendOrder?.orderId) {
+            schedulePoll(backendOrder.orderId);
+        }
+    };
+
     const schedulePoll = (orderId: string) => {
         const startedAt = polling.startedAt || Date.now();
         polling.startedAt = startedAt;
@@ -225,6 +249,9 @@
         lastUpdatedAt={polling.lastUpdatedAt}
         timedOut={polling.timedOut}
         error={polling.error}
+        isAutoRefreshing={shouldPoll(backendOrder?.state)}
+        onRefresh={refreshNow}
+        onResumeAutoRefresh={resumeAutoRefresh}
     />
 
     <RevenueCard

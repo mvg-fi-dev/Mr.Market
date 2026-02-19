@@ -9,6 +9,9 @@
   export let lastUpdatedAt: number | null | undefined = null;
   export let timedOut: boolean | null | undefined = null;
   export let error: string | null | undefined = null;
+  export let isAutoRefreshing: boolean | null | undefined = null;
+  export let onRefresh: (() => void) | null = null;
+  export let onResumeAutoRefresh: (() => void) | null = null;
 
   $: display = getMarketMakingStateDisplay(state);
   $: steps = getMarketMakingFlowSteps(state);
@@ -66,13 +69,34 @@
 
     <div class="mt-3 text-xs text-base-content/50 space-y-1">
       <div>Current state: {state || '---'}</div>
-      <div>Last updated: {formatTime(lastUpdatedAt)}</div>
+      <div class="flex items-center gap-2">
+        <span>Last updated: {formatTime(lastUpdatedAt)}</span>
+        {#if isAutoRefreshing}
+          <span class="text-blue-600">• auto-refreshing</span>
+        {/if}
+      </div>
       {#if timedOut}
-        <div class="text-amber-700">Auto-refresh timed out. Pull to refresh or reopen this page.</div>
+        <div class="text-amber-700">
+          Auto-refresh timed out. You can refresh manually or continue auto-refresh.
+        </div>
       {/if}
       {#if error}
         <div class="text-red-600">Last error: {error}</div>
       {/if}
+
+      <div class="pt-2 flex flex-wrap gap-2">
+        {#if onRefresh}
+          <button class="btn btn-sm" on:click={() => onRefresh?.()}>Refresh now</button>
+        {/if}
+        {#if timedOut && onResumeAutoRefresh}
+          <button
+            class="btn btn-sm btn-outline"
+            on:click={() => onResumeAutoRefresh?.()}
+          >
+            Continue auto-refresh
+          </button>
+        {/if}
+      </div>
     </div>
   </div>
 </div>
