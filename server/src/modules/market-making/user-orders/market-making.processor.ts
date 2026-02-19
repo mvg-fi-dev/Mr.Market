@@ -32,6 +32,7 @@ import { NetworkMappingService } from '../network-mapping/network-mapping.servic
 import { PauseWithdrawOrchestratorService } from '../orchestration/pause-withdraw-orchestrator.service';
 import { StrategyService } from '../strategy/strategy.service';
 import { UserOrdersService } from './user-orders.service';
+import { DurabilityService } from '../durability/durability.service';
 
 const DEPOSIT_AMOUNT_TOLERANCE = new BigNumber('0.00000001');
 
@@ -94,6 +95,8 @@ export class MarketMakingOrderProcessor {
     private readonly configService: ConfigService,
     @InjectRepository(MarketMakingPaymentState)
     private readonly paymentStateRepository: Repository<MarketMakingPaymentState>,
+    private readonly durabilityService: DurabilityService,
+
     @InjectRepository(MarketMakingOrderIntent)
     private readonly marketMakingOrderIntentRepository: Repository<MarketMakingOrderIntent>,
     @InjectRepository(MarketMakingOrder)
@@ -1819,6 +1822,27 @@ export class MarketMakingOrderProcessor {
       await job.update({ ...job.data, startedAt });
     }
 
+    const idempotencyKey = `mm:monitor_exchange_deposit:${orderId}`;
+
+    // If this job is re-delivered after being completed (Bull removeOnComplete=false) or after a crash,
+    // we want to skip side effects when we've already finished this step.
+    if (
+      await this.durabilityService.isProcessed(
+        'mm.monitor_exchange_deposit',
+        idempotencyKey,
+      )
+    ) {
+      this.logger.warn(
+        `${this.logCtx({
+          traceId: traceId || `mm:${orderId}`,
+          orderId,
+          job,
+        })} monitor_exchange_deposit already processed; skipping`,
+      );
+
+      return;
+    }
+
     const retryCount = job.attemptsMade || 0;
 
     this.logger.log(
@@ -2020,6 +2044,29 @@ export class MarketMakingOrderProcessor {
           attempts: 3,
           removeOnComplete: false,
         },
+      );
+
+      await this.durabilityService.appendOutboxEvent({
+        topic: 'mm.deposit.confirmed',
+        aggregateType: 'market_making_order',
+        aggregateId: orderId,
+        payload: {
+          orderId,
+          exchange: exchangeName,
+          baseSymbol: pairConfig.base_symbol,
+          quoteSymbol: pairConfig.quote_symbol,
+          baseAmount: paymentState.baseAssetAmount,
+          quoteAmount: paymentState.quoteAssetAmount,
+          baseWithdrawalTxHash,
+          quoteWithdrawalTxHash,
+          traceId: traceId || `mm:${orderId}`,
+          startedAt,
+        },
+      });
+
+      await this.durabilityService.markProcessed(
+        'mm.monitor_exchange_deposit',
+        idempotencyKey,
       );
 
       this.logger.log(

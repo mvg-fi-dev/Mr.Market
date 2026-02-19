@@ -46,6 +46,12 @@ describe('MarketMakingOrderProcessor', () => {
       save: jest.fn(),
     };
 
+    const durabilityService = {
+      isProcessed: jest.fn().mockResolvedValue(false),
+      markProcessed: jest.fn().mockResolvedValue(true),
+      appendOutboxEvent: jest.fn().mockResolvedValue(undefined),
+    };
+
     const processor = new MarketMakingOrderProcessor(
       userOrdersService as any,
       strategyService as any,
@@ -103,6 +109,7 @@ describe('MarketMakingOrderProcessor', () => {
       } as any,
       { get: jest.fn().mockReturnValue(false) } as any,
       paymentStateRepository as any,
+      durabilityService as any,
       { update: jest.fn(), findOne: jest.fn(), save: jest.fn() } as any,
       marketMakingRepository as any,
       balanceLedgerService as any,
@@ -116,6 +123,7 @@ describe('MarketMakingOrderProcessor', () => {
       transactionService,
       marketMakingRepository,
       balanceLedgerService,
+      durabilityService,
     };
   };
 
