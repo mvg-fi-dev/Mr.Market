@@ -85,7 +85,7 @@ _DoD: one admin page shows system health; on-call can answer “is the loop runn
 
 - [x] Standardize structured logging fields (campaign_id, order_id, job_id, chain_id, exchange, version). (server: `server/src/modules/infrastructure/logger/*`)
   - NOTE: `formatAuditLogContext()` now supports these fields for consistent prefix formatting.
-- [ ] Add tracing/correlation IDs across Mr.Market -> executor -> HuFi components. (server: queue payloads + HTTP clients)
+- [x] Add tracing/correlation IDs across Mr.Market -> executor -> HuFi components. (server: queue payloads + HTTP clients)
 - [ ] Admin “system status” page: queue health, executor health, HuFi reachability, EasyEnclave verification status. (server: `server/src/modules/infrastructure/health/*`; interface: `interface/src/lib/components/admin/health/*`)
 
 ---
