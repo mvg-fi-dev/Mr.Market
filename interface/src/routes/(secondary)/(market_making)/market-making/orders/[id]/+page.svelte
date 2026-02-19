@@ -7,7 +7,7 @@
     import FillHistory from "$lib/components/market-making/order-details/FillHistory.svelte";
     import BottomActions from "$lib/components/market-making/order-details/BottomActions.svelte";
     import CancelOrderDialog from "$lib/components/market-making/order-details/CancelOrderDialog.svelte";
-    import ModifyOrderModal from "$lib/components/market-making/order-details/ModifyOrderDialog.svelte";
+    // ModifyOrderModal removed (no modify action in order details UI)
     import ExecutionDetailsDialog from "$lib/components/market-making/order-details/ExecutionDetailsDialog.svelte";
     import type { PageData } from "./$types";
     import { _ } from "svelte-i18n";
@@ -42,7 +42,7 @@
 
     export let data: PageData;
 
-    let showModifyModal = false;
+    // let showModifyModal = false; // removed with ModifyOrderModal
     let showExecutionDetails = false;
     let isCancelDialogOpen = false;
 
@@ -424,18 +424,7 @@
 
     <!-- Resume handled by BottomActions -->
 
-    <ModifyOrderModal
-        isOpen={showModifyModal}
-        baseSymbol={order.balances.base?.symbol}
-        quoteSymbol={order.balances.quote?.symbol}
-        currentBaseBalance={order.balances.base?.amount}
-        currentQuoteBalance={order.balances.quote?.amount}
-        on:close={() => (showModifyModal = false)}
-        on:confirm={(e) => {
-            console.log("Modify confirmed:", e.detail);
-            showModifyModal = false;
-        }}
-    />
+    <!-- ModifyOrderModal removed: order details controls are now pause/stop/exit/resume -->
 
     <CancelOrderDialog
         isOpen={isCancelDialogOpen}
