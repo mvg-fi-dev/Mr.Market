@@ -11,6 +11,7 @@ import { CustomLogger } from '../../infrastructure/logger/logger.service';
 import { DurabilityService } from '../durability/durability.service';
 import { CancelTradeDto, LimitTradeDto, MarketTradeDto } from './trade.dto';
 import { TradeRepository } from './trade.repository';
+import { classifyCcxtError } from './trade-error-taxonomy';
 
 @Injectable()
 export class TradeService {
@@ -96,7 +97,11 @@ export class TradeService {
 
       return order;
     } catch (error) {
-      this.logger.error(`Failed to execute market trade: ${error.message}`);
+      const classification = classifyCcxtError(error);
+
+      this.logger.error(
+        `Failed to execute market trade: ${classification.errorCode} ${classification.errorName} ${classification.errorMessage}`,
+      );
 
       await this.durabilityService.appendOutboxEvent({
         topic: 'market_making.trade.failed',
@@ -112,13 +117,16 @@ export class TradeService {
           amount: amount.toString(),
           userId,
           clientId,
-          errorMessage: String(error.message || ''),
+          errorCode: classification.errorCode,
+          retryable: classification.retryable,
+          errorName: classification.errorName,
+          errorMessage: classification.errorMessage,
           failedAt: getRFC3339Timestamp(),
         },
       });
 
       throw new InternalServerErrorException(
-        `Trade execution failed: ${error.message}`,
+        `Trade execution failed: ${classification.errorMessage}`,
       );
     }
   }
@@ -185,7 +193,11 @@ export class TradeService {
 
       return order;
     } catch (error) {
-      this.logger.error(`Failed to execute limit trade: ${error.message}`);
+      const classification = classifyCcxtError(error);
+
+      this.logger.error(
+        `Failed to execute limit trade: ${classification.errorCode} ${classification.errorName} ${classification.errorMessage}`,
+      );
 
       await this.durabilityService.appendOutboxEvent({
         topic: 'market_making.trade.failed',
@@ -202,13 +214,16 @@ export class TradeService {
           price: price.toString(),
           userId,
           clientId,
-          errorMessage: String(error.message || ''),
+          errorCode: classification.errorCode,
+          retryable: classification.retryable,
+          errorName: classification.errorName,
+          errorMessage: classification.errorMessage,
           failedAt: getRFC3339Timestamp(),
         },
       });
 
       throw new InternalServerErrorException(
-        `Trade execution failed: ${error.message}`,
+        `Trade execution failed: ${classification.errorMessage}`,
       );
     }
   }
@@ -242,7 +257,11 @@ export class TradeService {
         },
       });
     } catch (error) {
-      this.logger.error(`Failed to cancel order: ${error.message}`);
+      const classification = classifyCcxtError(error);
+
+      this.logger.error(
+        `Failed to cancel order: ${classification.errorCode} ${classification.errorName} ${classification.errorMessage}`,
+      );
 
       await this.durabilityService.appendOutboxEvent({
         topic: 'market_making.trade.cancel_failed',
@@ -256,13 +275,16 @@ export class TradeService {
           symbol,
           userId,
           clientId,
-          errorMessage: String(error.message || ''),
+          errorCode: classification.errorCode,
+          retryable: classification.retryable,
+          errorName: classification.errorName,
+          errorMessage: classification.errorMessage,
           failedAt: getRFC3339Timestamp(),
         },
       });
 
       throw new InternalServerErrorException(
-        `Order cancellation failed: ${error.message}`,
+        `Order cancellation failed: ${classification.errorMessage}`,
       );
     }
   }

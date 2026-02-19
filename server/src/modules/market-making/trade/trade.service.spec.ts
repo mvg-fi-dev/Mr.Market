@@ -151,6 +151,16 @@ describe('TradeService', () => {
       );
 
       expect(tradeRepository.createTrade).not.toHaveBeenCalled();
+
+      expect(durabilityService.appendOutboxEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          topic: 'market_making.trade.failed',
+          payload: expect.objectContaining({
+            errorCode: 'UNKNOWN',
+            retryable: false,
+          }),
+        }),
+      );
     });
   });
 
@@ -250,6 +260,16 @@ describe('TradeService', () => {
       );
 
       expect(tradeRepository.createTrade).not.toHaveBeenCalled();
+
+      expect(durabilityService.appendOutboxEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          topic: 'market_making.trade.failed',
+          payload: expect.objectContaining({
+            errorCode: 'UNKNOWN',
+            retryable: false,
+          }),
+        }),
+      );
     });
   });
 
@@ -333,6 +353,8 @@ describe('TradeService', () => {
             exchange: 'binance',
             orderId: 'order123',
             symbol: 'BTC/USDT',
+            errorCode: 'UNKNOWN',
+            retryable: false,
           }),
         }),
       );
