@@ -90,6 +90,13 @@ describe('UserOrdersController', () => {
     expect(res.history).toHaveLength(1);
     expect(res.outbox).toHaveLength(1);
 
+    expect(res.outboxSummary).toEqual(
+      expect.objectContaining({
+        total: 1,
+        topicCounts: { t1: 1 },
+      }),
+    );
+
     expect(mockAdminOutboxService.listOutboxEvents).toHaveBeenCalledWith(
       expect.objectContaining({ orderId: 'order-1', limit: 500 }),
     );

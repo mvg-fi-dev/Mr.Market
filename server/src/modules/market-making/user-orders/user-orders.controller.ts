@@ -15,6 +15,7 @@ import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
 import { AdminOutboxService } from 'src/modules/admin/outbox/admin-outbox.service';
 
 import { StrategyService } from '../strategy/strategy.service';
+import { buildOutboxSummaryV0 } from './lifecycle-summary';
 import { ExitMarketMakingDto, StopMarketMakingDto } from './user-orders.dto';
 import { CreateMarketMakingIntentDto } from './user-orders.dto';
 import { UserOrdersService } from './user-orders.service';
@@ -268,6 +269,8 @@ export class UserOrdersController {
 
     const openOrders = this.strategyService.getOpenOrders(strategyKey);
 
+    const outboxEvents = outbox.events;
+
     return {
       ok: true,
       orderId,
@@ -275,7 +278,8 @@ export class UserOrdersController {
       intents,
       openOrders,
       history,
-      outbox: outbox.events,
+      outboxSummary: buildOutboxSummaryV0(outboxEvents),
+      outbox: outboxEvents,
     };
   }
 }
