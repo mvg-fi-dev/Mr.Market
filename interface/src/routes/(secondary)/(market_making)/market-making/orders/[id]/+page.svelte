@@ -15,6 +15,20 @@
     import { onDestroy, onMount } from "svelte";
 
     import { ORDER_STATE_FETCH_INTERVAL, ORDER_STATE_TIMEOUT_DURATION } from "$lib/helpers/constants";
+
+    const getPollTimeoutMs = (state?: MarketMakingState | null) => {
+        // Default (short) timeout is fine for payment/UI responsiveness, but
+        // withdrawal + exchange deposit confirmation can legitimately take much longer.
+        if (
+            state === "withdrawing" ||
+            state === "withdrawal_confirmed" ||
+            state === "deposit_confirming"
+        ) {
+            return 60 * 60 * 1000; // 60 minutes
+        }
+
+        return ORDER_STATE_TIMEOUT_DURATION;
+    };
     import { getUserOrderMarketMakingById } from "$lib/helpers/mrm/strategy";
     import { isMarketMakingTerminalState, type MarketMakingState } from "$lib/helpers/mrm/marketMakingState";
 
@@ -124,7 +138,8 @@
             try {
                 if (!shouldPoll(backendOrder?.state)) return;
 
-                if (Date.now() - startedAt > ORDER_STATE_TIMEOUT_DURATION) {
+                const timeoutMs = getPollTimeoutMs(backendOrder?.state);
+                if (Date.now() - startedAt > timeoutMs) {
                     polling.timedOut = true;
                     return;
                 }
