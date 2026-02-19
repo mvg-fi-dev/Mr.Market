@@ -81,7 +81,8 @@ _DoD: given an orderId and time window, we can produce a reproducible report bun
   - [x] Trade execution emits durable outbox events (executed/failed/cancelled/cancel_failed; traceId-ready). (server: `server/src/modules/market-making/trade/*`)
   - [x] Risk guard counts open orders per strategyKey (no cross-strategy leakage). (server: `server/src/modules/market-making/strategy/*`, `server/src/modules/market-making/trackers/*`)
 - [ ] Profit/balance tracking v0: realized/unrealized PnL (even if not paid out), volume, counts. (server: `server/src/modules/market-making/ledger/*`, `server/src/modules/market-making/performance/performance.service.ts`)
-- [ ] Risk controls v0: max exposure, max order count, kill-switch, price sanity checks. (server: `server/src/modules/market-making/strategy/*`, `server/src/modules/market-making/orchestration/*`)
+- [ ] Risk controls v0: max exposure, max order count, price sanity checks. (server: `server/src/modules/market-making/strategy/*`, `server/src/modules/market-making/orchestration/*`)
+  - [x] Kill-switch: global config flag to disable intent execution without redeploy. (env: `MARKET_MAKING_KILL_SWITCH_ENABLED`; code: `server/src/config/configuration.ts`, `server/src/modules/market-making/strategy/strategy-intent-execution.service.ts`)
 
 ### 2.2 Observability & ops
 
