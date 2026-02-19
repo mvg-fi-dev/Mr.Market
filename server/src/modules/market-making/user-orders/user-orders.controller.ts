@@ -15,6 +15,7 @@ import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
 import { AdminOutboxService } from 'src/modules/admin/outbox/admin-outbox.service';
 
 import { StrategyService } from '../strategy/strategy.service';
+import { buildLifecycleOpenOrdersV0 } from './lifecycle-open-orders';
 import { buildOutboxSummaryV0 } from './lifecycle-summary';
 import { TradeService } from '../trade/trade.service';
 import { ExitMarketMakingDto, StopMarketMakingDto } from './user-orders.dto';
@@ -270,16 +271,23 @@ export class UserOrdersController {
       this.tradeService.getTradeHistoryByClientId(orderId, 200),
     ]);
 
-    const openOrders = this.strategyService.getOpenOrders(strategyKey);
+    const trackerOpenOrders = this.strategyService.getOpenOrders(strategyKey);
 
     const outboxEvents = outbox.events;
+
+    const reconstructed = buildLifecycleOpenOrdersV0({
+      orderId,
+      trackerOpenOrders,
+      outboxEvents,
+    });
 
     return {
       ok: true,
       orderId,
       strategyKey,
       intents,
-      openOrders,
+      openOrders: reconstructed.openOrders,
+      openOrdersSource: reconstructed.source,
       history,
       trades: trades.trades,
       outboxSummary: buildOutboxSummaryV0(outboxEvents),

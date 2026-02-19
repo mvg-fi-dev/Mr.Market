@@ -100,6 +100,7 @@ describe('UserOrdersController', () => {
     expect(res.ok).toBe(true);
     expect(res.orderId).toBe('order-1');
     expect(res.intents).toHaveLength(1);
+    expect(res.openOrdersSource).toBe('tracker');
     expect(res.openOrders).toHaveLength(1);
     expect(res.history).toHaveLength(1);
     expect(res.outbox).toHaveLength(1);
