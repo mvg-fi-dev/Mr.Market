@@ -12,6 +12,11 @@ import { ClockTickCoordinatorService } from '../tick/clock-tick-coordinator.serv
 import { TickComponent } from '../tick/tick-component.interface';
 
 type TrackedOrder = {
+  /**
+   * For market-making, clientId === orderId.
+   * This is used to build reproducible lifecycle bundles by orderId.
+   */
+  orderId?: string;
   strategyKey: string;
   traceId?: string;
   exchange: string;
@@ -134,8 +139,10 @@ export class ExchangeOrderTrackerService
         topic: 'market_making.exchange_order.status_changed',
         aggregateType: 'exchange_order',
         aggregateId: order.exchangeOrderId,
+        orderId: order.orderId,
         payload: {
           ...updated,
+          orderId: order.orderId,
           eventType: 'TRACKER_EVENT',
           prevStatus: order.status,
           newStatus: normalizedStatus,

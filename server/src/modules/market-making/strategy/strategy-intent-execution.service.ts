@@ -177,6 +177,7 @@ export class StrategyIntentExecutionService {
             executedMixinOrderId,
           );
           this.exchangeOrderTrackerService?.upsertOrder({
+            orderId: intent.clientId,
             strategyKey: intent.strategyKey,
             traceId: intent.traceId,
             exchange: intent.exchange,
@@ -211,6 +212,7 @@ export class StrategyIntentExecutionService {
         );
 
         this.exchangeOrderTrackerService?.upsertOrder({
+          orderId: intent.clientId,
           strategyKey: intent.strategyKey,
           traceId: intent.traceId,
           exchange: intent.exchange,
