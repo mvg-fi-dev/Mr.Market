@@ -309,10 +309,12 @@ describe('TradeService', () => {
 
       expect(durabilityService.appendOutboxEvent).toHaveBeenCalledWith(
         expect.objectContaining({
+          orderId: 'client123',
           payload: expect.objectContaining({
             traceId: 't-cancel-1',
             exchange: 'binance',
-            orderId: 'order123',
+            orderId: 'client123',
+            exchangeOrderId: 'order123',
             symbol: 'BTC/USDT',
             userId: 'user123',
             clientId: 'client123',
@@ -351,7 +353,7 @@ describe('TradeService', () => {
           payload: expect.objectContaining({
             traceId: 't-cancel-2',
             exchange: 'binance',
-            orderId: 'order123',
+            exchangeOrderId: 'order123',
             symbol: 'BTC/USDT',
             errorCode: 'UNKNOWN',
             retryable: false,
