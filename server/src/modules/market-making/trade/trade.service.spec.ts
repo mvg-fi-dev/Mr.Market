@@ -8,7 +8,7 @@ import { ExchangeInitService } from 'src/modules/infrastructure/exchange-init/ex
 
 import { CustomLogger } from '../../infrastructure/logger/logger.service';
 import { DurabilityService } from '../durability/durability.service';
-import { LimitTradeDto, MarketTradeDto } from './trade.dto';
+import { CancelTradeDto, LimitTradeDto, MarketTradeDto } from './trade.dto';
 import { TradeRepository } from './trade.repository';
 import { TradeService } from './trade.service';
 
@@ -255,18 +255,27 @@ describe('TradeService', () => {
 
   describe('cancelOrder', () => {
     it('should cancel an order successfully', async () => {
-      const orderId = 'order123';
-      const symbol = 'BTC/USDT';
+      const request: CancelTradeDto = {
+        exchange: 'binance',
+        orderId: 'order123',
+        symbol: 'BTC/USDT',
+        traceId: 't-cancel-1',
+        userId: 'user123',
+        clientId: 'client123',
+      };
 
+      exchangeInitService.getExchange = jest.fn().mockReturnValue(exchangeMock);
       exchangeMock.cancelOrder = jest.fn().mockResolvedValue({});
 
-      service['exchange'] = exchangeMock;
+      await service.cancelOrder(request);
 
-      await service.cancelOrder(orderId, symbol);
-
-      expect(exchangeMock.cancelOrder).toHaveBeenCalledWith(orderId, symbol);
+      expect(exchangeInitService.getExchange).toHaveBeenCalledWith('binance');
+      expect(exchangeMock.cancelOrder).toHaveBeenCalledWith(
+        'order123',
+        'BTC/USDT',
+      );
       expect(tradeRepository.updateTradeStatus).toHaveBeenCalledWith(
-        orderId,
+        'order123',
         'cancelled',
       );
 
@@ -274,22 +283,38 @@ describe('TradeService', () => {
         expect.objectContaining({
           topic: 'market_making.trade.cancelled',
           aggregateType: 'trade',
-          aggregateId: orderId,
+          aggregateId: 'binance:order123',
+        }),
+      );
+
+      expect(durabilityService.appendOutboxEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          payload: expect.objectContaining({
+            traceId: 't-cancel-1',
+            exchange: 'binance',
+            orderId: 'order123',
+            symbol: 'BTC/USDT',
+            userId: 'user123',
+            clientId: 'client123',
+          }),
         }),
       );
     });
 
     it('should throw InternalServerErrorException if order cancellation fails', async () => {
-      const orderId = 'order123';
-      const symbol = 'BTC/USDT';
+      const request: CancelTradeDto = {
+        exchange: 'binance',
+        orderId: 'order123',
+        symbol: 'BTC/USDT',
+        traceId: 't-cancel-2',
+      };
 
+      exchangeInitService.getExchange = jest.fn().mockReturnValue(exchangeMock);
       exchangeMock.cancelOrder = jest
         .fn()
         .mockRejectedValue(new Error('Cancellation failed'));
 
-      service['exchange'] = exchangeMock;
-
-      await expect(service.cancelOrder(orderId, symbol)).rejects.toThrow(
+      await expect(service.cancelOrder(request)).rejects.toThrow(
         InternalServerErrorException,
       );
 
@@ -297,7 +322,18 @@ describe('TradeService', () => {
         expect.objectContaining({
           topic: 'market_making.trade.cancel_failed',
           aggregateType: 'trade',
-          aggregateId: orderId,
+          aggregateId: 'binance:order123',
+        }),
+      );
+
+      expect(durabilityService.appendOutboxEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          payload: expect.objectContaining({
+            traceId: 't-cancel-2',
+            exchange: 'binance',
+            orderId: 'order123',
+            symbol: 'BTC/USDT',
+          }),
         }),
       );
     });

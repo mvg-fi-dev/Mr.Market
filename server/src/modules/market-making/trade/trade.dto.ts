@@ -88,3 +88,38 @@ export class LimitTradeDto {
   @IsNumber()
   price: number;
 }
+
+export class CancelTradeDto {
+  @ApiProperty({ description: 'Exchange' })
+  @IsString()
+  @IsNotEmpty()
+  exchange: string;
+
+  @ApiProperty({ description: 'Exchange order id' })
+  @IsString()
+  @IsNotEmpty()
+  orderId: string;
+
+  @ApiProperty({ description: 'Symbol (e.g., BTC/USDT)' })
+  @IsString()
+  @IsNotEmpty()
+  symbol: string;
+
+  @ApiProperty({
+    description: 'Correlation id for auditability/replayability',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  traceId?: string;
+
+  @ApiProperty({ description: 'Identifier for the sub-user', required: false })
+  @IsString()
+  @IsOptional()
+  userId?: string;
+
+  @ApiProperty({ description: 'Identifier for the client', required: false })
+  @IsString()
+  @IsOptional()
+  clientId?: string;
+}

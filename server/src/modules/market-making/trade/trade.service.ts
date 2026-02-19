@@ -9,7 +9,7 @@ import { ExchangeInitService } from 'src/modules/infrastructure/exchange-init/ex
 
 import { CustomLogger } from '../../infrastructure/logger/logger.service';
 import { DurabilityService } from '../durability/durability.service';
-import { LimitTradeDto, MarketTradeDto } from './trade.dto';
+import { CancelTradeDto, LimitTradeDto, MarketTradeDto } from './trade.dto';
 import { TradeRepository } from './trade.repository';
 
 @Injectable()
@@ -213,26 +213,31 @@ export class TradeService {
     }
   }
 
-  async cancelOrder(orderId: string, symbol: string): Promise<void> {
-    if (!this.exchange) {
-      throw new InternalServerErrorException(
-        'Exchange is not initialized for cancelOrder.',
-      );
-    }
+  async cancelOrder(request: CancelTradeDto): Promise<void> {
+    const { exchange, orderId, symbol, traceId, userId, clientId } = request;
+
+    const effectiveTraceId = traceId || `trade:cancel:${clientId || orderId}`;
+
+    const exchangeInstance = this.getExchange(exchange);
 
     try {
-      await this.exchange.cancelOrder(orderId, symbol);
+      await exchangeInstance.cancelOrder(orderId, symbol);
+
       // update the transaction status in database
       await this.tradeRepository.updateTradeStatus(orderId, 'cancelled');
 
       await this.durabilityService.appendOutboxEvent({
         topic: 'market_making.trade.cancelled',
         aggregateType: 'trade',
-        aggregateId: orderId,
+        aggregateId: `${exchange}:${orderId}`,
         payload: {
           eventType: 'TRADE_CANCELLED',
+          traceId: effectiveTraceId,
+          exchange,
           orderId,
           symbol,
+          userId,
+          clientId,
           cancelledAt: getRFC3339Timestamp(),
         },
       });
@@ -242,11 +247,15 @@ export class TradeService {
       await this.durabilityService.appendOutboxEvent({
         topic: 'market_making.trade.cancel_failed',
         aggregateType: 'trade',
-        aggregateId: orderId,
+        aggregateId: `${exchange}:${orderId}`,
         payload: {
           eventType: 'TRADE_CANCEL_FAILED',
+          traceId: effectiveTraceId,
+          exchange,
           orderId,
           symbol,
+          userId,
+          clientId,
           errorMessage: String(error.message || ''),
           failedAt: getRFC3339Timestamp(),
         },

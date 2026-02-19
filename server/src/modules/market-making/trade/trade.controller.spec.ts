@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 
 import { TradeController } from './trade.controller';
-import { LimitTradeDto, MarketTradeDto } from './trade.dto';
+import { CancelTradeDto, LimitTradeDto, MarketTradeDto } from './trade.dto';
 import { TradeService } from './trade.service';
 
 describe('TradeController', () => {
@@ -12,6 +12,7 @@ describe('TradeController', () => {
     mockTradeService = {
       executeMarketTrade: jest.fn(),
       executeLimitTrade: jest.fn(),
+      cancelOrder: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -55,5 +56,17 @@ describe('TradeController', () => {
 
     await controller.executeLimitTrade(dto);
     expect(mockTradeService.executeLimitTrade).toHaveBeenCalledWith(dto);
+  });
+
+  it('should cancel an order', async () => {
+    const dto: CancelTradeDto = {
+      exchange: 'binance',
+      orderId: 'order1',
+      symbol: 'BTC/USDT',
+      traceId: 't-cancel-1',
+    };
+
+    await controller.cancelOrder(dto);
+    expect(mockTradeService.cancelOrder).toHaveBeenCalledWith(dto);
   });
 });

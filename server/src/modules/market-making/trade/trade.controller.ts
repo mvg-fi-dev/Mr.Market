@@ -1,12 +1,4 @@
-import {
-  BadRequestException,
-  Body,
-  Controller,
-  HttpCode,
-  HttpStatus,
-  Param,
-  Post,
-} from '@nestjs/common';
+import { BadRequestException, Body, Controller, Post } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiOperation,
@@ -15,7 +7,7 @@ import {
 } from '@nestjs/swagger';
 
 import { CustomLogger } from '../../infrastructure/logger/logger.service';
-import { LimitTradeDto, MarketTradeDto } from './trade.dto';
+import { CancelTradeDto, LimitTradeDto, MarketTradeDto } from './trade.dto';
 import { TradeService } from './trade.service';
 
 @ApiTags('Trading Engine')
@@ -80,12 +72,16 @@ export class TradeController {
     }
   }
 
-  @Post('/cancel/:orderId/:symbol')
-  @HttpCode(HttpStatus.OK)
-  async cancelOrder(
-    @Param('orderId') orderId: string,
-    @Param('symbol') symbol: string,
-  ) {
-    return this.tradeService.cancelOrder(orderId, symbol);
+  @Post('/cancel')
+  @ApiOperation({ summary: 'Cancel an order' })
+  @ApiResponse({ status: 200, description: 'Order cancelled successfully.' })
+  @ApiBadRequestResponse({ description: 'Invalid cancel parameters.' })
+  async cancelOrder(@Body() dto: CancelTradeDto) {
+    if (!dto.exchange || !dto.orderId || !dto.symbol) {
+      throw new BadRequestException('Invalid cancel parameters.');
+    }
+
+    return this.tradeService.cancelOrder(dto);
   }
 }
+
