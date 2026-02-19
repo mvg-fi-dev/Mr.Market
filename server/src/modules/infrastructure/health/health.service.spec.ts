@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getEntityManagerToken } from '@nestjs/typeorm';
 
+import { ClockTickCoordinatorService } from 'src/modules/market-making/tick/clock-tick-coordinator.service';
+
 import { ExchangeInitService } from '../exchange-init/exchange-init.service';
 import { CustomLogger } from '../logger/logger.service';
 import { HealthService } from './health.service';
@@ -57,6 +59,16 @@ describe('HealthService', () => {
           provide: ExchangeInitService,
           useValue: {
             getExchange: jest.fn(),
+          },
+        },
+        {
+          provide: ClockTickCoordinatorService,
+          useValue: {
+            isRunning: jest.fn().mockReturnValue(true),
+            getTickSizeMs: jest.fn().mockReturnValue(1000),
+            getLastTickAtMs: jest.fn().mockReturnValue(Date.now()),
+            getLastTickAt: jest.fn().mockReturnValue('2026-02-19T00:00:00.000Z'),
+            getTickCount: jest.fn().mockReturnValue(0),
           },
         },
       ],

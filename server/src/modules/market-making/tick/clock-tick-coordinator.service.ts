@@ -21,6 +21,9 @@ export class ClockTickCoordinatorService
   private intervalId?: NodeJS.Timeout;
   private running = false;
   private tickInProgress = false;
+  private lastTickAtMs: number | null = null;
+  private lastTickAt: string | null = null;
+  private tickCount = 0;
 
   constructor(private readonly configService: ConfigService) {
     this.tickSizeMs = Number(
@@ -100,6 +103,10 @@ export class ClockTickCoordinatorService
 
         await item.component.onTick(ts);
       }
+
+      this.lastTickAtMs = Date.now();
+      this.lastTickAt = ts;
+      this.tickCount += 1;
     } finally {
       this.tickInProgress = false;
     }
@@ -107,6 +114,22 @@ export class ClockTickCoordinatorService
 
   isRunning(): boolean {
     return this.running;
+  }
+
+  getLastTickAtMs(): number | null {
+    return this.lastTickAtMs;
+  }
+
+  getLastTickAt(): string | null {
+    return this.lastTickAt;
+  }
+
+  getTickCount(): number {
+    return this.tickCount;
+  }
+
+  getTickSizeMs(): number {
+    return this.tickSizeMs;
   }
 
   private getSortedComponents(): RegisteredTickComponent[] {

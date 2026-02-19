@@ -3,6 +3,7 @@
 ## 2026-02-19
 
 - Emit durable outbox events for trade execute/cancel/fail (traceId-ready)
+- Add /health/system-status endpoint (queues + tick loop health bundle)
 
 ## 2026-02-18
 
@@ -84,3 +85,4 @@
 - Fix withdrawal confirmation monitoring documentation with correct Mixin snapshot check
 - Add withdrawal timeout (30 minutes) to error handling
 - Add comprehensive ui/DESIGN_PATTERN.md with full design system documentation
+

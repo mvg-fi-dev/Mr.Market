@@ -3,6 +3,7 @@ import { Controller, Get, Param } from '@nestjs/common';
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 import { HealthSummaryDto } from './health.dto';
+import { SystemStatusDto } from './system-status.dto';
 
 import { HealthService } from './health.service';
 
@@ -105,5 +106,13 @@ export class HealthController {
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
   async getMarketMakingQueueHealth() {
     return await this.healthService.checkMarketMakingQueueHealth();
+  }
+
+  @Get('/system-status')
+  @ApiOperation({ summary: 'Get system status summary (queues + tick loop)' })
+  @ApiResponse({ status: 200, description: 'System status', type: SystemStatusDto })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
+  async getSystemStatus(): Promise<SystemStatusDto> {
+    return await this.healthService.getSystemStatus();
   }
 }

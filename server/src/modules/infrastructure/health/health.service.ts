@@ -8,10 +8,12 @@ import type { Job, Queue } from 'bull';
 import * as ccxt from 'ccxt';
 
 import { getRFC3339Timestamp } from '../../../common/helpers/utils';
+import { ClockTickCoordinatorService } from '../../market-making/tick/clock-tick-coordinator.service';
 import { ExchangeInitService } from '../exchange-init/exchange-init.service';
 import { CustomLogger } from '../logger/logger.service';
 
 import { HealthSummaryDto } from './health.dto';
+import { SystemStatusDto } from './system-status.dto';
 
 type HEALTH_STATE = 'alive' | 'dead';
 
@@ -24,6 +26,7 @@ export class HealthService {
     @InjectQueue('snapshots') private snapshotsQueue: Queue,
     @InjectQueue('market-making') private marketMakingQueue: Queue,
     private exchangeInitService: ExchangeInitService,
+    private readonly clockTickCoordinatorService: ClockTickCoordinatorService,
   ) {
     // Enable this with api keys in .env
     // this.checkApiKeys()
@@ -382,5 +385,87 @@ export class HealthService {
       };
     }
   }
+
+  async getSystemStatus(): Promise<SystemStatusDto> {
+    const timestamp = getRFC3339Timestamp();
+
+    const issues: string[] = [];
+
+    const [snapshots, marketMaking] = await Promise.all([
+      this.getQueueSummary('snapshots', this.snapshotsQueue),
+      this.getQueueSummary('market-making', this.marketMakingQueue),
+    ]);
+
+    const tickSizeMs = this.clockTickCoordinatorService.getTickSizeMs();
+    const tickRunning = this.clockTickCoordinatorService.isRunning();
+    const lastTickAtMs = this.clockTickCoordinatorService.getLastTickAtMs();
+    const lastTickAt = this.clockTickCoordinatorService.getLastTickAt();
+    const tickCount = this.clockTickCoordinatorService.getTickCount();
+
+    const recentlyTicked =
+      lastTickAtMs != null && Date.now() - lastTickAtMs < 30_000;
+
+    if (!tickRunning) {
+      issues.push('Tick loop is not running');
+    }
+
+    if (tickRunning && !recentlyTicked) {
+      issues.push('Tick loop appears stale');
+    }
+
+    if (snapshots.isPaused) {
+      issues.push('Snapshots queue is paused');
+    }
+
+    if (marketMaking.isPaused) {
+      issues.push('Market-making queue is paused');
+    }
+
+    const ok = issues.length === 0;
+
+    return {
+      timestamp,
+      ok,
+      queues: {
+        snapshots,
+        marketMaking,
+      },
+      tick: {
+        running: tickRunning,
+        tickSizeMs,
+        lastTickAtMs,
+        lastTickAt,
+        tickCount,
+        recentlyTicked,
+      },
+      issues,
+    };
+  }
+
+  private async getQueueSummary(
+    name: string,
+    queue: Queue,
+  ): Promise<SystemStatusDto['queues']['snapshots']> {
+    const [waiting, active, completed, failed, delayed, isPaused] =
+      await Promise.all([
+        queue.getWaitingCount(),
+        queue.getActiveCount(),
+        queue.getCompletedCount(),
+        queue.getFailedCount(),
+        queue.getDelayedCount(),
+        queue.isPaused(),
+      ]);
+
+    return {
+      name,
+      isPaused,
+      waiting,
+      active,
+      completed,
+      failed,
+      delayed,
+    };
+  }
 }
+
 
