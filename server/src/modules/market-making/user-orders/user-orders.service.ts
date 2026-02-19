@@ -259,6 +259,21 @@ export class UserOrdersService {
     });
   }
 
+  async getMarketMakingHistoryByStrategyInstanceId(
+    id: string,
+  ): Promise<MarketMakingHistory[]> {
+    if (!id) {
+      return [];
+    }
+
+    // Backwards compatible: frontend historically calls this endpoint with orderId.
+    // For MM flows, we store orderId as clientId; some records may also use strategyInstanceId.
+    return await this.marketMakingHistoryRepository.find({
+      where: [{ clientId: id }, { strategyInstanceId: id }],
+      order: { executedAt: 'DESC' },
+    });
+  }
+
   async getUserArbitrageHistorys(userId: string): Promise<ArbitrageHistory[]> {
     return await this.arbitrageHistoryRepository.find({
       where: { userId },

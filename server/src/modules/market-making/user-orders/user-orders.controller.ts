@@ -208,19 +208,22 @@ export class UserOrdersController {
     return await this.userOrdersService.getUserOrders(userId);
   }
 
-  // @Get('/market-making/history/instance/:id')
-  // @HttpCode(HttpStatus.OK)
-  // @ApiOperation({ summary: 'Get market making history by strategy instance id' })
-  // @ApiResponse({
-  //   status: 200,
-  //   description: 'Market making history of strategy instance',
-  // })
-  // @ApiResponse({ status: 400, description: 'Bad request.' })
-  // async getMarketMakingHistoryByInstanceId(
-  //   @Param('id') id: string,
-  // ): Promise<MarketMakingHistory[]> {
-  //   return await this.userOrdersService.getMarketMakingHistoryByStrategyInstanceId(
-  //     id,
-  //   );
-  // }
+  @Get('/market-making/history/instance/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Get market making history by strategy instance id (or orderId/clientId for MM)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Market making execution history rows',
+  })
+  @ApiResponse({ status: 400, description: 'Bad request.' })
+  async getMarketMakingHistoryByInstanceId(
+    @Param('id') id: string,
+  ): Promise<MarketMakingHistory[]> {
+    return await this.userOrdersService.getMarketMakingHistoryByStrategyInstanceId(
+      id,
+    );
+  }
 }

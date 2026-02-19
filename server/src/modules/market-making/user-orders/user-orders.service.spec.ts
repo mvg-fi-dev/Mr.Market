@@ -29,6 +29,7 @@ describe('UserOrdersService', () => {
   let strategyService: StrategyService;
   let marketMakingRepository: Repository<MarketMakingOrder>;
   let simplyGrowRepository: Repository<SimplyGrowOrder>;
+  let marketMakingHistoryRepository: Repository<MarketMakingHistory>;
   let testingModule: TestingModule;
 
   beforeEach(async () => {
@@ -81,6 +82,9 @@ describe('UserOrdersService', () => {
     simplyGrowRepository = testingModule.get<Repository<SimplyGrowOrder>>(
       getRepositoryToken(SimplyGrowOrder),
     );
+    marketMakingHistoryRepository = testingModule.get<
+      Repository<MarketMakingHistory>
+    >(getRepositoryToken(MarketMakingHistory));
     jest.clearAllMocks();
   });
 
@@ -146,6 +150,25 @@ describe('UserOrdersService', () => {
       expect(marketMakingRepository.save).toHaveBeenCalledWith(
         mockMarketMakingOrder,
       );
+    });
+  });
+
+  describe('getMarketMakingHistoryByStrategyInstanceId', () => {
+    it('queries history by clientId OR strategyInstanceId (backwards compatible)', async () => {
+      const rows = [{ id: 1 } as any];
+      jest
+        .spyOn(marketMakingHistoryRepository, 'find')
+        .mockResolvedValueOnce(rows as any);
+
+      const res = await service.getMarketMakingHistoryByStrategyInstanceId(
+        'order-123',
+      );
+
+      expect(marketMakingHistoryRepository.find).toHaveBeenCalledWith({
+        where: [{ clientId: 'order-123' }, { strategyInstanceId: 'order-123' }],
+        order: { executedAt: 'DESC' },
+      });
+      expect(res).toEqual(rows);
     });
   });
 
