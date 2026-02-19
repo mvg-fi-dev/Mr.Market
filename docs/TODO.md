@@ -64,7 +64,7 @@ _DoD: one written policy + state diagram; code matches policy (tests), and UI te
 
 - [x] Decide whether `join_campaign` is a required step or optional bookkeeping. (server: `server/src/modules/campaign/*`, `server/src/modules/market-making/user-orders/market-making.processor.ts`)
   - Current behavior: HuFi join is handled by CampaignService cron; `deposit_confirmed` queues `start_mm` directly.
-- [ ] If required: define `deposit_confirmed -> join_campaign` enqueue rules (idempotent), and store idempotency keys (`order_id + step_name`). (server: MM queue + DB)
+- [x] If required: define `deposit_confirmed -> join_campaign` enqueue rules (idempotent), and store idempotency keys (`order_id + step_name`). (server: MM queue + DB)
 
 ---
 
