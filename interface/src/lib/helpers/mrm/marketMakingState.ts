@@ -19,7 +19,7 @@ export type MarketMakingState =
   | 'failed'
   | 'refunded'
   | 'deleted'
-  | (string & {});
+  | (string & Record<string, never>);
 
 export type MarketMakingFlowStepKey = 'payment' | 'withdraw' | 'deposit' | 'running';
 
