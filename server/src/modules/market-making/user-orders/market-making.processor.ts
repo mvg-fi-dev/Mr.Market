@@ -1256,7 +1256,61 @@ export class MarketMakingOrderProcessor {
           traceId: exitTraceId,
           orderId,
           job,
-        })} Exit already in progress (${order.state}), skipping re-withdraw`,
+        })} Exit already in progress (${order.state}), ensuring monitor job is queued`,
+      );
+
+      // Crash-safe: if we are already in an exit state but the monitor job was lost
+      // (e.g. crash after state update), re-enqueue monitor_exit_mixin_deposit using
+      // durable allocation fields.
+      const allocation = await this.allocationService.getByOrderId(orderId);
+
+      if (!allocation) {
+        throw new Error(
+          `Missing exchange allocation for order ${orderId}. Refusing to exit without per-order allocation.`,
+        );
+      }
+
+      const pairConfig =
+        await this.growDataRepository.findMarketMakingPairByExchangeAndSymbol(
+          order.exchangeName,
+          order.pair,
+        );
+
+      if (!pairConfig) {
+        throw new Error(
+          `Market making pair config not found for ${order.exchangeName} ${order.pair}`,
+        );
+      }
+
+      const exchangeName = pairConfig.exchange_id;
+
+      const persistedStartedAt = allocation.exitWithdrawalStartedAt
+        ? Date.parse(allocation.exitWithdrawalStartedAt)
+        : Date.now();
+
+      await (job.queue as any).add(
+        'monitor_exit_mixin_deposit',
+        {
+          userId,
+          orderId,
+          exchangeName,
+          baseAssetId: pairConfig.base_asset_id,
+          quoteAssetId: pairConfig.quote_asset_id,
+          expectedBaseAmount: allocation.baseAllocatedAmount,
+          expectedQuoteAmount: allocation.quoteAllocatedAmount,
+          expectedBaseTxHash: allocation.exitExpectedBaseTxHash,
+          expectedQuoteTxHash: allocation.exitExpectedQuoteTxHash,
+          traceId: exitTraceId,
+          startedAt: Number.isFinite(persistedStartedAt)
+            ? persistedStartedAt
+            : Date.now(),
+        },
+        {
+          jobId: `monitor_exit_mixin_deposit_${orderId}`,
+          attempts: 120,
+          backoff: { type: 'fixed', delay: this.RETRY_DELAY_MS },
+          removeOnComplete: false,
+        },
       );
 
       return;
