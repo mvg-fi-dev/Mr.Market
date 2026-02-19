@@ -6,6 +6,7 @@ import { GrowdataMarketMakingPair } from 'src/common/entities/data/grow-data.ent
 import { SpotdataTradingPair } from 'src/common/entities/data/spot-data.entity';
 import { ArbitrageHistory } from 'src/common/entities/market-making/arbitrage-order.entity';
 import { MarketMakingHistory } from 'src/common/entities/market-making/market-making-order.entity';
+import { Performance } from 'src/common/entities/market-making/performance.entity';
 import { StrategyInstance } from 'src/common/entities/market-making/strategy-instances.entity';
 import { MixinUser } from 'src/common/entities/mixin/mixin-user.entity';
 
@@ -19,6 +20,7 @@ import { MixinClientModule } from '../mixin/client/mixin-client.module';
 import { Web3Module } from '../web3/web3.module';
 import { AdminController } from './admin.controller';
 import { AdminSpotService } from './admin-spot-management/admin-spot-management.service';
+import { AdminOutboxModule } from './outbox/admin-outbox.module';
 import { AdminExchangesModule } from './exchanges/exchanges.module';
 import { AdminFeeController } from './fee/admin-fee.controller';
 import { AdminFeeService } from './fee/admin-fee.service';
@@ -28,6 +30,7 @@ import { AdminStrategyService } from './strategy/adminStrategy.service';
 @Module({
   imports: [
     AdminExchangesModule,
+    AdminOutboxModule,
     GrowdataModule,
     SpotdataModule,
     MixinClientModule,
