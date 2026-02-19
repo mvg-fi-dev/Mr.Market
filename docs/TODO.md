@@ -87,6 +87,7 @@ _DoD: one admin page shows system health; on-call can answer “is the loop runn
   - NOTE: `formatAuditLogContext()` now supports these fields for consistent prefix formatting.
 - [x] Add tracing/correlation IDs across Mr.Market -> executor -> HuFi components. (server: queue payloads + HTTP clients)
 - [ ] Admin “system status” page: queue health, executor health, HuFi reachability, EasyEnclave verification status. (server: `server/src/modules/infrastructure/health/*`; interface: `interface/src/lib/components/admin/health/*`)
+  - [x] Server exposes market-making queue health endpoint: `GET /health/market-making` (server: `server/src/modules/infrastructure/health/*`)
 
 ---
 
