@@ -297,6 +297,38 @@
             console.error("Failed to resume market making:", e);
         }
     };
+
+    const handleStop = async () => {
+        const currentUser = get(user);
+        const userId = currentUser?.user_id;
+
+        if (!userId || !backendOrder?.orderId) {
+            return;
+        }
+
+        try {
+            await stopMarketMakingOrder(userId, backendOrder.orderId);
+            await refreshNow();
+        } catch (e) {
+            console.error("Failed to stop market making:", e);
+        }
+    };
+
+    const handleExit = async () => {
+        const currentUser = get(user);
+        const userId = currentUser?.user_id;
+
+        if (!userId || !backendOrder?.orderId) {
+            return;
+        }
+
+        try {
+            await exitMarketMakingOrder(userId, backendOrder.orderId);
+            await refreshNow();
+        } catch (e) {
+            console.error("Failed to exit market making:", e);
+        }
+    };
 </script>
 
 <div class="min-h-screen bg-gray-50 pb-10">
@@ -376,20 +408,21 @@
     <FillHistory fills={order.fills || []} />
 
     <BottomActions
-        on:cancel={() => (isCancelDialogOpen = true)}
-        on:modify={() => (showModifyModal = true)}
+        canPause={backendOrder?.state === "running"}
+        canResume={backendOrder?.state === "paused"}
+        canStop={
+            backendOrder?.state === "running" ||
+            backendOrder?.state === "paused" ||
+            backendOrder?.state === "stopped"
+        }
+        canExit={!isMarketMakingTerminalState(backendOrder?.state)}
+        on:pause={() => (isCancelDialogOpen = true)}
+        on:stop={handleStop}
+        on:exit={handleExit}
+        on:resume={handleResume}
     />
 
-    {#if backendOrder?.state === "paused"}
-        <div class="mx-4 mt-4">
-            <button
-                class="btn btn-primary w-full rounded-full"
-                on:click={handleResume}
-            >
-                Resume
-            </button>
-        </div>
-    {/if}
+    <!-- Resume handled by BottomActions -->
 
     <ModifyOrderModal
         isOpen={showModifyModal}
