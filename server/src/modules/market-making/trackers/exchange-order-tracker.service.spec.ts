@@ -40,7 +40,13 @@ describe('ExchangeOrderTrackerService', () => {
 
   it('reconciles order status on tick via adapter poller', async () => {
     const adapter = {
-      fetchOrder: jest.fn().mockResolvedValue({ id: 'ex-1', status: 'closed' }),
+      fetchOrder: jest.fn().mockResolvedValue({
+        id: 'ex-1',
+        status: 'closed',
+        filled: 0.25,
+        remaining: 0.75,
+        average: 100.5,
+      }),
     };
     const durability = {
       appendOutboxEvent: jest.fn(),
@@ -70,6 +76,10 @@ describe('ExchangeOrderTrackerService', () => {
     const tracked = service.getByExchangeOrderId('ex-1');
 
     expect(tracked?.status).toBe('filled');
+    expect(tracked?.filled).toBe('0.25');
+    expect(tracked?.remaining).toBe('0.75');
+    expect(tracked?.averagePrice).toBe('100.5');
+
     expect(durability.appendOutboxEvent).toHaveBeenCalledTimes(1);
     expect(durability.appendOutboxEvent).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -82,9 +92,15 @@ describe('ExchangeOrderTrackerService', () => {
     );
   });
 
-  it('does not emit outbox event if status is unchanged', async () => {
+  it('does not emit outbox event if status and fields are unchanged', async () => {
     const adapter = {
-      fetchOrder: jest.fn().mockResolvedValue({ id: 'ex-1', status: 'open' }),
+      fetchOrder: jest.fn().mockResolvedValue({
+        id: 'ex-1',
+        status: 'open',
+        filled: 0,
+        remaining: 1,
+        average: undefined,
+      }),
     };
     const durability = {
       appendOutboxEvent: jest.fn(),
@@ -107,6 +123,8 @@ describe('ExchangeOrderTrackerService', () => {
       qty: '1',
       status: 'open',
       updatedAt: '2026-02-11T00:00:00.000Z',
+      filled: '0',
+      remaining: '1',
     });
 
     await service.onTick('2026-02-11T00:00:01.000Z');

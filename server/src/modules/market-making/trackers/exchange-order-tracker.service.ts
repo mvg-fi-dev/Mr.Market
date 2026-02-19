@@ -25,6 +25,13 @@ type TrackedOrder = {
   side: 'buy' | 'sell';
   price: string;
   qty: string;
+  /**
+   * Best-effort fill fields (if exchange adapter provides them).
+   * Stored as strings to avoid float issues.
+   */
+  filled?: string;
+  remaining?: string;
+  averagePrice?: string;
   status: 'open' | 'partially_filled' | 'filled' | 'cancelled' | 'failed';
   updatedAt: string;
 };
@@ -123,15 +130,32 @@ export class ExchangeOrderTrackerService
 
       const normalizedStatus = this.normalizeStatus(latest.status);
 
-      if (normalizedStatus === order.status) {
+      // Best-effort: if exchange adapter provides filled/remaining/average, we persist them.
+      const normalizedFilled = this.normalizeAmount((latest as any).filled);
+      const normalizedRemaining = this.normalizeAmount(
+        (latest as any).remaining,
+      );
+      const normalizedAverage = this.normalizePrice((latest as any).average);
+
+      const shouldUpdateFields =
+        (normalizedFilled && (order as any).filled !== normalizedFilled) ||
+        (normalizedRemaining &&
+          (order as any).remaining !== normalizedRemaining) ||
+        (normalizedAverage && (order as any).averagePrice !== normalizedAverage);
+
+      if (normalizedStatus === order.status && !shouldUpdateFields) {
         continue;
       }
 
-      const updated = {
+      const updated: any = {
         ...order,
         status: normalizedStatus,
         updatedAt: getRFC3339Timestamp(),
       };
+
+      if (normalizedFilled) updated.filled = normalizedFilled;
+      if (normalizedRemaining) updated.remaining = normalizedRemaining;
+      if (normalizedAverage) updated.averagePrice = normalizedAverage;
 
       this.orders.set(order.exchangeOrderId, updated);
 
@@ -173,5 +197,34 @@ export class ExchangeOrderTrackerService
     }
 
     return 'failed';
+  }
+
+  private normalizeAmount(value: unknown): string | undefined {
+    if (value === null || value === undefined) {
+      return undefined;
+    }
+
+    if (typeof value === 'number') {
+      if (!Number.isFinite(value)) {
+        return undefined;
+      }
+
+      return String(value);
+    }
+
+    if (typeof value === 'string') {
+      const v = value.trim();
+      if (!v.length) {
+        return undefined;
+      }
+
+      return v;
+    }
+
+    return undefined;
+  }
+
+  private normalizePrice(value: unknown): string | undefined {
+    return this.normalizeAmount(value);
   }
 }

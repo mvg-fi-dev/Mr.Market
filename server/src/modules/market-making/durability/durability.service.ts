@@ -19,6 +19,16 @@ type AppendOutboxCommand = {
   payload: Record<string, unknown>;
 };
 
+export type ListOutboxEventsQuery = {
+  topics?: string[];
+  aggregateType?: string;
+  aggregateId?: string;
+  since?: string;
+  traceId?: string;
+  orderId?: string;
+  limit?: number;
+};
+
 @Injectable()
 export class DurabilityService {
   constructor(
@@ -27,6 +37,46 @@ export class DurabilityService {
     @InjectRepository(ConsumerReceipt)
     private readonly consumerReceiptRepository: Repository<ConsumerReceipt>,
   ) {}
+
+  async listOutboxEvents(query: ListOutboxEventsQuery): Promise<OutboxEvent[]> {
+    const limit = Math.max(1, Math.min(1000, Number(query.limit || 50)));
+
+    const qb = this.outboxRepository
+      .createQueryBuilder('e')
+      .orderBy('e.createdAt', 'DESC')
+      .addOrderBy('e.eventId', 'DESC')
+      .limit(limit);
+
+    if (query.aggregateType) {
+      qb.andWhere('e.aggregateType = :aggregateType', {
+        aggregateType: query.aggregateType,
+      });
+    }
+
+    if (query.aggregateId) {
+      qb.andWhere('e.aggregateId = :aggregateId', {
+        aggregateId: query.aggregateId,
+      });
+    }
+
+    if (query.since) {
+      qb.andWhere('e.createdAt >= :since', { since: query.since });
+    }
+
+    if (query.traceId) {
+      qb.andWhere('e.traceId = :traceId', { traceId: query.traceId });
+    }
+
+    if (query.orderId) {
+      qb.andWhere('e.orderId = :orderId', { orderId: query.orderId });
+    }
+
+    if (query.topics && query.topics.length > 0) {
+      qb.andWhere('e.topic IN (:...topics)', { topics: query.topics });
+    }
+
+    return await qb.getMany();
+  }
 
   async appendOutboxEvent(command: AppendOutboxCommand): Promise<OutboxEvent> {
     const payloadTraceId = this.extractString(command.payload?.traceId);
