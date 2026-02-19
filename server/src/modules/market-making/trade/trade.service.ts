@@ -254,12 +254,12 @@ export class TradeService {
         topic: 'market_making.trade.cancelled',
         aggregateType: 'trade',
         aggregateId: `${exchange}:${orderId}`,
-        // For market-making, clientId === orderId.
-        orderId: clientId || '',
+        // For market-making, clientId === orderId. If absent (manual/admin cancel), fall back to exchange orderId.
+        orderId: clientId || orderId,
         payload: {
           eventType: 'TRADE_CANCELLED',
           traceId: effectiveTraceId,
-          orderId: clientId || '',
+          orderId: clientId || orderId,
           exchangeOrderId: orderId,
           exchange,
           symbol,
@@ -279,11 +279,11 @@ export class TradeService {
         topic: 'market_making.trade.cancel_failed',
         aggregateType: 'trade',
         aggregateId: `${exchange}:${orderId}`,
-        orderId: clientId || '',
+        orderId: clientId || orderId,
         payload: {
           eventType: 'TRADE_CANCEL_FAILED',
           traceId: effectiveTraceId,
-          orderId: clientId || '',
+          orderId: clientId || orderId,
           exchangeOrderId: orderId,
           exchange,
           symbol,
