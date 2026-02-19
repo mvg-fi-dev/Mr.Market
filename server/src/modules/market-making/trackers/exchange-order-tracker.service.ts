@@ -71,10 +71,21 @@ export class ExchangeOrderTrackerService
     return this.orders.size;
   }
 
-  countOpen(): number {
-    return [...this.orders.values()].filter(
-      (order) => order.status === 'open' || order.status === 'partially_filled',
-    ).length;
+  countOpen(strategyKey?: string): number {
+    return [...this.orders.values()].filter((order) => {
+      const isOpen =
+        order.status === 'open' || order.status === 'partially_filled';
+
+      if (!isOpen) {
+        return false;
+      }
+
+      if (strategyKey) {
+        return order.strategyKey === strategyKey;
+      }
+
+      return true;
+    }).length;
   }
 
   getOpenOrders(strategyKey: string): TrackedOrder[] {

@@ -143,8 +143,22 @@ describe('ExchangeOrderTrackerService', () => {
       updatedAt: '2026-02-11T00:00:00.000Z',
     });
 
-    expect(service.countAll()).toBe(3);
-    expect(service.countOpen()).toBe(2);
+    service.upsertOrder({
+      strategyKey: 's2',
+      exchange: 'binance',
+      pair: 'BTC/USDT',
+      exchangeOrderId: 'ex-open-s2',
+      side: 'buy',
+      price: '100',
+      qty: '1',
+      status: 'open',
+      updatedAt: '2026-02-11T00:00:00.000Z',
+    });
+
+    expect(service.countAll()).toBe(4);
+    expect(service.countOpen()).toBe(3);
+    expect(service.countOpen('s1')).toBe(2);
+    expect(service.countOpen('s2')).toBe(1);
     expect(service.getOpenOrders('s1')).toHaveLength(2);
   });
 });

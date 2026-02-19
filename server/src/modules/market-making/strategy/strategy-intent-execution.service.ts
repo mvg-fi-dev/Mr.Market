@@ -67,7 +67,8 @@ export class StrategyIntentExecutionService {
     }
 
     if (intent.type === 'CREATE_LIMIT_ORDER') {
-      const openCount = this.exchangeOrderTrackerService?.countOpen() ?? 0;
+      const openCount =
+        this.exchangeOrderTrackerService?.countOpen(intent.strategyKey) ?? 0;
 
       if (openCount >= this.maxOpenOrdersPerStrategy) {
         this.logger.warn(

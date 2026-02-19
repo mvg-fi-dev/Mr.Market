@@ -89,6 +89,9 @@ describe('StrategyIntentExecutionService (max open orders guard)', () => {
 
     await service.consumeIntents([baseIntent]);
 
+    expect(exchangeOrderTrackerService.countOpen).toHaveBeenCalledWith(
+      baseIntent.strategyKey,
+    );
     expect(exchangeConnectorAdapterService.placeLimitOrder).not.toHaveBeenCalled();
     expect(intentStoreService.updateIntentStatus).toHaveBeenCalledWith(
       baseIntent.intentId,
