@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class MarketTradeDto {
   @ApiProperty({ description: 'Identifier for the sub-user' })
@@ -11,6 +11,14 @@ export class MarketTradeDto {
   @IsString()
   @IsNotEmpty()
   clientId: string;
+
+  @ApiProperty({
+    description: 'Correlation id for auditability/replayability',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  traceId?: string;
 
   @ApiProperty({ description: 'Exchange' })
   @IsString()
@@ -45,6 +53,14 @@ export class LimitTradeDto {
   @IsString()
   @IsNotEmpty()
   clientId: string;
+
+  @ApiProperty({
+    description: 'Correlation id for auditability/replayability',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  traceId?: string;
 
   @ApiProperty({ description: 'Exchange' })
   @IsString()

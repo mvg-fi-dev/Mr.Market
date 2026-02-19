@@ -51,6 +51,7 @@ describe('TradeService', () => {
       const marketTradeDto: MarketTradeDto = {
         userId: 'user123',
         clientId: 'client123',
+        traceId: 't1',
         exchange: 'binance',
         symbol: 'BTC/USDT',
         side: 'buy',
@@ -79,6 +80,7 @@ describe('TradeService', () => {
         userId: 'user123',
         clientId: 'client123',
         exchange: 'binance',
+        traceId: 't1',
         symbol: 'BTC/USDT',
         type: 'market',
         side: 'buy',
@@ -93,6 +95,7 @@ describe('TradeService', () => {
       const marketTradeDto: MarketTradeDto = {
         userId: 'user123',
         clientId: 'client123',
+        traceId: 't2',
         exchange: 'binance',
         symbol: '',
         side: 'buy',
@@ -108,6 +111,7 @@ describe('TradeService', () => {
       const marketTradeDto: MarketTradeDto = {
         userId: 'user123',
         clientId: 'client123',
+        traceId: 't3',
         exchange: 'binance',
         symbol: 'BTC/USDT',
         side: 'buy',
@@ -130,6 +134,7 @@ describe('TradeService', () => {
       const limitTradeDto: LimitTradeDto = {
         userId: 'user123',
         clientId: 'client123',
+        traceId: 't4',
         exchange: 'binance',
         symbol: 'BTC/USDT',
         side: 'buy',
@@ -160,6 +165,7 @@ describe('TradeService', () => {
         userId: 'user123',
         clientId: 'client123',
         exchange: 'binance',
+        traceId: 't4',
         symbol: 'BTC/USDT',
         side: 'buy',
         type: 'limit',
@@ -174,6 +180,7 @@ describe('TradeService', () => {
       const limitTradeDto: LimitTradeDto = {
         userId: 'user123',
         clientId: 'client123',
+        traceId: 't5',
         exchange: 'binance',
         symbol: 'BTC/USDT',
         side: 'buy',
@@ -190,6 +197,7 @@ describe('TradeService', () => {
       const limitTradeDto: LimitTradeDto = {
         userId: 'user123',
         clientId: 'client123',
+        traceId: 't6',
         exchange: 'binance',
         symbol: 'BTC/USDT',
         side: 'buy',

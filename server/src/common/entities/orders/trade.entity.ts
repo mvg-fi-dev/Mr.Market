@@ -25,6 +25,10 @@ export class Trade {
   @Column({ default: '' })
   exchange: string;
 
+  // Correlation id for auditability/replayability across the loop.
+  @Column({ default: '' })
+  traceId: string;
+
   @Column()
   symbol: string; // E.g., 'BTC/USD'
 

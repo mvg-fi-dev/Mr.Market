@@ -32,7 +32,8 @@ export class TradeService {
   }
 
   async executeMarketTrade(marketTradeDto: MarketTradeDto) {
-    const { userId, clientId, exchange, symbol, side, amount } = marketTradeDto;
+    const { userId, clientId, traceId, exchange, symbol, side, amount } =
+      marketTradeDto;
 
     if (!symbol || !side || !amount) {
       throw new BadRequestException(
@@ -55,6 +56,7 @@ export class TradeService {
         userId,
         clientId,
         exchange,
+        traceId: traceId || '',
         symbol,
         type: 'market',
         side: side,
@@ -74,7 +76,7 @@ export class TradeService {
   }
 
   async executeLimitTrade(limitTradeDto: LimitTradeDto): Promise<ccxt.Order> {
-    const { userId, clientId, exchange, symbol, side, amount, price } =
+    const { userId, clientId, traceId, exchange, symbol, side, amount, price } =
       limitTradeDto;
 
     if (!symbol || !side || !amount || !price) {
@@ -100,6 +102,7 @@ export class TradeService {
         userId,
         clientId,
         exchange,
+        traceId: traceId || '',
         symbol,
         side: side,
         type: 'limit',

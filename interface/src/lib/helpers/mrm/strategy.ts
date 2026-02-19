@@ -128,9 +128,38 @@ export const stopPureMarketMaking = async (userId: string, clientId: string) => 
 
 export const getMarketMakingHistoryByInstanceId = async (id: string) => {
   try {
-    const response = await fetch(`${MRM_BACKEND_URL}/user-orders/market-making/history/instance/${id}`);
+    const response = await fetch(
+      `${MRM_BACKEND_URL}/user-orders/market-making/history/instance/${id}`,
+    );
     return await handleResponse(response);
   } catch (error) {
     console.error('Error fetching market making history by instance id:', error);
   }
-}
+};
+
+export type MarketMakingLifecycleBundle =
+  | {
+      ok: false;
+      error: string;
+    }
+  | {
+      ok: true;
+      orderId: string;
+      strategyKey: string;
+      intents: unknown[];
+      openOrders: unknown[];
+      history: unknown[];
+    };
+
+export const getMarketMakingLifecycleBundle = async (
+  orderId: string,
+): Promise<MarketMakingLifecycleBundle | undefined> => {
+  try {
+    const response = await fetch(
+      `${MRM_BACKEND_URL}/user-orders/market-making/lifecycle/${orderId}`,
+    );
+    return await handleResponse(response);
+  } catch (error) {
+    console.error('Error fetching market making lifecycle bundle:', error);
+  }
+};

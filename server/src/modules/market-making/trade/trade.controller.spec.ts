@@ -30,6 +30,7 @@ describe('TradeController', () => {
     const dto: MarketTradeDto = {
       userId: '123',
       clientId: 'client1',
+      traceId: 't1',
       exchange: 'binance',
       symbol: 'BTC/USD',
       side: 'buy',
@@ -44,6 +45,7 @@ describe('TradeController', () => {
     const dto: LimitTradeDto = {
       userId: '123',
       clientId: 'client1',
+      traceId: 't2',
       exchange: 'binance',
       symbol: 'BTC/USD',
       side: 'sell',

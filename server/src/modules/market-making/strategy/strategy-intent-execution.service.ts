@@ -115,6 +115,7 @@ export class StrategyIntentExecutionService {
             : this.tradeService.executeLimitTrade({
                 userId: intent.userId,
                 clientId: intent.clientId,
+                traceId: intent.traceId,
                 exchange: intent.exchange,
                 symbol: intent.pair,
                 side: intent.side,

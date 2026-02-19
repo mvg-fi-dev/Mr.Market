@@ -64,6 +64,7 @@
     let backendOrder: any = data.order?.data || data.order;
     $: history = data.history || [];
     $: executionReport = data.executionReport;
+    $: lifecycle = data.lifecycle;
 
     let polling = {
         enabled: true,
@@ -253,6 +254,35 @@
         onRefresh={refreshNow}
         onResumeAutoRefresh={resumeAutoRefresh}
     />
+
+    <!-- Lifecycle evidence (auditability/replayability) -->
+    {#if lifecycle?.ok}
+        <div class="mx-4 mt-4">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-50 p-4">
+                <div class="text-sm font-bold text-gray-500">Lifecycle evidence</div>
+                <div class="mt-3 grid grid-cols-3 gap-3">
+                    <div class="text-center">
+                        <div class="text-lg font-bold text-base-content">
+                            {lifecycle.intents?.length || 0}
+                        </div>
+                        <div class="text-xs text-base-content/60">Intents</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-lg font-bold text-base-content">
+                            {lifecycle.openOrders?.length || 0}
+                        </div>
+                        <div class="text-xs text-base-content/60">Open orders</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-lg font-bold text-base-content">
+                            {lifecycle.history?.length || 0}
+                        </div>
+                        <div class="text-xs text-base-content/60">History</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {/if}
 
     <RevenueCard
         totalRevenue={order.totalRevenue || "$0.00"}
