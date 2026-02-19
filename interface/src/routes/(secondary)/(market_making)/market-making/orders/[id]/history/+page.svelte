@@ -1,60 +1,45 @@
 <script lang="ts">
     import { _ } from "svelte-i18n";
     import OrderHistoryItem from "$lib/components/grow/marketMaking/details/OrderHistoryItem.svelte";
-    import { page } from "$app/stores";
 
-    // Mock Data
-    const mockOrders = [
-        {
-            id: "8829102391ae2",
-            symbol: "BTC/USDT",
-            side: "buy",
-            quantity: "0.225",
-            unit: "BTC",
-            price: "64,448.00",
-            quoteUnit: "USDT",
-            exchange: "Binance",
-            createdAt: new Date().toISOString(), // Today
-        },
-        {
-            id: "77341231bc1",
-            symbol: "ETH/USDT",
-            side: "sell",
-            quantity: "12.50",
-            unit: "ETH",
-            price: "2,642.50",
-            quoteUnit: "USDT",
-            exchange: "Coinbase",
-            createdAt: new Date(Date.now() - 3600000).toISOString(), // Today, 1 hour ago
-        },
-        {
-            id: "5512391df4",
-            symbol: "SOL/USDT",
-            side: "buy",
-            quantity: "150.0",
-            unit: "SOL",
-            price: "142.45",
-            quoteUnit: "USDT",
-            exchange: "Kraken",
-            createdAt: new Date(Date.now() - 86400000).toISOString(), // Yesterday
-        },
-        {
-            id: "4491029cc8",
-            symbol: "BTC/USDT",
-            side: "sell",
-            quantity: "0.500",
-            unit: "BTC",
-            price: "64,100.00",
-            quoteUnit: "USDT",
-            exchange: "Binance",
-            createdAt: new Date(Date.now() - 90000000).toISOString(), // Yesterday
-        },
-    ] as const;
+    export let data;
+
+    type UiOrder = {
+        id: string;
+        symbol: string;
+        side: "buy" | "sell";
+        quantity: string;
+        unit: string;
+        price: string;
+        quoteUnit: string;
+        exchange: string;
+        createdAt: string;
+    };
+
+    const toUiOrder = (h: any): UiOrder => {
+        const pair = h?.pair || "---";
+        const [base, quote] = String(pair).split("/");
+
+        return {
+            id: String(h?.orderId || h?.id || "---"),
+            symbol: pair,
+            side: h?.side === "sell" ? "sell" : "buy",
+            quantity: String(h?.amount ?? "0"),
+            unit: base || "---",
+            price: String(h?.price ?? "0"),
+            quoteUnit: quote || "---",
+            exchange: String(h?.exchange || "---"),
+            createdAt: h?.executedAt ? new Date(h.executedAt).toISOString() : new Date().toISOString(),
+        };
+    };
+
+    $: rawHistory = data?.history || [];
+    $: orders = rawHistory.map(toUiOrder) as UiOrder[];
 
     let searchTerm = "";
     let activeFilter: "all" | "buy" | "sell" = "all";
 
-    $: filteredOrders = mockOrders.filter((order) => {
+    $: filteredOrders = orders.filter((order: UiOrder) => {
         const matchesSearch =
             order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
             order.createdAt.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -68,7 +53,7 @@
 
     // Group by Date
     $: groupedOrders = filteredOrders.reduce(
-        (groups, order) => {
+        (groups: Record<string, UiOrder[]>, order: UiOrder) => {
             const date = new Date(order.createdAt);
             const today = new Date();
             const yesterday = new Date();
@@ -76,7 +61,7 @@
 
             let key = date.toDateString();
             if (date.toDateString() === today.toDateString()) {
-                key = "today"; // i18n key or specific string
+                key = "today";
             } else if (date.toDateString() === yesterday.toDateString()) {
                 key = "yesterday";
             }
@@ -87,7 +72,7 @@
             groups[key].push(order);
             return groups;
         },
-        {} as Record<string, (typeof mockOrders)[number][]>,
+        {} as Record<string, UiOrder[]>,
     );
 
     // Sort keys to maintain order (Today first)
@@ -98,8 +83,6 @@
         if (b === "yesterday") return 1;
         return new Date(b).getTime() - new Date(a).getTime();
     });
-
-    $: id = $page.params.id;
 </script>
 
 <div class="flex flex-col min-h-screen bg-base-100/50 pb-20">
