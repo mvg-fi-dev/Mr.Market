@@ -148,6 +148,10 @@ export class StrategyService
     );
   }
 
+  getOpenOrders(strategyKey: string) {
+    return this.exchangeOrderTrackerService?.getOpenOrders(strategyKey) || [];
+  }
+
   async getStrategyInstanceKey(strategyKey: string): Promise<StrategyInstance> {
     return await this.strategyInstanceRepository.findOne({
       where: { strategyKey },

@@ -12,6 +12,7 @@ import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { MarketMakingHistory } from 'src/common/entities/market-making/market-making-order.entity';
 import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
 
+import { StrategyService } from '../strategy/strategy.service';
 import { ExitMarketMakingDto, StopMarketMakingDto } from './user-orders.dto';
 import { CreateMarketMakingIntentDto } from './user-orders.dto';
 import { UserOrdersService } from './user-orders.service';
@@ -21,7 +22,10 @@ import { UserOrdersService } from './user-orders.service';
 export class UserOrdersController {
   private readonly logger = new CustomLogger(UserOrdersController.name);
 
-  constructor(private readonly userOrdersService: UserOrdersService) {}
+  constructor(
+    private readonly userOrdersService: UserOrdersService,
+    private readonly strategyService: StrategyService,
+  ) {}
 
   @Get('/all')
   @HttpCode(HttpStatus.OK)
@@ -225,5 +229,45 @@ export class UserOrdersController {
     return await this.userOrdersService.getMarketMakingHistoryByStrategyInstanceId(
       id,
     );
+  }
+
+  @Get('/market-making/lifecycle/:orderId')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Get market making order lifecycle bundle v0 (intents + openOrders + history)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lifecycle bundle for auditability/replayability',
+  })
+  async getMarketMakingLifecycle(@Param('orderId') orderId: string) {
+    const order = await this.userOrdersService.findMarketMakingByOrderId(
+      orderId,
+    );
+
+    if (!order) {
+      return { ok: false, error: 'order not found' };
+    }
+
+    const strategyKey = `${order.userId}-${orderId}-pureMarketMaking`;
+
+    const [intents, history] = await Promise.all([
+      this.strategyService.listIntentsByClientId(orderId, 500),
+      this.userOrdersService.getMarketMakingHistoryByStrategyInstanceId(
+        orderId,
+      ),
+    ]);
+
+    const openOrders = this.strategyService.getOpenOrders(strategyKey);
+
+    return {
+      ok: true,
+      orderId,
+      strategyKey,
+      intents,
+      openOrders,
+      history,
+    };
   }
 }
