@@ -16,6 +16,10 @@ describe('AlpacaStratService', () => {
   let exchangeInitService: ExchangeInitService;
 
   beforeEach(async () => {
+    // The service uses setInterval. In tests we must not leave real timers running,
+    // otherwise callbacks can fire after Jest teardown and trigger ccxt network calls.
+    jest.useFakeTimers();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AlpacaStratService,
@@ -48,7 +52,17 @@ describe('AlpacaStratService', () => {
   });
 
   afterEach(() => {
+    // Clear any intervals created by the service.
+    for (const inst of (service as any)['strategyInstances']?.values?.() || []) {
+      if (inst?.intervalId) {
+        clearInterval(inst.intervalId);
+      }
+    }
+
+    (service as any)['strategyInstances']?.clear?.();
+
     jest.clearAllMocks();
+    jest.useRealTimers();
   });
 
   describe('startAlpacaArbitrageStrategy', () => {
