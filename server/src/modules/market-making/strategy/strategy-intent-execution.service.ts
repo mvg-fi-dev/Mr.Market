@@ -253,7 +253,16 @@ export class StrategyIntentExecutionService {
           orderId: intent.clientId,
           eventType: 'EXECUTION_EVENT',
           eventStatus: 'DONE',
+          // CCXT exchange order id for place/cancel.
+          exchangeOrderId: executedMixinOrderId,
+          // Legacy field name kept for backward compatibility.
           executedMixinOrderId,
+          resultStatus:
+            intent.type === 'CANCEL_ORDER'
+              ? 'CANCELLED'
+              : intent.type === 'CREATE_LIMIT_ORDER'
+                ? 'PLACED'
+                : 'DONE',
         },
       });
       await this.durabilityService?.markProcessed(
