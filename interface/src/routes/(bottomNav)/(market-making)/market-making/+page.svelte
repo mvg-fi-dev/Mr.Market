@@ -104,37 +104,37 @@
     </div>
   </div>
 {:else}
-  {#await $page.data.campaign_stats}
-    <div class="flex flex-col items-center justify-center grow h-screen">
-      <Loading />
-    </div>
-  {:then data}
-    <div class="flex flex-col grow space-y-0 mx-4">
+  <div class="flex flex-col grow space-y-0 mx-4">
+    {#await $page.data.campaign_stats}
+      <BasicStats rewardsPool={0} activeCampaigns={0} />
+    {:then data}
       <BasicStats
         rewardsPool={data.rewards_pool_usd}
         activeCampaigns={data.n_active_campaigns}
       />
+    {:catch}
+      <BasicStats rewardsPool={0} activeCampaigns={0} />
+    {/await}
 
-      <Bar />
-      {#if isLoadingOrders}
-        <div class="flex flex-col items-center justify-center grow py-12">
-          <Loading />
-        </div>
-      {:else if ordersError}
-        <div class="text-sm opacity-60 py-6">
-          {ordersError}
-        </div>
-        <BaseIntro />
-      {:else if noMarketMakingCreated}
-        <BaseIntro />
-      {:else}
-        <!-- Show created market making orders -->
-        <div class="flex flex-col space-y-3 pb-6">
-          {#each marketMakingOrders as mm (mm.orderId)}
-            <Card data={mm} />
-          {/each}
-        </div>
-      {/if}
-    </div>
-  {/await}
+    <Bar />
+    {#if isLoadingOrders}
+      <div class="flex flex-col items-center justify-center grow py-12">
+        <Loading />
+      </div>
+    {:else if ordersError}
+      <div class="text-sm opacity-60 py-6">
+        {ordersError}
+      </div>
+      <BaseIntro />
+    {:else if noMarketMakingCreated}
+      <BaseIntro />
+    {:else}
+      <!-- Show created market making orders -->
+      <div class="flex flex-col space-y-3 pb-6">
+        {#each marketMakingOrders as mm (mm.orderId)}
+          <Card data={mm} />
+        {/each}
+      </div>
+    {/if}
+  </div>
 {/if}
