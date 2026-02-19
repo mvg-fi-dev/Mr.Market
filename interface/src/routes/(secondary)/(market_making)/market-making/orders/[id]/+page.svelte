@@ -12,6 +12,11 @@
     import type { PageData } from "./$types";
     import { _ } from "svelte-i18n";
     import BigNumber from "bignumber.js";
+    import { onDestroy, onMount } from "svelte";
+
+    import { ORDER_STATE_FETCH_INTERVAL, ORDER_STATE_TIMEOUT_DURATION } from "$lib/helpers/constants";
+    import { getUserOrderMarketMakingById } from "$lib/helpers/mrm/strategy";
+    import { isMarketMakingTerminalState, type MarketMakingState } from "$lib/helpers/mrm/marketMakingState";
 
     export let data: PageData;
 
@@ -56,9 +61,57 @@
         return new Date(dateStr).toLocaleString();
     };
 
-    $: backendOrder = data.order?.data || data.order;
+    let backendOrder: any = data.order?.data || data.order;
     $: history = data.history || [];
     $: executionReport = data.executionReport;
+
+    let polling = {
+        enabled: true,
+        startedAt: 0,
+        lastUpdatedAt: 0,
+        timedOut: false,
+        error: null as string | null,
+    };
+
+    const normalizeOrder = (res: any) => res?.data ?? res;
+
+    const shouldPoll = (state?: MarketMakingState | null) => {
+        if (!polling.enabled) return false;
+        if (polling.timedOut) return false;
+        if (isMarketMakingTerminalState(state)) return false;
+        return true;
+    };
+
+    const schedulePoll = (orderId: string) => {
+        const startedAt = polling.startedAt || Date.now();
+        polling.startedAt = startedAt;
+
+        const tick = async () => {
+            try {
+                if (!shouldPoll(backendOrder?.state)) return;
+
+                if (Date.now() - startedAt > ORDER_STATE_TIMEOUT_DURATION) {
+                    polling.timedOut = true;
+                    return;
+                }
+
+                const res = await getUserOrderMarketMakingById(orderId);
+                const next = normalizeOrder(res);
+                if (next) {
+                    backendOrder = next;
+                    polling.lastUpdatedAt = Date.now();
+                }
+            } catch (e: any) {
+                polling.error = e?.message || String(e);
+            } finally {
+                if (shouldPoll(backendOrder?.state)) {
+                    setTimeout(tick, ORDER_STATE_FETCH_INTERVAL);
+                }
+            }
+        };
+
+        setTimeout(tick, ORDER_STATE_FETCH_INTERVAL);
+    };
 
     $: ordersPlaced = history.length.toString();
 
@@ -91,6 +144,22 @@
         status: h.status || "Filled",
         side: h.side,
     }));
+
+    onMount(() => {
+        polling.enabled = true;
+        polling.startedAt = Date.now();
+        polling.lastUpdatedAt = Date.now();
+        polling.timedOut = false;
+        polling.error = null;
+
+        if (backendOrder?.orderId) {
+            schedulePoll(backendOrder.orderId);
+        }
+    });
+
+    onDestroy(() => {
+        polling.enabled = false;
+    });
 
     $: order = backendOrder
         ? {
