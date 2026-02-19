@@ -1,5 +1,6 @@
 <script lang="ts">
     import StatsHeader from "$lib/components/market-making/order-details/StatsHeader.svelte";
+    import FlowStatusCard from "$lib/components/market-making/order-details/FlowStatusCard.svelte";
     import RevenueCard from "$lib/components/market-making/order-details/RevenueCard.svelte";
     import BalanceCard from "$lib/components/market-making/order-details/BalanceCard.svelte";
     import DetailsCard from "$lib/components/market-making/order-details/DetailsCard.svelte";
@@ -141,6 +142,8 @@
         isActive={order.active}
         on:click={() => (showExecutionDetails = true)}
     />
+
+    <FlowStatusCard state={backendOrder?.state} />
 
     <RevenueCard
         totalRevenue={order.totalRevenue || "$0.00"}
