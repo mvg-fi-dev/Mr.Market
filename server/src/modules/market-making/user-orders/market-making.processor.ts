@@ -1079,6 +1079,8 @@ export class MarketMakingOrderProcessor {
         topic: 'mm.campaign.joined',
         aggregateType: 'market_making_order',
         aggregateId: orderId,
+        traceId: effectiveTraceId,
+        orderId,
         payload: {
           traceId: effectiveTraceId,
           orderId,
@@ -1179,6 +1181,8 @@ export class MarketMakingOrderProcessor {
         topic: 'mm.started',
         aggregateType: 'market_making_order',
         aggregateId: orderId,
+        traceId,
+        orderId,
         payload: {
           traceId,
           orderId,
@@ -1193,6 +1197,8 @@ export class MarketMakingOrderProcessor {
         topic: 'mm.start_mm.failed',
         aggregateType: 'market_making_order',
         aggregateId: orderId,
+        traceId,
+        orderId,
         payload: {
           traceId,
           orderId,
@@ -2264,6 +2270,8 @@ export class MarketMakingOrderProcessor {
         topic: 'mm.deposit.confirmed',
         aggregateType: 'market_making_order',
         aggregateId: orderId,
+        traceId: traceId || `mm:${orderId}`,
+        orderId,
         payload: {
           orderId,
           exchange: exchangeName,
