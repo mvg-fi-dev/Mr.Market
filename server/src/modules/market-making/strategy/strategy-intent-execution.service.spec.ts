@@ -111,6 +111,17 @@ describe('StrategyIntentExecutionService', () => {
     );
     expect(exchangeConnectorAdapterService.placeLimitOrder).toHaveBeenCalled();
     expect(exchangeOrderTrackerService.upsertOrder).toHaveBeenCalled();
+
+    expect(durabilityService.appendOutboxEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        topic: 'strategy.intent.executed',
+        aggregateType: 'strategy_intent',
+        aggregateId: baseIntent.intentId,
+        payload: expect.objectContaining({
+          executedMixinOrderId: 'order-1',
+        }),
+      }),
+    );
   });
 
   it('does not execute intents when execution is disabled', async () => {
@@ -158,6 +169,17 @@ describe('StrategyIntentExecutionService', () => {
       'BTC/USDT',
       'exchange-order-1',
     );
+
+    expect(durabilityService.appendOutboxEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        topic: 'strategy.intent.executed',
+        aggregateType: 'strategy_intent',
+        aggregateId: 'intent-cancel',
+        payload: expect.objectContaining({
+          executedMixinOrderId: 'exchange-order-1',
+        }),
+      }),
+    );
   });
 
   it('marks intent FAILED when execution throws', async () => {
@@ -181,6 +203,17 @@ describe('StrategyIntentExecutionService', () => {
       baseIntent.intentId,
       'FAILED',
       'exchange down',
+    );
+    expect(durabilityService.appendOutboxEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        topic: 'strategy.intent.failed',
+        aggregateType: 'strategy_intent',
+        aggregateId: baseIntent.intentId,
+        payload: expect.objectContaining({
+          executedMixinOrderId: undefined,
+          error: 'exchange down',
+        }),
+      }),
     );
   });
 

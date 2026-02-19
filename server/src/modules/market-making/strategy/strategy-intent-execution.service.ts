@@ -99,6 +99,8 @@ export class StrategyIntentExecutionService {
       return;
     }
 
+    let executedMixinOrderId: string | undefined;
+
     try {
       if (intent.type === 'CREATE_LIMIT_ORDER') {
         const result = await this.runWithRetries(() =>
@@ -122,16 +124,18 @@ export class StrategyIntentExecutionService {
         );
 
         if (result?.id) {
+          executedMixinOrderId = String(result.id);
+
           await this.strategyIntentStoreService?.attachMixinOrderId(
             intent.intentId,
-            String(result.id),
+            executedMixinOrderId,
           );
           this.exchangeOrderTrackerService?.upsertOrder({
             strategyKey: intent.strategyKey,
             traceId: intent.traceId,
             exchange: intent.exchange,
             pair: intent.pair,
-            exchangeOrderId: String(result.id),
+            exchangeOrderId: executedMixinOrderId,
             side: intent.side,
             price: intent.price,
             qty: intent.qty,
@@ -142,6 +146,8 @@ export class StrategyIntentExecutionService {
       }
 
       if (intent.type === 'CANCEL_ORDER' && intent.mixinOrderId) {
+        executedMixinOrderId = intent.mixinOrderId;
+
         const result = await this.runWithRetries(() =>
           this.exchangeConnectorAdapterService
             ? this.exchangeConnectorAdapterService.cancelOrder(
@@ -196,6 +202,7 @@ export class StrategyIntentExecutionService {
           ...intent,
           eventType: 'EXECUTION_EVENT',
           eventStatus: 'DONE',
+          executedMixinOrderId,
         },
       });
       await this.durabilityService?.markProcessed(
@@ -217,6 +224,7 @@ export class StrategyIntentExecutionService {
           ...intent,
           eventType: 'EXECUTION_EVENT',
           eventStatus: 'FAILED',
+          executedMixinOrderId,
           error: error instanceof Error ? error.message : 'unknown error',
         },
       });
