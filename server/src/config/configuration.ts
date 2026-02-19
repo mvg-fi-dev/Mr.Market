@@ -66,6 +66,8 @@ export default () => ({
         process.env.MARKET_MAKING_INTENT_WORKER_MAX_IN_FLIGHT_PER_EXCHANGE,
         10,
       ) || 1,
+    max_open_orders_per_strategy:
+      parseInt(process.env.MARKET_MAKING_MAX_OPEN_ORDERS_PER_STRATEGY, 10) || 50,
     withdraw_to_exchange_enabled:
       process.env.MARKET_MAKING_WITHDRAW_TO_EXCHANGE_ENABLED === 'true',
     queue_withdraw_on_payment_complete:

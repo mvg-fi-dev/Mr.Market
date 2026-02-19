@@ -21,6 +21,7 @@ export class StrategyIntentExecutionService {
   private readonly executeIntents: boolean;
   private readonly maxRetries: number;
   private readonly retryBaseDelayMs: number;
+  private readonly maxOpenOrdersPerStrategy: number;
 
   constructor(
     private readonly tradeService: TradeService,
@@ -44,6 +45,10 @@ export class StrategyIntentExecutionService {
     this.retryBaseDelayMs = Number(
       this.configService.get('strategy.intent_retry_base_delay_ms', 250),
     );
+    this.maxOpenOrdersPerStrategy = Math.max(
+      1,
+      Number(this.configService.get('strategy.max_open_orders_per_strategy', 50)),
+    );
   }
 
   async consumeIntents(intents: StrategyOrderIntent[]): Promise<void> {
@@ -59,6 +64,41 @@ export class StrategyIntentExecutionService {
   private async consumeIntent(intent: StrategyOrderIntent): Promise<void> {
     if (this.processedIntentIds.has(intent.intentId)) {
       return;
+    }
+
+    if (intent.type === 'CREATE_LIMIT_ORDER') {
+      const openCount = this.exchangeOrderTrackerService?.countOpen() ?? 0;
+
+      if (openCount >= this.maxOpenOrdersPerStrategy) {
+        this.logger.warn(
+          `Skipping CREATE_LIMIT_ORDER due to max_open_orders_per_strategy limit (open=${openCount}, limit=${this.maxOpenOrdersPerStrategy}, strategyKey=${intent.strategyKey})`,
+        );
+
+        await this.strategyIntentStoreService?.updateIntentStatus(
+          intent.intentId,
+          'DONE',
+        );
+        await this.durabilityService?.appendOutboxEvent({
+          topic: 'strategy.intent.skipped',
+          aggregateType: 'strategy_intent',
+          aggregateId: intent.intentId,
+          payload: {
+            ...intent,
+            eventType: 'EXECUTION_EVENT',
+            eventStatus: 'SKIPPED',
+            skipReason: 'MAX_OPEN_ORDERS_REACHED',
+            openOrders: openCount,
+            limit: this.maxOpenOrdersPerStrategy,
+          },
+        });
+        await this.durabilityService?.markProcessed(
+          'strategy-intent-execution',
+          intent.intentId,
+        );
+        this.processedIntentIds.add(intent.intentId);
+
+        return;
+      }
     }
 
     const alreadyProcessed = this.durabilityService

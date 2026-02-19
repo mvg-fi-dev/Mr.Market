@@ -27,6 +27,7 @@ describe('StrategyIntentExecutionService', () => {
 
   const exchangeOrderTrackerService = {
     upsertOrder: jest.fn(),
+    countOpen: jest.fn().mockReturnValue(0),
   };
 
   const intentStoreService = {
@@ -51,6 +52,9 @@ describe('StrategyIntentExecutionService', () => {
         }
         if (key === 'strategy.intent_retry_base_delay_ms') {
           return 1;
+        }
+        if (key === 'strategy.max_open_orders_per_strategy') {
+          return 50;
         }
 
         return defaultValue;
@@ -78,6 +82,7 @@ describe('StrategyIntentExecutionService', () => {
   });
 
   it('executes CREATE_LIMIT_ORDER intents once (idempotent)', async () => {
+    exchangeOrderTrackerService.countOpen.mockReturnValue(0);
     const service = new StrategyIntentExecutionService(
       tradeService as any,
       exchangeInitService as any,
@@ -125,6 +130,7 @@ describe('StrategyIntentExecutionService', () => {
   });
 
   it('does not execute intents when execution is disabled', async () => {
+    exchangeOrderTrackerService.countOpen.mockReturnValue(0);
     const service = new StrategyIntentExecutionService(
       tradeService as any,
       exchangeInitService as any,
@@ -146,6 +152,7 @@ describe('StrategyIntentExecutionService', () => {
   });
 
   it('executes CANCEL_ORDER through exchange adapter', async () => {
+    exchangeOrderTrackerService.countOpen.mockReturnValue(0);
     const service = new StrategyIntentExecutionService(
       tradeService as any,
       exchangeInitService as any,
@@ -183,6 +190,7 @@ describe('StrategyIntentExecutionService', () => {
   });
 
   it('marks intent FAILED when execution throws', async () => {
+    exchangeOrderTrackerService.countOpen.mockReturnValue(0);
     exchangeConnectorAdapterService.placeLimitOrder.mockRejectedValue(
       new Error('exchange down'),
     );
@@ -218,6 +226,7 @@ describe('StrategyIntentExecutionService', () => {
   });
 
   it('retries and succeeds on second attempt', async () => {
+    exchangeOrderTrackerService.countOpen.mockReturnValue(0);
     exchangeConnectorAdapterService.placeLimitOrder
       .mockRejectedValueOnce(new Error('temporary'))
       .mockResolvedValueOnce({ id: 'order-retry', status: 'open' });
