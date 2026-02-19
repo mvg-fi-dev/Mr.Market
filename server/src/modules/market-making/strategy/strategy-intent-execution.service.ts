@@ -8,6 +8,7 @@ import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
 import { DurabilityService } from '../durability/durability.service';
 import { ExchangeConnectorAdapterService } from '../execution/exchange-connector-adapter.service';
 import { ExchangeOrderTrackerService } from '../trackers/exchange-order-tracker.service';
+import { classifyCcxtError } from '../trade/trade-error-taxonomy';
 import { TradeService } from '../trade/trade.service';
 import { StrategyOrderIntent } from './strategy-intent.types';
 import { StrategyIntentStoreService } from './strategy-intent-store.service';
@@ -261,11 +262,15 @@ export class StrategyIntentExecutionService {
       );
       this.processedIntentIds.add(intent.intentId);
     } catch (error) {
+      const classification = classifyCcxtError(error);
+
       await this.strategyIntentStoreService?.updateIntentStatus(
         intent.intentId,
         'FAILED',
-        error instanceof Error ? error.message : 'unknown error',
+        classification.errorMessage ||
+          (error instanceof Error ? error.message : 'unknown error'),
       );
+
       await this.durabilityService?.appendOutboxEvent({
         topic: 'strategy.intent.failed',
         aggregateType: 'strategy_intent',
@@ -278,8 +283,14 @@ export class StrategyIntentExecutionService {
           eventStatus: 'FAILED',
           executedMixinOrderId,
           error: error instanceof Error ? error.message : 'unknown error',
+          errorCode: classification.errorCode,
+          retryable: classification.retryable,
+          errorCategory: classification.category,
+          errorName: classification.errorName,
+          errorMessage: classification.errorMessage,
         },
       });
+
       throw error;
     }
   }
