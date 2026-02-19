@@ -77,6 +77,8 @@ _DoD: given an orderId and time window, we can produce a reproducible report bun
 - [x] Execution report v0: per-order periodic metrics snapshot + audit fields + references to exchange facts. (server: `server/src/modules/market-making/metrics/*`, `server/src/modules/market-making/performance/*`)
 - [ ] Order lifecycle transparency: place/cancel logs, fills, active orders, error taxonomy, safe retries. (server: `server/src/modules/market-making/trade/*`, `server/src/modules/market-making/trackers/*`)
   - [x] Cancel endpoint is auditable (requires exchange + orderId + symbol; includes traceId in outbox events). (server: `server/src/modules/market-making/trade/*`)
+  - [x] Trade execution emits durable outbox events (executed/failed/cancelled/cancel_failed; traceId-ready). (server: `server/src/modules/market-making/trade/*`)
+  - [x] Risk guard counts open orders per strategyKey (no cross-strategy leakage). (server: `server/src/modules/market-making/strategy/*`, `server/src/modules/market-making/trackers/*`)
 - [ ] Profit/balance tracking v0: realized/unrealized PnL (even if not paid out), volume, counts. (server: `server/src/modules/market-making/ledger/*`, `server/src/modules/market-making/performance/performance.service.ts`)
 - [ ] Risk controls v0: max exposure, max order count, kill-switch, price sanity checks. (server: `server/src/modules/market-making/strategy/*`, `server/src/modules/market-making/orchestration/*`)
 
