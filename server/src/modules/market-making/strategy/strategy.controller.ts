@@ -57,6 +57,42 @@ export class StrategyController {
     return await this.strategyService.getAllStrategies();
   }
 
+  @Get('intents/by-client')
+  @ApiOperation({
+    summary: 'List strategy order intents by clientId (order lifecycle v0)',
+  })
+  @ApiQuery({
+    name: 'clientId',
+    type: String,
+    required: true,
+    description: 'Market-making orderId is used as clientId for MM flows',
+  })
+  @ApiQuery({
+    name: 'limit',
+    type: Number,
+    required: false,
+    description: 'Max number of intents (default 200, max 500)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Intent timeline for auditability/replayability',
+  })
+  async listIntentsByClientId(
+    @Query('clientId') clientId: string,
+    @Query('limit') limit?: string,
+  ) {
+    const parsedLimit = limit ? Number(limit) : 200;
+
+    if (!clientId) {
+      return [];
+    }
+
+    return await this.strategyService.listIntentsByClientId(
+      clientId,
+      Number.isFinite(parsedLimit) ? parsedLimit : 200,
+    );
+  }
+
   @Post('join')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Join a strategy with a contribution' })

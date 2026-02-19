@@ -86,6 +86,21 @@ export class StrategyIntentStoreService {
     return await this.strategyOrderIntentRepository.find();
   }
 
+  async listByClientId(
+    clientId: string,
+    limit = 200,
+  ): Promise<StrategyOrderIntentEntity[]> {
+    if (!clientId) {
+      return [];
+    }
+
+    return await this.strategyOrderIntentRepository.find({
+      where: { clientId },
+      order: { createdAt: 'ASC', intentId: 'ASC' },
+      take: Math.max(1, Math.min(500, limit)),
+    });
+  }
+
   async listStrategyKeysWithNewIntents(limit: number): Promise<string[]> {
     if (limit <= 0) {
       return [];

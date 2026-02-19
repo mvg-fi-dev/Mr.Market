@@ -9,6 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import BigNumber from 'bignumber.js';
 import * as ccxt from 'ccxt';
 import { StrategyInstance } from 'src/common/entities/market-making/strategy-instances.entity';
+import { StrategyOrderIntentEntity } from 'src/common/entities/market-making/strategy-order-intent.entity';
 import { PriceSourceType } from 'src/common/enum/pricesourcetype';
 import { createStrategyKey } from 'src/common/helpers/strategyKey';
 import { getRFC3339Timestamp } from 'src/common/helpers/utils';
@@ -133,6 +134,18 @@ export class StrategyService
 
   async getAllStrategies(): Promise<StrategyInstance[]> {
     return await this.strategyInstanceRepository.find();
+  }
+
+  async listIntentsByClientId(
+    clientId: string,
+    limit = 200,
+  ): Promise<StrategyOrderIntentEntity[]> {
+    return (
+      (await this.strategyIntentStoreService?.listByClientId(
+        clientId,
+        limit,
+      )) || []
+    );
   }
 
   async getStrategyInstanceKey(strategyKey: string): Promise<StrategyInstance> {
@@ -803,7 +816,9 @@ export class StrategyService
     const traceId = intents[0]?.traceId;
 
     this.logger.log(
-      `Published ${intents.length} intents for ${strategyKey} (driver=${intentExecutionDriver})${
+      `Published ${
+        intents.length
+      } intents for ${strategyKey} (driver=${intentExecutionDriver})${
         traceId ? ` traceId=${traceId}` : ''
       }`,
     );
