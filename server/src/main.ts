@@ -12,7 +12,13 @@ import * as encryption from './common/helpers/crypto';
 import { CustomLogger } from './modules/infrastructure/logger/logger.service';
 
 async function bootstrap() {
+  const isProd = process.env.NODE_ENV === 'production';
+
   if (!process.env.JWT_SECRET) {
+    if (isProd) {
+      throw new Error('JWT_SECRET is required in production. Refusing to auto-generate.');
+    }
+
     console.log('JWT_SECRET is not set. Generating a new one...');
     const secret = crypto.randomBytes(32).toString('hex');
 
@@ -33,6 +39,12 @@ async function bootstrap() {
   }
 
   if (!process.env.ENCRYPTION_PRIVATE_KEY) {
+    if (isProd) {
+      throw new Error(
+        'ENCRYPTION_PRIVATE_KEY is required in production. Refusing to auto-generate.',
+      );
+    }
+
     console.log('ENCRYPTION_PRIVATE_KEY is not set. Generating a new one...');
     const { privateKey } = encryption.generateKeyPair();
 

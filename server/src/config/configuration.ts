@@ -1,3 +1,33 @@
+import { URL } from 'url';
+
+function parseRedisConfig(): {
+  host: string;
+  port: number;
+  password?: string;
+  tls?: Record<string, unknown>;
+} {
+  const url = process.env.REDIS_URL;
+
+  if (url) {
+    // REDIS_URL formats:
+    // - redis://:password@host:port
+    // - rediss://:password@host:port
+    const u = new URL(url);
+
+    return {
+      host: u.hostname,
+      port: Number(u.port || 6379),
+      password: u.password || undefined,
+      tls: u.protocol === 'rediss:' ? {} : undefined,
+    };
+  }
+
+  return {
+    host: process.env.REDIS_HOST || 'localhost',
+    port: parseInt(process.env.REDIS_PORT || '', 10) || 6379,
+  };
+}
+
 export default () => ({
   dev: process.env.NODE_ENV !== 'production',
   host: process.env.HOST || 'localhost',
@@ -5,10 +35,7 @@ export default () => ({
   database: {
     path: process.env.DATABASE_PATH || 'data/mr_market.db',
   },
-  redis: {
-    host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT, 10) || 6379,
-  },
+  redis: parseRedisConfig(),
   apiKeys: {
     binance: [
       {

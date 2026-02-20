@@ -3,7 +3,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 export class AddOutboxTraceAndOrderIndexFields1771900000000
   implements MigrationInterface
 {
-  name = AddOutboxTraceAndOrderIndexFields1771900000000;
+  name = 'AddOutboxTraceAndOrderIndexFields1771900000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Improve auditability/replayability: make traceId/orderId queryable without LIKE on JSON.

@@ -18,9 +18,13 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { MarketdataService, marketDataType } from './market-data.service';
 
-const webSocketPort = process.env.WS_PORT || '0';
+// IMPORTANT for deploys: prefer running Socket.IO on the same port as HTTP.
+// Many platforms only expose a single port; binding a second port breaks connectivity.
+// WS_PORT is kept only for backwards compatibility; we intentionally do NOT bind it here.
+const webSocketPort = process.env.WS_PORT;
+void webSocketPort;
 
-@WebSocketGateway(parseInt(webSocketPort, 10), {
+@WebSocketGateway({
   namespace: '/market',
   cors: true,
 })
