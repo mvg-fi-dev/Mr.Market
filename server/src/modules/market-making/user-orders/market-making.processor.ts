@@ -2159,74 +2159,25 @@ export class MarketMakingOrderProcessor {
       limit: 200,
     });
 
-    const matchDeposit = (
-      symbol: string,
-      network: string,
-      expectedAmount: string,
-      expectedTxHash?: string,
-    ) => {
-      const expectedBn = new BigNumber(expectedAmount || '0');
+    const { findMatchingDeposit } = await import('./exchange-deposit-matcher');
 
-      return deposits.find((d: any) => {
-        const dSymbol = (d.currency || d.code || '').toString();
-        const dNetwork = (d.network || '').toString();
+    const baseDeposit = findMatchingDeposit({
+      deposits,
+      symbol: pairConfig.base_symbol,
+      network: baseNetwork,
+      expectedAmount: paymentState.baseAssetAmount,
+      expectedTxHash: baseWithdrawalTxHash,
+      amountTolerance: DEPOSIT_AMOUNT_TOLERANCE,
+    });
 
-        if (!dSymbol || !dNetwork) {
-          return false;
-        }
-
-        if (dSymbol.toUpperCase() !== symbol.toUpperCase()) {
-          return false;
-        }
-
-        if (dNetwork !== network) {
-          return false;
-        }
-
-        // If we have an expected tx hash from Mixin, prefer strict match.
-        if (expectedTxHash) {
-          const dTxid = (
-            d.txid ||
-            d.txId ||
-            d.txHash ||
-            d.hash ||
-            ''
-          ).toString();
-
-          if (!dTxid) {
-            return false;
-          }
-
-          return dTxid.toLowerCase() === expectedTxHash.toLowerCase();
-        }
-
-        const amountBn = new BigNumber(
-          d.amount ?? d.quantity ?? d.value ?? '0',
-        );
-
-        if (!amountBn.isFinite() || amountBn.isLessThanOrEqualTo(0)) {
-          return false;
-        }
-
-        const delta = amountBn.minus(expectedBn).abs();
-
-        return delta.isLessThanOrEqualTo(DEPOSIT_AMOUNT_TOLERANCE);
-      });
-    };
-
-    const baseDeposit = matchDeposit(
-      pairConfig.base_symbol,
-      baseNetwork,
-      paymentState.baseAssetAmount,
-      baseWithdrawalTxHash,
-    );
-
-    const quoteDeposit = matchDeposit(
-      pairConfig.quote_symbol,
-      quoteNetwork,
-      paymentState.quoteAssetAmount,
-      quoteWithdrawalTxHash,
-    );
+    const quoteDeposit = findMatchingDeposit({
+      deposits,
+      symbol: pairConfig.quote_symbol,
+      network: quoteNetwork,
+      expectedAmount: paymentState.quoteAssetAmount,
+      expectedTxHash: quoteWithdrawalTxHash,
+      amountTolerance: DEPOSIT_AMOUNT_TOLERANCE,
+    });
 
     this.logger.log(
       `${this.logCtx({
