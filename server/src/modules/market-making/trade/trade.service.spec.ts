@@ -34,6 +34,7 @@ describe('TradeService', () => {
           useValue: {
             createTrade: jest.fn(),
             updateTradeStatus: jest.fn(),
+            findLatestTradeByExchangeOrderId: jest.fn(),
           },
         },
         {
@@ -331,6 +332,10 @@ describe('TradeService', () => {
         traceId: 't-cancel-2',
       };
 
+      tradeRepository.findLatestTradeByExchangeOrderId = jest
+        .fn()
+        .mockResolvedValue({ clientId: 'mm-order-1' } as any);
+
       exchangeInitService.getExchange = jest.fn().mockReturnValue(exchangeMock);
       exchangeMock.cancelOrder = jest
         .fn()
@@ -350,10 +355,10 @@ describe('TradeService', () => {
 
       expect(durabilityService.appendOutboxEvent).toHaveBeenCalledWith(
         expect.objectContaining({
-          orderId: 'order123',
+          orderId: 'mm-order-1',
           payload: expect.objectContaining({
             traceId: 't-cancel-2',
-            orderId: 'order123',
+            orderId: 'mm-order-1',
             exchange: 'binance',
             exchangeOrderId: 'order123',
             symbol: 'BTC/USDT',

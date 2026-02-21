@@ -283,6 +283,13 @@ export class TradeService {
 
     const exchangeInstance = this.getExchange(exchange);
 
+    // Ensure outbox orderId stays consistent: it should always be the market-making orderId (clientId).
+    // If clientId is missing (manual/admin cancel), best-effort resolve it from persisted trade records.
+    const resolvedClientId = clientId ||
+      (await this.tradeRepository.findLatestTradeByExchangeOrderId(orderId))
+        ?.clientId ||
+      '';
+
     try {
       await exchangeInstance.cancelOrder(orderId, symbol);
 
@@ -293,17 +300,17 @@ export class TradeService {
         topic: 'market_making.trade.cancelled',
         aggregateType: 'trade',
         aggregateId: `${exchange}:${orderId}`,
-        // For market-making, clientId === orderId. If absent (manual/admin cancel), fall back to exchange orderId.
-        orderId: clientId || orderId,
+        // For market-making, clientId === orderId.
+        orderId: resolvedClientId,
         payload: {
           eventType: 'TRADE_CANCELLED',
           traceId: effectiveTraceId,
-          orderId: clientId || orderId,
+          orderId: resolvedClientId,
           exchangeOrderId: orderId,
           exchange,
           symbol,
           userId,
-          clientId,
+          clientId: resolvedClientId || clientId,
           cancelledAt: getRFC3339Timestamp(),
         },
       });
@@ -318,16 +325,16 @@ export class TradeService {
         topic: 'market_making.trade.cancel_failed',
         aggregateType: 'trade',
         aggregateId: `${exchange}:${orderId}`,
-        orderId: clientId || orderId,
+        orderId: resolvedClientId,
         payload: {
           eventType: 'TRADE_CANCEL_FAILED',
           traceId: effectiveTraceId,
-          orderId: clientId || orderId,
+          orderId: resolvedClientId,
           exchangeOrderId: orderId,
           exchange,
           symbol,
           userId,
-          clientId,
+          clientId: resolvedClientId || clientId,
           errorCode: classification.errorCode,
           retryable: classification.retryable,
           errorName: classification.errorName,

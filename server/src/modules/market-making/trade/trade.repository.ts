@@ -27,6 +27,18 @@ export class TradeRepository {
     });
   }
 
+  async findLatestTradeByExchangeOrderId(
+    exchangeOrderId: string,
+  ): Promise<Trade | null> {
+    const found = await this.repository.find({
+      where: { orderId: exchangeOrderId },
+      order: { createdAt: 'DESC', id: 'DESC' },
+      take: 1,
+    });
+
+    return found?.[0] ?? null;
+  }
+
   async createTrade(transactionData: Partial<Trade>): Promise<Trade> {
     // Convert numeric amount and price to strings for SQLite storage
     const dataToSave = {
