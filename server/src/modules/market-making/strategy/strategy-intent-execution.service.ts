@@ -88,6 +88,7 @@ export class StrategyIntentExecutionService {
           topic: 'strategy.intent.skipped',
           aggregateType: 'strategy_intent',
           aggregateId: intent.intentId,
+          traceId: intent.traceId,
           // For market-making, clientId === orderId.
           orderId: intent.clientId,
           payload: {
@@ -138,6 +139,7 @@ export class StrategyIntentExecutionService {
         topic: 'strategy.intent.skipped',
         aggregateType: 'strategy_intent',
         aggregateId: intent.intentId,
+        traceId: intent.traceId,
         orderId: intent.clientId,
         payload: { ...intent, orderId: intent.clientId },
       });
@@ -251,6 +253,7 @@ export class StrategyIntentExecutionService {
         topic: 'strategy.intent.executed',
         aggregateType: 'strategy_intent',
         aggregateId: intent.intentId,
+        traceId: intent.traceId,
         orderId: intent.clientId,
         payload: {
           ...intent,
@@ -288,6 +291,7 @@ export class StrategyIntentExecutionService {
         topic: 'strategy.intent.failed',
         aggregateType: 'strategy_intent',
         aggregateId: intent.intentId,
+        traceId: intent.traceId,
         orderId: intent.clientId,
         payload: {
           ...intent,
