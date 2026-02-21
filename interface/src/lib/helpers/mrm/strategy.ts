@@ -208,6 +208,20 @@ export type OutboxSummaryV0 = {
   lastCreatedAt?: string;
 };
 
+export type LedgerEntryV0 = {
+  entryId: string;
+  userId: string;
+  assetId: string;
+  amount: string;
+  type: string;
+  refType?: string;
+  refId?: string;
+  idempotencyKey: string;
+  traceId: string;
+  orderId: string;
+  createdAt: string;
+};
+
 export type MarketMakingLifecycleBundle =
   | {
       ok: false;
@@ -221,6 +235,7 @@ export type MarketMakingLifecycleBundle =
       openOrders: unknown[];
       history: unknown[];
       trades?: unknown[];
+      ledgerEntries?: LedgerEntryV0[];
       outboxSummary?: OutboxSummaryV0;
       outbox?: unknown[];
     };
