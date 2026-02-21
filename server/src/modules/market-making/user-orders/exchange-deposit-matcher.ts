@@ -9,6 +9,56 @@ export type NormalizedDeposit = {
   timestamp?: number;
 };
 
+/**
+ * Canonicalize network strings across exchanges.
+ *
+ * Why: ccxt adapters often report network as 'ETH'/'Ethereum' for ERC20, etc.
+ * We want stable matching based on the MM's expected ccxt network identifier.
+ */
+export function canonicalizeNetwork(network: string | undefined): string | undefined {
+  if (!network) return undefined;
+  const v = String(network).trim().toUpperCase();
+  if (!v.length) return undefined;
+
+  const aliasToCanonical: Record<string, string> = {
+    // Ethereum
+    ETH: 'ERC20',
+    ETHEREUM: 'ERC20',
+    ERC20: 'ERC20',
+
+    // Tron
+    TRON: 'TRC20',
+    TRX: 'TRC20',
+    TRC20: 'TRC20',
+
+    // Binance Smart Chain
+    BSC: 'BEP20',
+    BNB: 'BEP20',
+    BEP20: 'BEP20',
+
+    // Polygon
+    POLYGON: 'MATIC',
+    MATIC: 'MATIC',
+
+    // Solana
+    SOLANA: 'SOL',
+    SOL: 'SOL',
+
+    // Avalanche C-Chain
+    AVALANCHE: 'AVAXC',
+    AVAX: 'AVAXC',
+    AVAXC: 'AVAXC',
+
+    // Native chains commonly used as-is
+    BTC: 'BTC',
+    LTC: 'LTC',
+    DOGE: 'DOGE',
+    XRP: 'XRP',
+  };
+
+  return aliasToCanonical[v] || v;
+}
+
 function toUpperSafe(value: unknown): string | undefined {
   if (value === null || value === undefined) return undefined;
   const v = String(value).trim();
@@ -159,7 +209,7 @@ export function findMatchingDeposit(args: {
   amountTolerance: string | BigNumber;
 }): any | undefined {
   const expectedSymbol = toUpperSafe(args.symbol);
-  const expectedNetwork = toUpperSafe(args.network);
+  const expectedNetwork = canonicalizeNetwork(toUpperSafe(args.network));
   const expectedTx = toLowerSafe(args.expectedTxHash);
   const expectedAmountBn = new BigNumber(args.expectedAmount || '0');
   const toleranceBn =
@@ -186,8 +236,11 @@ export function findMatchingDeposit(args: {
       return d.txid === expectedTx;
     }
 
-    // Network match (case-insensitive). If deposit omits network, we cannot safely match by amount only.
-    if (!d.network || d.network !== expectedNetwork) {
+    // Network match (case-insensitive + alias normalization).
+    // If deposit omits network, we cannot safely match by amount only.
+    const depositNetwork = canonicalizeNetwork(d.network);
+
+    if (!depositNetwork || depositNetwork !== expectedNetwork) {
       return false;
     }
 

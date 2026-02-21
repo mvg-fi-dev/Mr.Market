@@ -67,6 +67,27 @@ describe('exchange-deposit-matcher', () => {
     expect(found).toBe(deposits[0]);
   });
 
+  it('canonicalizes network aliases (ETH -> ERC20)', () => {
+    const deposits = [
+      {
+        currency: 'USDT',
+        network: 'ETH',
+        amount: '2',
+        status: 'ok',
+      },
+    ];
+
+    const found = findMatchingDeposit({
+      deposits,
+      symbol: 'USDT',
+      network: 'ERC20',
+      expectedAmount: '2',
+      amountTolerance: '0.00000001',
+    });
+
+    expect(found).toBe(deposits[0]);
+  });
+
   it('does not match when network is missing and no txid is provided', () => {
     const deposits = [
       {
