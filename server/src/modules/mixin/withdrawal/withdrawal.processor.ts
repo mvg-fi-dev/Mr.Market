@@ -139,6 +139,7 @@ export class WithdrawalProcessor {
             idempotencyKey: `withdrawal-debit:${withdrawalId}`,
             refType: 'withdrawal_processor',
             refId: withdrawalId,
+            // No MM order id for generic withdrawals; keep empty.
           });
         } catch (ledgerError) {
           this.logger.error(

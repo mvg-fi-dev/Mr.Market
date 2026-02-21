@@ -19,6 +19,10 @@ type BalanceLedgerCommand = {
   idempotencyKey: string;
   refType?: string;
   refId?: string;
+  /** Optional audit correlation for lifecycle reconstruction. */
+  traceId?: string;
+  /** Optional MM order id for lifecycle reconstruction. */
+  orderId?: string;
 };
 
 type BalanceLedgerResult = {
@@ -137,7 +141,11 @@ export class BalanceLedgerService {
         topic: 'ledger.entry.created',
         aggregateType: 'ledger_entry',
         aggregateId: result.entry.entryId,
+        traceId: result.entry.traceId,
+        orderId: result.entry.orderId,
         payload: {
+          traceId: result.entry.traceId,
+          orderId: result.entry.orderId,
           userId: result.entry.userId,
           assetId: result.entry.assetId,
           type: result.entry.type,
@@ -275,6 +283,8 @@ export class BalanceLedgerService {
       refType: command.refType,
       refId: command.refId,
       idempotencyKey: command.idempotencyKey,
+      traceId: command.traceId || '',
+      orderId: command.orderId || '',
       createdAt: now,
     });
 

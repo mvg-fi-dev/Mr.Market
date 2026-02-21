@@ -66,6 +66,8 @@ export class PauseWithdrawOrchestratorService {
       idempotencyKey: `unlock:${command.userId}:${command.clientId}:${command.assetId}:${command.amount}`,
       refType: 'withdraw_orchestrator_unlock',
       refId: command.clientId,
+      traceId: `mm:${command.clientId}`,
+      orderId: command.clientId,
     });
 
     await this.balanceLedgerService.debitWithdrawal({
@@ -75,6 +77,8 @@ export class PauseWithdrawOrchestratorService {
       idempotencyKey: `withdraw_debit:${command.userId}:${command.clientId}:${command.assetId}:${command.amount}`,
       refType: 'withdraw_orchestrator_debit',
       refId: command.clientId,
+      traceId: `mm:${command.clientId}`,
+      orderId: command.clientId,
     });
 
     await this.withdrawalService.executeWithdrawal(

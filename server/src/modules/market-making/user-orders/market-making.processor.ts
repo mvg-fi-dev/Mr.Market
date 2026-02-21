@@ -198,6 +198,9 @@ export class MarketMakingOrderProcessor {
         idempotencyKey: command.debitIdempotencyKey,
         refType: command.refType,
         refId: command.refId,
+        // Best-effort: tie refunds back to the MM order for lifecycle reconstruction.
+        traceId: `mm:${command.refId}`,
+        orderId: command.refId,
       });
 
       if (debitResult && debitResult.applied === false) {
@@ -244,6 +247,8 @@ export class MarketMakingOrderProcessor {
         idempotencyKey: `${command.debitIdempotencyKey}:compensation`,
         refType: `${command.refType}_compensation`,
         refId: command.refId,
+        traceId: `mm:${command.refId}`,
+        orderId: command.refId,
       });
     } catch (error) {
       this.logger.error(
@@ -329,6 +334,8 @@ export class MarketMakingOrderProcessor {
         idempotencyKey: `snapshot-credit:${snapshotId}`,
         refType: 'market_making_snapshot',
         refId: snapshotId,
+        traceId: `mm:${orderId}`,
+        orderId,
       });
 
       // Step 1.4: Find or create payment state

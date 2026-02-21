@@ -178,6 +178,7 @@ export class RewardPipelineService {
         idempotencyKey: `reward:${allocation.allocationId}`,
         refType: 'reward_allocation',
         refId: allocation.allocationId,
+        // No MM order id here (reward is campaign/window scoped). Keep empty.
       });
 
       allocation.status = 'CREDITED';

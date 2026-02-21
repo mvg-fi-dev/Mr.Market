@@ -42,6 +42,18 @@ export class LedgerEntry {
   @Column({ unique: true })
   idempotencyKey: string;
 
+  /**
+   * First-class audit fields (optional) to tie balance movements back to an MM order.
+   * Default '' keeps migrations/insert paths simple and SQLite-safe.
+   */
+  @Column({ default: '' })
+  @Index()
+  traceId: string;
+
+  @Column({ default: '' })
+  @Index()
+  orderId: string;
+
   @Column()
   createdAt: string;
 }
