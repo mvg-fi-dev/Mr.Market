@@ -22,6 +22,7 @@ import { AdminController } from './admin.controller';
 import { AdminSpotService } from './admin-spot-management/admin-spot-management.service';
 import { AdminOutboxModule } from './outbox/admin-outbox.module';
 import { AdminExchangesModule } from './exchanges/exchanges.module';
+import { AdminLedgerModule } from './ledger/admin-ledger.module';
 import { AdminFeeController } from './fee/admin-fee.controller';
 import { AdminFeeService } from './fee/admin-fee.service';
 import { AdminGrowService } from './growdata/adminGrow.service';
@@ -31,6 +32,7 @@ import { AdminStrategyService } from './strategy/adminStrategy.service';
   imports: [
     AdminExchangesModule,
     AdminOutboxModule,
+    AdminLedgerModule,
     GrowdataModule,
     SpotdataModule,
     MixinClientModule,
