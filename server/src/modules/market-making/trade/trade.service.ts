@@ -117,6 +117,8 @@ export class TradeService {
         topic: 'market_making.trade.executed',
         aggregateType: 'trade',
         aggregateId: `${exchange}:${order.id}`,
+        // First-class audit fields for indexing/search.
+        traceId: effectiveTraceId,
         // For market-making, clientId === orderId.
         orderId: clientId,
         payload: {
@@ -149,6 +151,7 @@ export class TradeService {
         topic: 'market_making.trade.failed',
         aggregateType: 'trade',
         aggregateId: `${exchange}:market:${clientId}`,
+        traceId: effectiveTraceId,
         orderId: clientId,
         payload: {
           eventType: 'TRADE_FAILED',
@@ -218,6 +221,7 @@ export class TradeService {
         topic: 'market_making.trade.executed',
         aggregateType: 'trade',
         aggregateId: `${exchange}:${order.id}`,
+        traceId: effectiveTraceId,
         orderId: clientId,
         payload: {
           eventType: 'TRADE_EXECUTED',
@@ -249,6 +253,7 @@ export class TradeService {
         topic: 'market_making.trade.failed',
         aggregateType: 'trade',
         aggregateId: `${exchange}:limit:${clientId}`,
+        traceId: effectiveTraceId,
         orderId: clientId,
         payload: {
           eventType: 'TRADE_FAILED',
@@ -300,6 +305,7 @@ export class TradeService {
         topic: 'market_making.trade.cancelled',
         aggregateType: 'trade',
         aggregateId: `${exchange}:${orderId}`,
+        traceId: effectiveTraceId,
         // For market-making, clientId === orderId.
         orderId: resolvedClientId,
         payload: {
@@ -325,6 +331,7 @@ export class TradeService {
         topic: 'market_making.trade.cancel_failed',
         aggregateType: 'trade',
         aggregateId: `${exchange}:${orderId}`,
+        traceId: effectiveTraceId,
         orderId: resolvedClientId,
         payload: {
           eventType: 'TRADE_CANCEL_FAILED',
