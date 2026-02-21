@@ -2152,14 +2152,54 @@ export class MarketMakingOrderProcessor {
 
     const since = startedAt;
 
-    const deposits = await this.exchangeService.getDeposits({
-      exchange: exchangeName,
-      apiKeyId: apiKey.key_id,
-      since,
-      limit: 200,
-    });
+    const { findMatchingDeposit, normalizeCcxtDeposit } = await import(
+      './exchange-deposit-matcher'
+    );
 
-    const { findMatchingDeposit } = await import('./exchange-deposit-matcher');
+    const tryFetchDeposits = async (args: {
+      symbol?: string;
+      network?: string;
+    }): Promise<any[]> => {
+      try {
+        return await this.exchangeService.getDeposits({
+          exchange: exchangeName,
+          apiKeyId: apiKey.key_id,
+          symbol: args.symbol,
+          network: args.network,
+          since,
+          limit: 200,
+        } as any);
+      } catch (error) {
+        // Some exchanges/ccxt builds reject network filtering; fall back to broad fetch.
+        this.logger.warn(
+          `${this.logCtx({
+            traceId: traceId || `mm:${orderId}`,
+            orderId,
+            job,
+            exchange: exchangeName,
+            apiKeyId: apiKey.key_id,
+          })} fetchDeposits filter failed (symbol=${args.symbol || ''} network=${args.network || ''}): ${error?.message || error}`,
+        );
+
+        return await this.exchangeService.getDeposits({
+          exchange: exchangeName,
+          apiKeyId: apiKey.key_id,
+          since,
+          limit: 200,
+        });
+      }
+    };
+
+    // Prefer filtered fetches to reduce noise, but keep broad fallback for compatibility.
+    const [baseDeposits, quoteDeposits] = await Promise.all([
+      tryFetchDeposits({ symbol: pairConfig.base_symbol, network: baseNetwork }),
+      tryFetchDeposits({
+        symbol: pairConfig.quote_symbol,
+        network: quoteNetwork,
+      }),
+    ]);
+
+    const deposits = [...(baseDeposits || []), ...(quoteDeposits || [])];
 
     const baseDeposit = findMatchingDeposit({
       deposits,
@@ -2178,6 +2218,13 @@ export class MarketMakingOrderProcessor {
       expectedTxHash: quoteWithdrawalTxHash,
       amountTolerance: DEPOSIT_AMOUNT_TOLERANCE,
     });
+
+    const baseFact = baseDeposit ? normalizeCcxtDeposit(baseDeposit) : null;
+    const quoteFact = quoteDeposit ? normalizeCcxtDeposit(quoteDeposit) : null;
+
+    const baseConfirmedAmount = baseFact?.amount || paymentState.baseAssetAmount;
+    const quoteConfirmedAmount =
+      quoteFact?.amount || paymentState.quoteAssetAmount;
 
     this.logger.log(
       `${this.logCtx({
@@ -2203,10 +2250,10 @@ export class MarketMakingOrderProcessor {
         exchange: exchangeName,
         baseAssetId: paymentState.baseAssetId,
         baseSymbol: pairConfig.base_symbol,
-        baseAllocatedAmount: paymentState.baseAssetAmount,
+        baseAllocatedAmount: baseConfirmedAmount,
         quoteAssetId: paymentState.quoteAssetId,
         quoteSymbol: pairConfig.quote_symbol,
-        quoteAllocatedAmount: paymentState.quoteAssetAmount,
+        quoteAllocatedAmount: quoteConfirmedAmount,
       });
 
       await this.allocationService.markExchangeDepositConfirmed(orderId);
@@ -2235,10 +2282,14 @@ export class MarketMakingOrderProcessor {
           exchange: exchangeName,
           baseSymbol: pairConfig.base_symbol,
           quoteSymbol: pairConfig.quote_symbol,
-          baseAmount: paymentState.baseAssetAmount,
-          quoteAmount: paymentState.quoteAssetAmount,
+          baseAmount: baseConfirmedAmount,
+          quoteAmount: quoteConfirmedAmount,
+          baseNetwork,
+          quoteNetwork,
           baseWithdrawalTxHash,
           quoteWithdrawalTxHash,
+          baseDeposit: baseFact,
+          quoteDeposit: quoteFact,
           traceId: traceId || `mm:${orderId}`,
           startedAt,
         },
