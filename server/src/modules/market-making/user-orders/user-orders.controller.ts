@@ -13,6 +13,7 @@ import { MarketMakingHistory } from 'src/common/entities/market-making/market-ma
 import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
 
 import { AdminOutboxService } from 'src/modules/admin/outbox/admin-outbox.service';
+import { AdminLedgerService } from 'src/modules/admin/ledger/admin-ledger.service';
 
 import { StrategyService } from '../strategy/strategy.service';
 import { buildLifecycleOpenOrdersV0 } from './lifecycle-open-orders';
@@ -31,6 +32,7 @@ export class UserOrdersController {
     private readonly userOrdersService: UserOrdersService,
     private readonly strategyService: StrategyService,
     private readonly adminOutboxService: AdminOutboxService,
+    private readonly adminLedgerService: AdminLedgerService,
     private readonly tradeService: TradeService,
   ) {}
 
@@ -259,7 +261,7 @@ export class UserOrdersController {
 
     const strategyKey = `${order.userId}-${orderId}-pureMarketMaking`;
 
-    const [intents, history, outbox, trades] = await Promise.all([
+    const [intents, history, outbox, trades, ledger] = await Promise.all([
       this.strategyService.listIntentsByClientId(orderId, 500),
       this.userOrdersService.getMarketMakingHistoryByStrategyInstanceId(
         orderId,
@@ -269,6 +271,10 @@ export class UserOrdersController {
         limit: 500,
       }),
       this.tradeService.getTradeHistoryByClientId(orderId, 200),
+      this.adminLedgerService.listLedgerEntries({
+        orderId,
+        limit: 200,
+      }),
     ]);
 
     const trackerOpenOrders = this.strategyService.getOpenOrders(strategyKey);
@@ -290,6 +296,8 @@ export class UserOrdersController {
       openOrdersSource: reconstructed.source,
       history,
       trades: trades.trades,
+      // Ledger entries are durable facts about balance movements; include them for full lifecycle reconstruction.
+      ledgerEntries: ledger.entries,
       outboxSummary: buildOutboxSummaryV0(outboxEvents),
       outbox: outboxEvents,
     };

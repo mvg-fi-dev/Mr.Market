@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 
 import { AdminOutboxService } from 'src/modules/admin/outbox/admin-outbox.service';
+import { AdminLedgerService } from 'src/modules/admin/ledger/admin-ledger.service';
 
 import { StrategyService } from '../strategy/strategy.service';
 import { TradeService } from '../trade/trade.service';
@@ -24,6 +25,10 @@ describe('UserOrdersController', () => {
     listOutboxEvents: jest.fn(),
   };
 
+  const mockAdminLedgerService = {
+    listLedgerEntries: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UserOrdersController],
@@ -31,6 +36,7 @@ describe('UserOrdersController', () => {
         { provide: UserOrdersService, useValue: mockUserOrdersService },
         { provide: StrategyService, useValue: mockStrategyService },
         { provide: AdminOutboxService, useValue: mockAdminOutboxService },
+        { provide: AdminLedgerService, useValue: mockAdminLedgerService },
         {
           provide: TradeService,
           useValue: {
@@ -78,6 +84,11 @@ describe('UserOrdersController', () => {
       trades: [{ orderId: 'ex-1' }],
     });
 
+    mockAdminLedgerService.listLedgerEntries.mockResolvedValueOnce({
+      ok: true,
+      entries: [{ entryId: 'le1' }],
+    });
+
     const res = await (controller as any).getMarketMakingLifecycle('order-1');
 
     expect(
@@ -104,6 +115,7 @@ describe('UserOrdersController', () => {
     expect(res.openOrders).toHaveLength(1);
     expect(res.history).toHaveLength(1);
     expect(res.outbox).toHaveLength(1);
+    expect(res.ledgerEntries).toHaveLength(1);
 
     expect(res.outboxSummary).toEqual(
       expect.objectContaining({

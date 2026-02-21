@@ -20,6 +20,7 @@ import { WalletModule } from 'src/modules/mixin/wallet/wallet.module';
 import { WithdrawalModule } from 'src/modules/mixin/withdrawal/withdrawal.module';
 
 import { AdminOutboxModule } from 'src/modules/admin/outbox/admin-outbox.module';
+import { AdminLedgerModule } from 'src/modules/admin/ledger/admin-ledger.module';
 
 import { DurabilityModule } from '../durability/durability.module';
 import { MMExchangeAllocationModule } from '../exchange-allocation/mm-exchange-allocation.module';
@@ -66,6 +67,7 @@ import { UserOrdersService } from './user-orders.service';
     LedgerModule,
     DurabilityModule,
     AdminOutboxModule,
+    AdminLedgerModule,
   ],
   controllers: [UserOrdersController],
   providers: [UserOrdersService, MarketMakingOrderProcessor],
