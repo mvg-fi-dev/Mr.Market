@@ -7,6 +7,7 @@ import type { Queue } from 'bull';
 import { BalanceReadModel } from 'src/common/entities/ledger/balance-read-model.entity';
 import { RewardAllocation } from 'src/common/entities/ledger/reward-allocation.entity';
 import { RewardLedger } from 'src/common/entities/ledger/reward-ledger.entity';
+import { MMExchangeAllocation } from 'src/common/entities/market-making/mm-exchange-allocation.entity';
 import { StrategyOrderIntentEntity } from 'src/common/entities/market-making/strategy-order-intent.entity';
 import { MarketMakingOrder } from 'src/common/entities/orders/user-orders.entity';
 import type { MarketMakingStates } from 'src/common/types/orders/states';
@@ -22,6 +23,11 @@ type ReconciliationReport = {
 };
 
 type DepositConfirmingRepairReport = {
+  checked: number;
+  repaired: number;
+};
+
+type ExitInProgressRepairReport = {
   checked: number;
   repaired: number;
 };
@@ -42,6 +48,8 @@ export class ReconciliationService {
     private readonly strategyOrderIntentRepository: Repository<StrategyOrderIntentEntity>,
     @InjectRepository(MarketMakingOrder)
     private readonly marketMakingOrderRepository: Repository<MarketMakingOrder>,
+    @InjectRepository(MMExchangeAllocation)
+    private readonly mmExchangeAllocationRepository: Repository<MMExchangeAllocation>,
     @InjectQueue('market-making') private readonly marketMakingQueue: Queue,
     private readonly growdataRepository: GrowdataRepository,
   ) {}
@@ -52,9 +60,10 @@ export class ReconciliationService {
     const rewards = await this.reconcileRewardConsistency();
     const intents = await this.reconcileIntentLifecycleConsistency();
     const depositConfirming = await this.reconcileDepositConfirmingOrders();
+    const exitInProgress = await this.reconcileExitInProgressOrders();
 
     this.logger.log(
-      `Ledger reconciliation checked=${ledger.checked} violations=${ledger.violations}; reward checked=${rewards.checked} violations=${rewards.violations}; intent checked=${intents.checked} violations=${intents.violations}; deposit_confirming checked=${depositConfirming.checked} repaired=${depositConfirming.repaired}`,
+      `Ledger reconciliation checked=${ledger.checked} violations=${ledger.violations}; reward checked=${rewards.checked} violations=${rewards.violations}; intent checked=${intents.checked} violations=${intents.violations}; deposit_confirming checked=${depositConfirming.checked} repaired=${depositConfirming.repaired}; exit_in_progress checked=${exitInProgress.checked} repaired=${exitInProgress.repaired}`,
     );
   }
 
@@ -203,4 +212,97 @@ export class ReconciliationService {
       repaired,
     };
   }
+
+  /**
+   * Repair worker for a known failure mode:
+   * - order is stuck in `exit_withdrawing` or `exit_refunding`
+   * - `monitor_exit_mixin_deposit` job was missed/lost (queue outage/restart)
+   *
+   * This periodically re-enqueues the monitor job (idempotent by jobId).
+   */
+  async reconcileExitInProgressOrders(): Promise<ExitInProgressRepairReport> {
+    const statesToRepair: MarketMakingStates[] = ['exit_withdrawing', 'exit_refunding'];
+
+    const orders = await this.marketMakingOrderRepository.findBy({
+      state: statesToRepair[0] as any,
+    });
+
+    const refunding = await this.marketMakingOrderRepository.findBy({
+      state: statesToRepair[1] as any,
+    });
+
+    orders.push(...refunding);
+
+    let repaired = 0;
+
+    for (const order of orders) {
+      try {
+        const allocation = await this.mmExchangeAllocationRepository.findOneBy({
+          orderId: order.orderId,
+        });
+
+        if (!allocation) {
+          this.logger.warn(
+            `Reconciliation: exit_in_progress order ${order.orderId} missing mm_exchange_allocation`,
+          );
+          continue;
+        }
+
+        const pairConfig =
+          await this.growdataRepository.findMarketMakingPairByExchangeAndSymbol(
+            order.exchangeName,
+            order.pair,
+          );
+
+        if (!pairConfig) {
+          this.logger.warn(
+            `Reconciliation: exit_in_progress order ${order.orderId} missing pair config (${order.exchangeName} ${order.pair})`,
+          );
+          continue;
+        }
+
+        const persistedStartedAt = allocation.exitWithdrawalStartedAt
+          ? Date.parse(allocation.exitWithdrawalStartedAt)
+          : Date.parse((order as any).updatedAt || order.createdAt) || Date.now();
+
+        await this.marketMakingQueue.add(
+          'monitor_exit_mixin_deposit',
+          {
+            userId: order.userId,
+            orderId: order.orderId,
+            exchangeName: pairConfig.exchange_id,
+            baseAssetId: pairConfig.base_asset_id,
+            quoteAssetId: pairConfig.quote_asset_id,
+            expectedBaseAmount: allocation.baseAllocatedAmount,
+            expectedQuoteAmount: allocation.quoteAllocatedAmount,
+            expectedBaseTxHash: allocation.exitExpectedBaseTxHash,
+            expectedQuoteTxHash: allocation.exitExpectedQuoteTxHash,
+            traceId: `mm:reconcile:exit:${order.orderId}`,
+            startedAt: Number.isFinite(persistedStartedAt)
+              ? persistedStartedAt
+              : Date.now(),
+          },
+          {
+            jobId: `monitor_exit_mixin_deposit_${order.orderId}`,
+            attempts: 120,
+            backoff: { type: 'fixed', delay: 30000 },
+            removeOnComplete: false,
+          },
+        );
+
+        repaired += 1;
+      } catch (error) {
+        this.logger.error(
+          `Reconciliation: failed to re-enqueue monitor_exit_mixin_deposit for order ${order.orderId}: ${error.message}`,
+          error.stack,
+        );
+      }
+    }
+
+    return {
+      checked: orders.length,
+      repaired,
+    };
+  }
 }
+

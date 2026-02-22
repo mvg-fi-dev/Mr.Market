@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { BalanceReadModel } from 'src/common/entities/ledger/balance-read-model.entity';
 import { RewardAllocation } from 'src/common/entities/ledger/reward-allocation.entity';
 import { RewardLedger } from 'src/common/entities/ledger/reward-ledger.entity';
+import { MMExchangeAllocation } from 'src/common/entities/market-making/mm-exchange-allocation.entity';
 import { StrategyOrderIntentEntity } from 'src/common/entities/market-making/strategy-order-intent.entity';
 import { MarketMakingOrder } from 'src/common/entities/orders/user-orders.entity';
 import { GrowdataModule } from 'src/modules/data/grow-data/grow-data.module';
@@ -19,6 +20,7 @@ import { ReconciliationService } from './reconciliation.service';
       RewardAllocation,
       StrategyOrderIntentEntity,
       MarketMakingOrder,
+      MMExchangeAllocation,
     ]),
     BullModule.registerQueue({
       name: 'market-making',

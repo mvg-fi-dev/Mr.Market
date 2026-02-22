@@ -21,6 +21,8 @@ describe('ReconciliationService', () => {
       { find: jest.fn().mockResolvedValue(deps?.intents ?? []) } as any,
       // marketMakingOrderRepository
       { findBy: jest.fn().mockResolvedValue(deps?.orders ?? []) } as any,
+      // mmExchangeAllocationRepository
+      { findOneBy: jest.fn().mockResolvedValue(null) } as any,
       // marketMakingQueue
       { add: jest.fn().mockResolvedValue(undefined) } as any,
       // growdataRepository
@@ -134,6 +136,7 @@ describe('ReconciliationService', () => {
           },
         ]),
       } as any,
+      { findOneBy: jest.fn().mockResolvedValue(null) } as any,
       queue as any,
       {
         findMarketMakingPairByExchangeAndSymbol: jest
