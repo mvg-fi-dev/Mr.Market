@@ -1588,6 +1588,30 @@ export class MarketMakingOrderProcessor {
       'exit_withdrawing',
     );
 
+    // Durable fact: exit withdrawal initiated (idempotency is ensured by allocation + jobId guards).
+    await this.durabilityService.appendOutboxEvent({
+      topic: 'mm.exit.withdrawal.initiated',
+      aggregateType: 'market_making_order',
+      aggregateId: orderId,
+      traceId: exitTraceId,
+      orderId,
+      payload: {
+        orderId,
+        userId,
+        exchange: exchangeName,
+        baseSymbol: pairConfig.base_symbol,
+        quoteSymbol: pairConfig.quote_symbol,
+        baseNetwork,
+        quoteNetwork,
+        baseAmount,
+        quoteAmount,
+        baseWithdrawalTxHash: expectedBaseTxHash,
+        quoteWithdrawalTxHash: expectedQuoteTxHash,
+        startedAt: exitStartedAt,
+        traceId: exitTraceId,
+      },
+    });
+
     // Persist expected tx hashes + start time to make exit-withdrawal idempotent across retries/crashes.
     await this.allocationService.markExitWithdrawing({
       orderId,
@@ -1749,6 +1773,30 @@ export class MarketMakingOrderProcessor {
       'exit_refunding',
     );
 
+    await this.durabilityService.appendOutboxEvent({
+      topic: 'mm.exit.deposits.confirmed',
+      aggregateType: 'market_making_order',
+      aggregateId: orderId,
+      traceId: traceId || `mm:exit:${orderId}`,
+      orderId,
+      payload: {
+        orderId,
+        userId,
+        baseAssetId,
+        quoteAssetId,
+        expectedBaseAmount: expectedBaseAmount || '0',
+        expectedQuoteAmount: expectedQuoteAmount || '0',
+        expectedBaseTxHash: expectedBaseTxHash || '',
+        expectedQuoteTxHash: expectedQuoteTxHash || '',
+        baseSnapshotId: baseSnapshot?.snapshot_id || '',
+        quoteSnapshotId: quoteSnapshot?.snapshot_id || '',
+        baseConfirmedAmount: baseSnapshot?.amount || '0',
+        quoteConfirmedAmount: quoteSnapshot?.amount || '0',
+        startedAt,
+        traceId: traceId || `mm:exit:${orderId}`,
+      },
+    });
+
     if (baseSnapshot) {
       await this.executeRefundTransfer({
         userId,
@@ -1793,6 +1841,21 @@ export class MarketMakingOrderProcessor {
       orderId,
       'exit_complete',
     );
+
+    await this.durabilityService.appendOutboxEvent({
+      topic: 'mm.exit.completed',
+      aggregateType: 'market_making_order',
+      aggregateId: orderId,
+      traceId: traceId || `mm:exit:${orderId}`,
+      orderId,
+      payload: {
+        orderId,
+        userId,
+        baseSnapshotId: baseSnapshot?.snapshot_id || '',
+        quoteSnapshotId: quoteSnapshot?.snapshot_id || '',
+        traceId: traceId || `mm:exit:${orderId}`,
+      },
+    });
 
     await this.allocationService.markExitComplete(orderId);
   }
