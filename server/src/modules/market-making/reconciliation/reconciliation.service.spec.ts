@@ -31,6 +31,8 @@ describe('ReconciliationService', () => {
           .fn()
           .mockResolvedValue(null),
       } as any,
+      // durabilityService
+      { appendOutboxEvent: jest.fn().mockResolvedValue(undefined) } as any,
     );
 
     return service;
@@ -143,6 +145,7 @@ describe('ReconciliationService', () => {
           .fn()
           .mockResolvedValue({ id: 'pair-1' }),
       } as any,
+      { appendOutboxEvent: jest.fn().mockResolvedValue(undefined) } as any,
     );
 
     const report = await service.reconcileDepositConfirmingOrders();
@@ -203,6 +206,7 @@ describe('ReconciliationService', () => {
           quote_asset_id: 'asset-quote',
         }),
       } as any,
+      { appendOutboxEvent: jest.fn().mockResolvedValue(undefined) } as any,
     );
 
     const report = await service.reconcileExitInProgressOrders();

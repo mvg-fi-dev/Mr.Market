@@ -9,6 +9,7 @@ import { StrategyOrderIntentEntity } from 'src/common/entities/market-making/str
 import { MarketMakingOrder } from 'src/common/entities/orders/user-orders.entity';
 import { GrowdataModule } from 'src/modules/data/grow-data/grow-data.module';
 
+import { DurabilityModule } from '../durability/durability.module';
 import { TrackersModule } from '../trackers/trackers.module';
 import { ReconciliationService } from './reconciliation.service';
 
@@ -27,6 +28,7 @@ import { ReconciliationService } from './reconciliation.service';
     }),
     GrowdataModule,
     TrackersModule,
+    DurabilityModule,
   ],
   providers: [ReconciliationService],
   exports: [ReconciliationService],

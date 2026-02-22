@@ -13,6 +13,7 @@ import { MarketMakingOrder } from 'src/common/entities/orders/user-orders.entity
 import type { MarketMakingStates } from 'src/common/types/orders/states';
 import { GrowdataRepository } from 'src/modules/data/grow-data/grow-data.repository';
 import { CustomLogger } from 'src/modules/infrastructure/logger/logger.service';
+import { DurabilityService } from '../durability/durability.service';
 import { Repository } from 'typeorm';
 
 import { ExchangeOrderTrackerService } from '../trackers/exchange-order-tracker.service';
@@ -52,6 +53,7 @@ export class ReconciliationService {
     private readonly mmExchangeAllocationRepository: Repository<MMExchangeAllocation>,
     @InjectQueue('market-making') private readonly marketMakingQueue: Queue,
     private readonly growdataRepository: GrowdataRepository,
+    private readonly durabilityService: DurabilityService,
   ) {}
 
   @Cron(CronExpression.EVERY_5_MINUTES)
@@ -61,9 +63,10 @@ export class ReconciliationService {
     const intents = await this.reconcileIntentLifecycleConsistency();
     const depositConfirming = await this.reconcileDepositConfirmingOrders();
     const exitInProgress = await this.reconcileExitInProgressOrders();
+    const allocations = await this.reconcileAllocationInvariants();
 
     this.logger.log(
-      `Ledger reconciliation checked=${ledger.checked} violations=${ledger.violations}; reward checked=${rewards.checked} violations=${rewards.violations}; intent checked=${intents.checked} violations=${intents.violations}; deposit_confirming checked=${depositConfirming.checked} repaired=${depositConfirming.repaired}; exit_in_progress checked=${exitInProgress.checked} repaired=${exitInProgress.repaired}`,
+      `Ledger reconciliation checked=${ledger.checked} violations=${ledger.violations}; reward checked=${rewards.checked} violations=${rewards.violations}; intent checked=${intents.checked} violations=${intents.violations}; deposit_confirming checked=${depositConfirming.checked} repaired=${depositConfirming.repaired}; exit_in_progress checked=${exitInProgress.checked} repaired=${exitInProgress.repaired}; allocations checked=${allocations.checked} violations=${allocations.violations}`,
     );
   }
 
@@ -302,6 +305,139 @@ export class ReconciliationService {
     return {
       checked: orders.length,
       repaired,
+    };
+  }
+
+  /**
+   * Allocation invariants (alert-only; do NOT auto-correct).
+   *
+   * Goal: detect unsafe states early and emit durable facts for ops/debugging.
+   */
+  async reconcileAllocationInvariants(): Promise<ReconciliationReport> {
+    // Only check states where allocation is expected to exist.
+    const statesToCheck: MarketMakingStates[] = [
+      'deposit_confirmed',
+      'running',
+      'paused',
+      'stopped',
+      'joining_campaign',
+      'campaign_joined',
+      'exit_requested',
+      'exit_withdrawing',
+      'exit_refunding',
+      'exit_complete',
+    ];
+
+    const allOrders: MarketMakingOrder[] = [];
+
+    for (const state of statesToCheck) {
+      const rows = await this.marketMakingOrderRepository.findBy({
+        state: state as any,
+      });
+
+      allOrders.push(...(rows || []));
+    }
+
+    // De-dup by orderId
+    const ordersById = new Map<string, MarketMakingOrder>();
+    for (const o of allOrders) {
+      if (o?.orderId && !ordersById.has(o.orderId)) {
+        ordersById.set(o.orderId, o);
+      }
+    }
+
+    let violations = 0;
+
+    for (const order of ordersById.values()) {
+      try {
+        const allocation = await this.mmExchangeAllocationRepository.findOneBy({
+          orderId: order.orderId,
+        });
+
+        if (!allocation) {
+          violations += 1;
+          await this.durabilityService.appendOutboxEvent({
+            topic: 'mm.allocation.missing',
+            aggregateType: 'market_making_order',
+            aggregateId: order.orderId,
+            traceId: `mm:reconcile:alloc:${order.orderId}`,
+            orderId: order.orderId,
+            payload: {
+              orderId: order.orderId,
+              userId: (order as any).userId || '',
+              exchange: order.exchangeName,
+              pair: order.pair,
+              state: order.state,
+              traceId: `mm:reconcile:alloc:${order.orderId}`,
+            },
+          });
+          continue;
+        }
+
+        const base = new BigNumber(allocation.baseAllocatedAmount || '0');
+        const quote = new BigNumber(allocation.quoteAllocatedAmount || '0');
+
+        const badNumber =
+          !base.isFinite() || !quote.isFinite() || base.isLessThan(0) || quote.isLessThan(0);
+
+        if (badNumber) {
+          violations += 1;
+          await this.durabilityService.appendOutboxEvent({
+            topic: 'mm.allocation.invalid_amount',
+            aggregateType: 'market_making_order',
+            aggregateId: order.orderId,
+            traceId: `mm:reconcile:alloc:${order.orderId}`,
+            orderId: order.orderId,
+            payload: {
+              orderId: order.orderId,
+              userId: allocation.userId,
+              exchange: allocation.exchange,
+              baseAllocatedAmount: allocation.baseAllocatedAmount,
+              quoteAllocatedAmount: allocation.quoteAllocatedAmount,
+              state: allocation.state,
+              orderState: order.state,
+              traceId: `mm:reconcile:alloc:${order.orderId}`,
+            },
+          });
+        }
+
+        // Exit markers should exist once allocation is in exit_withdrawing
+        if (allocation.state === 'exit_withdrawing') {
+          const hasMarker = Boolean(allocation.exitWithdrawalStartedAt);
+
+          if (!hasMarker) {
+            violations += 1;
+            await this.durabilityService.appendOutboxEvent({
+              topic: 'mm.allocation.exit_marker_missing',
+              aggregateType: 'market_making_order',
+              aggregateId: order.orderId,
+              traceId: `mm:reconcile:alloc:${order.orderId}`,
+              orderId: order.orderId,
+              payload: {
+                orderId: order.orderId,
+                userId: allocation.userId,
+                exchange: allocation.exchange,
+                allocationState: allocation.state,
+                exitWithdrawalStartedAt: allocation.exitWithdrawalStartedAt || '',
+                exitExpectedBaseTxHash: allocation.exitExpectedBaseTxHash || '',
+                exitExpectedQuoteTxHash: allocation.exitExpectedQuoteTxHash || '',
+                traceId: `mm:reconcile:alloc:${order.orderId}`,
+              },
+            });
+          }
+        }
+      } catch (error) {
+        violations += 1;
+        this.logger.error(
+          `Reconciliation: allocation invariant check failed for order ${order.orderId}: ${error.message}`,
+          error.stack,
+        );
+      }
+    }
+
+    return {
+      checked: ordersById.size,
+      violations,
     };
   }
 }
