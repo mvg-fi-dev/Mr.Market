@@ -99,6 +99,20 @@
         }
     };
 
+    const addMeta = (meta: Record<string, string>, k: string, v: any) => {
+        if (v === undefined || v === null) return;
+        const s = String(v);
+        if (!s) return;
+        meta[k] = s;
+    };
+
+    const addMetaShort = (meta: Record<string, string>, k: string, v: any, max = 64) => {
+        if (v === undefined || v === null) return;
+        const s = String(v);
+        if (!s) return;
+        meta[k] = s.length > max ? `${s.slice(0, max)}…` : s;
+    };
+
     const topicTone = (topic?: string): TimelineItem["tone"] => {
         if (!topic) return "info";
         if (topic.includes(".failed") || topic.includes(".timeout")) return "error";
@@ -143,13 +157,37 @@
                 const payload = typeof e.payload === "string" ? safeParsePayload(e.payload) : null;
 
                 const meta: Record<string, string> = {};
-                if (e.traceId) meta.traceId = String(e.traceId);
-                if (e.orderId) meta.orderId = String(e.orderId);
-                if (payload?.exchange) meta.exchange = String(payload.exchange);
-                if (payload?.symbol) meta.symbol = String(payload.symbol);
-                if (payload?.baseAmount) meta.baseAmount = String(payload.baseAmount);
-                if (payload?.quoteAmount) meta.quoteAmount = String(payload.quoteAmount);
-                if (payload?.error) meta.error = String(payload.error).slice(0, 140);
+                addMeta(meta, "traceId", e.traceId);
+                addMeta(meta, "orderId", e.orderId);
+
+                // Common
+                addMeta(meta, "exchange", payload?.exchange);
+                addMeta(meta, "symbol", payload?.symbol);
+                addMeta(meta, "baseAmount", payload?.baseAmount);
+                addMeta(meta, "quoteAmount", payload?.quoteAmount);
+
+                // Deposit confirmed event enrichment
+                // (server enriches with baseNetwork/quoteNetwork and normalized facts where available)
+                addMeta(meta, "baseNetwork", payload?.baseNetwork);
+                addMeta(meta, "quoteNetwork", payload?.quoteNetwork);
+                addMeta(meta, "baseTxHash", payload?.baseTxHash || payload?.expectedBaseTxHash);
+                addMeta(meta, "quoteTxHash", payload?.quoteTxHash || payload?.expectedQuoteTxHash);
+
+                // Exit events
+                addMeta(meta, "startedAt", payload?.startedAt);
+                addMeta(meta, "baseWithdrawalTxHash", payload?.baseWithdrawalTxHash);
+                addMeta(meta, "quoteWithdrawalTxHash", payload?.quoteWithdrawalTxHash);
+                addMeta(meta, "baseSnapshotId", payload?.baseSnapshotId);
+                addMeta(meta, "quoteSnapshotId", payload?.quoteSnapshotId);
+
+                // Allocation alerts
+                if (e.topic && String(e.topic).startsWith("mm.allocation.")) {
+                    addMeta(meta, "allocationState", payload?.allocationState);
+                    addMeta(meta, "orderState", payload?.orderState);
+                }
+
+                // Error
+                addMetaShort(meta, "error", payload?.error, 140);
 
                 return {
                     id: `outbox:${e.eventId}`,
@@ -166,14 +204,14 @@
         const fromLedger: TimelineItem[] = ledgerEntries
             .map((l: any) => {
                 const ts = Date.parse(l.createdAt);
-                const meta: Record<string, string> = {
-                    assetId: String(l.assetId),
-                    amount: String(l.amount),
-                    type: String(l.type),
-                };
-                if (l.traceId) meta.traceId = String(l.traceId);
-                if (l.orderId) meta.orderId = String(l.orderId);
-                if (l.refType) meta.refType = String(l.refType);
+                const meta: Record<string, string> = {};
+                addMeta(meta, "assetId", l.assetId);
+                addMeta(meta, "amount", l.amount);
+                addMeta(meta, "type", l.type);
+                addMeta(meta, "traceId", l.traceId);
+                addMeta(meta, "orderId", l.orderId);
+                addMeta(meta, "refType", l.refType);
+                addMeta(meta, "refId", l.refId);
 
                 return {
                     id: `ledger:${l.entryId}`,
