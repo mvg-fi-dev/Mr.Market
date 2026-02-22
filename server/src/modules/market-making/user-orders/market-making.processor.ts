@@ -63,6 +63,12 @@ type RefundTransferCommand = {
   debitIdempotencyKey: string;
   refType: string;
   refId: string;
+  /**
+   * Optional correlation for lifecycle reconstruction.
+   * Only set when refId is an actual MM orderId.
+   */
+  traceId?: string;
+  orderId?: string;
   transfer: () => Promise<unknown>;
 };
 
@@ -174,6 +180,8 @@ export class MarketMakingOrderProcessor {
         debitIdempotencyKey: `mm-refund:${orderId}:${assetId}`,
         refType: 'market_making_order_refund',
         refId: orderId,
+        traceId: `mm:${orderId}`,
+        orderId,
         transfer: async () =>
           await this.transactionService.transfer(
             refundUserId,
@@ -198,9 +206,8 @@ export class MarketMakingOrderProcessor {
         idempotencyKey: command.debitIdempotencyKey,
         refType: command.refType,
         refId: command.refId,
-        // Best-effort: tie refunds back to the MM order for lifecycle reconstruction.
-        traceId: `mm:${command.refId}`,
-        orderId: command.refId,
+        ...(command.traceId ? { traceId: command.traceId } : {}),
+        ...(command.orderId ? { orderId: command.orderId } : {}),
       });
 
       if (debitResult && debitResult.applied === false) {
@@ -247,8 +254,8 @@ export class MarketMakingOrderProcessor {
         idempotencyKey: `${command.debitIdempotencyKey}:compensation`,
         refType: `${command.refType}_compensation`,
         refId: command.refId,
-        traceId: `mm:${command.refId}`,
-        orderId: command.refId,
+        ...(command.traceId ? { traceId: command.traceId } : {}),
+        ...(command.orderId ? { orderId: command.orderId } : {}),
       });
     } catch (error) {
       this.logger.error(
@@ -1750,6 +1757,8 @@ export class MarketMakingOrderProcessor {
         debitIdempotencyKey: `mm-exit-refund:${orderId}:${baseAssetId}`,
         refType: 'market_making_exit_refund',
         refId: orderId,
+        traceId: traceId || `mm:exit:${orderId}`,
+        orderId,
         transfer: async () =>
           await this.transactionService.transfer(
             userId,
@@ -1768,6 +1777,8 @@ export class MarketMakingOrderProcessor {
         debitIdempotencyKey: `mm-exit-refund:${orderId}:${quoteAssetId}`,
         refType: 'market_making_exit_refund',
         refId: orderId,
+        traceId: traceId || `mm:exit:${orderId}`,
+        orderId,
         transfer: async () =>
           await this.transactionService.transfer(
             userId,

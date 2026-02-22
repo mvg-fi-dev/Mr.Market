@@ -160,6 +160,8 @@ describe('MarketMakingOrderProcessor', () => {
       idempotencyKey: 'snapshot-credit:snapshot-1',
       refType: 'market_making_snapshot',
       refId: 'snapshot-1',
+      traceId: 'mm:order-1',
+      orderId: 'order-1',
     });
   });
 
@@ -242,6 +244,8 @@ describe('MarketMakingOrderProcessor', () => {
       idempotencyKey: 'mm-refund:order-9:asset-base',
       refType: 'market_making_order_refund',
       refId: 'order-9',
+      traceId: 'mm:order-9',
+      orderId: 'order-9',
     });
 
     const debitOrder =
