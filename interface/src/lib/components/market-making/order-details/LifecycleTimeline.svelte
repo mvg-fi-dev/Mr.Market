@@ -13,6 +13,10 @@
 <script lang="ts">
   export let items: import('./LifecycleTimeline.svelte').TimelineItem[] = [];
 
+  export let defaultFilter: 'all' | 'errors' | 'outbox' | 'ledger' = 'all';
+
+  let filter: 'all' | 'errors' | 'outbox' | 'ledger' = defaultFilter;
+
   const fmt = (ts: number) => {
     try {
       return new Date(ts).toLocaleString();
@@ -27,22 +31,63 @@
     if (tone === 'error') return 'bg-red-50 border-red-100 text-red-700';
     return 'bg-blue-50 border-blue-100 text-blue-700';
   };
+
+  const isErrorItem = (item: TimelineItem) =>
+    item.tone === 'error' ||
+    Boolean(item.topic && (item.topic.includes('.failed') || item.topic.includes('.timeout')));
+
+  $: visibleItems = items.filter((item) => {
+    if (filter === 'all') return true;
+    if (filter === 'errors') return isErrorItem(item);
+    if (filter === 'outbox') return Boolean(item.id && item.id.startsWith('outbox:'));
+    if (filter === 'ledger') return Boolean(item.id && item.id.startsWith('ledger:'));
+    return true;
+  });
 </script>
 
 <div class="mx-4 mt-4">
   <div class="bg-white rounded-2xl shadow-sm border border-gray-50 p-4">
-    <div class="flex items-center justify-between">
+    <div class="flex items-center justify-between gap-3">
       <div class="text-sm font-bold text-gray-500">Timeline (durable facts)</div>
-      <div class="text-xs text-base-content/50">{items.length} events</div>
+      <div class="flex items-center gap-2">
+        <button
+          class={`btn btn-xs ${filter === 'all' ? 'btn-neutral' : 'btn-ghost'}`}
+          on:click={() => (filter = 'all')}
+        >
+          All
+        </button>
+        <button
+          class={`btn btn-xs ${filter === 'errors' ? 'btn-error' : 'btn-ghost'}`}
+          on:click={() => (filter = 'errors')}
+        >
+          Errors
+        </button>
+        <button
+          class={`btn btn-xs ${filter === 'outbox' ? 'btn-neutral' : 'btn-ghost'}`}
+          on:click={() => (filter = 'outbox')}
+        >
+          Outbox
+        </button>
+        <button
+          class={`btn btn-xs ${filter === 'ledger' ? 'btn-neutral' : 'btn-ghost'}`}
+          on:click={() => (filter = 'ledger')}
+        >
+          Ledger
+        </button>
+
+        <div class="text-xs text-base-content/50 whitespace-nowrap">
+          {visibleItems.length}/{items.length}
+        </div>
+      </div>
     </div>
 
-    {#if items.length === 0}
+    {#if visibleItems.length === 0}
       <div class="mt-3 text-sm text-base-content/60">
         No timeline events yet.
       </div>
     {:else}
       <div class="mt-3 space-y-3">
-        {#each items as item}
+        {#each visibleItems as item}
           <div class={`border rounded-xl p-3 ${toneClass(item.tone)}`}>
             <div class="flex items-start justify-between gap-3">
               <div>

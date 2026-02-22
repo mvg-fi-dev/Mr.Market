@@ -510,6 +510,15 @@
         </div>
 
         <LifecycleTimeline items={timelineItems} />
+
+        <div class="mx-4 mt-2">
+            <div class="text-xs text-base-content/60">
+                openOrdersSource:
+                <span class="ml-1 font-mono text-base-content/70">
+                    {lifecycle.openOrdersSource || "---"}
+                </span>
+            </div>
+        </div>
     {/if}
 
     <RevenueCard

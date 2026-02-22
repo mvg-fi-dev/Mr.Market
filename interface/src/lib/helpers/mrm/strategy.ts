@@ -244,6 +244,7 @@ export type MarketMakingLifecycleBundle =
       strategyKey: string;
       intents: unknown[];
       openOrders: unknown[];
+      openOrdersSource?: string;
       history: unknown[];
       trades?: unknown[];
       ledgerEntries?: LedgerEntryV0[];
