@@ -1496,18 +1496,35 @@ export class MarketMakingOrderProcessor {
       );
     }
 
-    // If we previously started an exit-withdrawal, do not create a second exchange withdrawal.
-    // Instead, re-enqueue the deposit monitor using the persisted tx hashes / startedAt.
-    if (
-      allocation.state === 'exit_withdrawing' &&
-      (allocation.exitExpectedBaseTxHash || allocation.exitExpectedQuoteTxHash)
-    ) {
+    // Exit-withdrawal idempotency (partial failure safe):
+    // - We persist per-side "issued" markers in allocation.
+    // - On retries, only withdraw the missing side(s).
+    // - Only enqueue monitor job after all required sides are issued (or amount==0).
+    const baseAmount = toWithdrawalAmount(allocation.baseAllocatedAmount);
+    const quoteAmount = toWithdrawalAmount(allocation.quoteAllocatedAmount);
+
+    const needsBase = new BigNumber(baseAmount).isGreaterThan(0);
+    const needsQuote = new BigNumber(quoteAmount).isGreaterThan(0);
+
+    // Fast-path: no withdrawals required.
+    // Still emit durable facts + enqueue monitor (which will confirm 0-amount trivially).
+
+    const baseIssued = Boolean((allocation as any).exitBaseIssuedAt);
+    const quoteIssued = Boolean((allocation as any).exitQuoteIssuedAt);
+
+    const baseReady = !needsBase || baseIssued;
+    const quoteReady = !needsQuote || quoteIssued;
+
+    // Stable startedAt across retries (important for snapshot matching window).
+    const exitStartedAtRfc3339 = allocation.exitWithdrawalStartedAt || getRFC3339Timestamp();
+
+    if (allocation.state === 'exit_withdrawing' && baseReady && quoteReady) {
       this.logger.warn(
         `${this.logCtx({
           traceId: exitTraceId,
           orderId,
           job,
-        })} Exit already withdrawing; re-enqueueing monitor_exit_mixin_deposit without re-withdraw`,
+        })} Exit already withdrawing (issued markers present); re-enqueueing monitor_exit_mixin_deposit without re-withdraw`,
       );
 
       const persistedStartedAt = allocation.exitWithdrawalStartedAt
@@ -1542,9 +1559,6 @@ export class MarketMakingOrderProcessor {
       return;
     }
 
-    const baseAmount = toWithdrawalAmount(allocation.baseAllocatedAmount);
-    const quoteAmount = toWithdrawalAmount(allocation.quoteAllocatedAmount);
-
     // IMPORTANT: shared exchange accounts may have balances locked in open orders.
     // Drain open orders (cancel until no open orders) before exchange withdrawals.
     try {
@@ -1578,29 +1592,54 @@ export class MarketMakingOrderProcessor {
     let quoteWithdrawal: any | null = null;
 
     try {
-      baseWithdrawal = new BigNumber(baseAmount).isGreaterThan(0)
-        ? await this.exchangeService.createWithdrawal({
-            exchange: exchangeName,
-            apiKeyId: apiKey.key_id,
-            symbol: pairConfig.base_symbol,
-            network: baseNetwork,
-            address: baseDeposit.address,
-            tag: baseDeposit.memo || '',
-            amount: baseAmount,
-          })
-        : null;
+      // If a prior attempt already issued one side, do not double-withdraw.
+      if (!baseReady) {
+        baseWithdrawal = needsBase
+          ? await this.exchangeService.createWithdrawal({
+              exchange: exchangeName,
+              apiKeyId: apiKey.key_id,
+              symbol: pairConfig.base_symbol,
+              network: baseNetwork,
+              address: baseDeposit.address,
+              tag: baseDeposit.memo || '',
+              amount: baseAmount,
+            })
+          : null;
 
-      quoteWithdrawal = new BigNumber(quoteAmount).isGreaterThan(0)
-        ? await this.exchangeService.createWithdrawal({
-            exchange: exchangeName,
-            apiKeyId: apiKey.key_id,
-            symbol: pairConfig.quote_symbol,
-            network: quoteNetwork,
-            address: quoteDeposit.address,
-            tag: quoteDeposit.memo || '',
-            amount: quoteAmount,
-          })
-        : null;
+        await this.allocationService.markExitWithdrawing({
+          orderId,
+          exitWithdrawalStartedAt: exitStartedAtRfc3339,
+          exitBaseIssuedAt: getRFC3339Timestamp(),
+          exitExpectedBaseTxHash: this.pickTxHash(baseWithdrawal),
+        });
+      }
+
+      // Refresh allocation markers for subsequent logic in this run.
+      const nextAllocation = await this.allocationService.getByOrderId(orderId);
+
+      const quoteIssuedNow = Boolean((nextAllocation as any)?.exitQuoteIssuedAt);
+      const quoteReadyNow = !needsQuote || quoteIssuedNow;
+
+      if (!quoteReadyNow) {
+        quoteWithdrawal = needsQuote
+          ? await this.exchangeService.createWithdrawal({
+              exchange: exchangeName,
+              apiKeyId: apiKey.key_id,
+              symbol: pairConfig.quote_symbol,
+              network: quoteNetwork,
+              address: quoteDeposit.address,
+              tag: quoteDeposit.memo || '',
+              amount: quoteAmount,
+            })
+          : null;
+
+        await this.allocationService.markExitWithdrawing({
+          orderId,
+          exitWithdrawalStartedAt: exitStartedAtRfc3339,
+          exitQuoteIssuedAt: getRFC3339Timestamp(),
+          exitExpectedQuoteTxHash: this.pickTxHash(quoteWithdrawal),
+        });
+      }
     } catch (error) {
       await this.durabilityService.appendOutboxEvent({
         topic: 'mm.exit.withdrawal.failed',
@@ -1626,9 +1665,17 @@ export class MarketMakingOrderProcessor {
       throw error;
     }
 
-    const exitStartedAt = Date.now();
-    const expectedBaseTxHash = this.pickTxHash(baseWithdrawal);
-    const expectedQuoteTxHash = this.pickTxHash(quoteWithdrawal);
+    // Reload allocation to use persisted durable markers/tx hashes (important when one side was issued in a prior attempt).
+    const finalAllocation = await this.allocationService.getByOrderId(orderId);
+
+    const exitStartedAt = finalAllocation?.exitWithdrawalStartedAt
+      ? Date.parse(finalAllocation.exitWithdrawalStartedAt)
+      : Date.now();
+
+    const expectedBaseTxHash =
+      this.pickTxHash(baseWithdrawal) || finalAllocation?.exitExpectedBaseTxHash;
+    const expectedQuoteTxHash =
+      this.pickTxHash(quoteWithdrawal) || finalAllocation?.exitExpectedQuoteTxHash;
 
     await this.userOrdersService.updateMarketMakingOrderState(
       orderId,
@@ -1661,9 +1708,10 @@ export class MarketMakingOrderProcessor {
     });
 
     // Persist expected tx hashes + start time to make exit-withdrawal idempotent across retries/crashes.
+    // Do NOT overwrite per-side issued markers; those are set earlier, right after each successful withdrawal request.
     await this.allocationService.markExitWithdrawing({
       orderId,
-      exitWithdrawalStartedAt: getRFC3339Timestamp(),
+      exitWithdrawalStartedAt: exitStartedAtRfc3339,
       exitExpectedBaseTxHash: expectedBaseTxHash,
       exitExpectedQuoteTxHash: expectedQuoteTxHash,
     });

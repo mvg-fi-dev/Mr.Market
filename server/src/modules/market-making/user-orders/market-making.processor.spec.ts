@@ -413,7 +413,7 @@ describe('MarketMakingOrderProcessor', () => {
       processor as any
     ).networkMappingService.getNetworkForAsset.mockResolvedValueOnce('ERC20');
 
-    (processor as any).allocationService.getByOrderId.mockResolvedValueOnce({
+    (processor as any).allocationService.getByOrderId.mockResolvedValue({
       baseAllocatedAmount: '1',
       quoteAllocatedAmount: '2',
       state: 'exchange_deposit_confirmed',

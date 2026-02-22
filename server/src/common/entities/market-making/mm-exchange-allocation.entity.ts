@@ -54,6 +54,14 @@ export class MMExchangeAllocation {
   @Column({ nullable: true })
   exitWithdrawalStartedAt?: string;
 
+  // Markers set when an exchange withdrawal request for the side has been issued.
+  // Used to ensure retries do not double-withdraw in partial failure scenarios.
+  @Column({ nullable: true })
+  exitBaseIssuedAt?: string;
+
+  @Column({ nullable: true })
+  exitQuoteIssuedAt?: string;
+
   @Column({ nullable: true })
   exitExpectedBaseTxHash?: string;
 

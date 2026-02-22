@@ -71,21 +71,36 @@ export class MMExchangeAllocationService {
   async markExitWithdrawing(params: {
     orderId: string;
     exitWithdrawalStartedAt?: string;
+    exitBaseIssuedAt?: string;
+    exitQuoteIssuedAt?: string;
     exitExpectedBaseTxHash?: string;
     exitExpectedQuoteTxHash?: string;
   }): Promise<void> {
     const now = getRFC3339Timestamp();
 
-    await this.repository.update(
-      { orderId: params.orderId },
-      {
-        state: 'exit_withdrawing',
-        exitWithdrawalStartedAt: params.exitWithdrawalStartedAt,
-        exitExpectedBaseTxHash: params.exitExpectedBaseTxHash,
-        exitExpectedQuoteTxHash: params.exitExpectedQuoteTxHash,
-        updatedAt: now,
-      },
-    );
+    const patch: Partial<MMExchangeAllocation> = {
+      state: 'exit_withdrawing',
+      updatedAt: now,
+    };
+
+    // Only set fields when explicitly provided; never overwrite durable markers with undefined.
+    if (params.exitWithdrawalStartedAt != null) {
+      patch.exitWithdrawalStartedAt = params.exitWithdrawalStartedAt;
+    }
+    if (params.exitBaseIssuedAt != null) {
+      patch.exitBaseIssuedAt = params.exitBaseIssuedAt;
+    }
+    if (params.exitQuoteIssuedAt != null) {
+      patch.exitQuoteIssuedAt = params.exitQuoteIssuedAt;
+    }
+    if (params.exitExpectedBaseTxHash != null) {
+      patch.exitExpectedBaseTxHash = params.exitExpectedBaseTxHash;
+    }
+    if (params.exitExpectedQuoteTxHash != null) {
+      patch.exitExpectedQuoteTxHash = params.exitExpectedQuoteTxHash;
+    }
+
+    await this.repository.update({ orderId: params.orderId }, patch);
   }
 
   async markExitComplete(orderId: string): Promise<void> {
