@@ -1547,37 +1547,84 @@ export class MarketMakingOrderProcessor {
 
     // IMPORTANT: shared exchange accounts may have balances locked in open orders.
     // Drain open orders (cancel until no open orders) before exchange withdrawals.
-    await this.pauseWithdrawOrchestratorService.pauseAndDrainOrders({
-      userId,
-      clientId: orderId,
-      strategyType: 'pureMarketMaking',
-      timeoutMs: 120_000,
-      pollMs: 1_000,
-    });
-
-    const baseWithdrawal = new BigNumber(baseAmount).isGreaterThan(0)
-      ? await this.exchangeService.createWithdrawal({
+    try {
+      await this.pauseWithdrawOrchestratorService.pauseAndDrainOrders({
+        userId,
+        clientId: orderId,
+        strategyType: 'pureMarketMaking',
+        timeoutMs: 120_000,
+        pollMs: 1_000,
+      });
+    } catch (error) {
+      await this.durabilityService.appendOutboxEvent({
+        topic: 'mm.exit.drain_open_orders.failed',
+        aggregateType: 'market_making_order',
+        aggregateId: orderId,
+        traceId: exitTraceId,
+        orderId,
+        payload: {
+          orderId,
+          userId,
           exchange: exchangeName,
-          apiKeyId: apiKey.key_id,
-          symbol: pairConfig.base_symbol,
-          network: baseNetwork,
-          address: baseDeposit.address,
-          tag: baseDeposit.memo || '',
-          amount: baseAmount,
-        })
-      : null;
+          error: String(error?.message || error),
+          traceId: exitTraceId,
+        },
+      });
 
-    const quoteWithdrawal = new BigNumber(quoteAmount).isGreaterThan(0)
-      ? await this.exchangeService.createWithdrawal({
+      throw error;
+    }
+
+    let baseWithdrawal: any | null = null;
+    let quoteWithdrawal: any | null = null;
+
+    try {
+      baseWithdrawal = new BigNumber(baseAmount).isGreaterThan(0)
+        ? await this.exchangeService.createWithdrawal({
+            exchange: exchangeName,
+            apiKeyId: apiKey.key_id,
+            symbol: pairConfig.base_symbol,
+            network: baseNetwork,
+            address: baseDeposit.address,
+            tag: baseDeposit.memo || '',
+            amount: baseAmount,
+          })
+        : null;
+
+      quoteWithdrawal = new BigNumber(quoteAmount).isGreaterThan(0)
+        ? await this.exchangeService.createWithdrawal({
+            exchange: exchangeName,
+            apiKeyId: apiKey.key_id,
+            symbol: pairConfig.quote_symbol,
+            network: quoteNetwork,
+            address: quoteDeposit.address,
+            tag: quoteDeposit.memo || '',
+            amount: quoteAmount,
+          })
+        : null;
+    } catch (error) {
+      await this.durabilityService.appendOutboxEvent({
+        topic: 'mm.exit.withdrawal.failed',
+        aggregateType: 'market_making_order',
+        aggregateId: orderId,
+        traceId: exitTraceId,
+        orderId,
+        payload: {
+          orderId,
+          userId,
           exchange: exchangeName,
-          apiKeyId: apiKey.key_id,
-          symbol: pairConfig.quote_symbol,
-          network: quoteNetwork,
-          address: quoteDeposit.address,
-          tag: quoteDeposit.memo || '',
-          amount: quoteAmount,
-        })
-      : null;
+          baseSymbol: pairConfig.base_symbol,
+          quoteSymbol: pairConfig.quote_symbol,
+          baseNetwork,
+          quoteNetwork,
+          baseAmount,
+          quoteAmount,
+          error: String(error?.message || error),
+          traceId: exitTraceId,
+        },
+      });
+
+      throw error;
+    }
 
     const exitStartedAt = Date.now();
     const expectedBaseTxHash = this.pickTxHash(baseWithdrawal);
@@ -1588,7 +1635,8 @@ export class MarketMakingOrderProcessor {
       'exit_withdrawing',
     );
 
-    // Durable fact: exit withdrawal initiated (idempotency is ensured by allocation + jobId guards).
+    // Durable fact: exit withdrawal initiated.
+    // Note: if withdrawals didn't return a tx hash, monitoring will fall back to amount matching.
     await this.durabilityService.appendOutboxEvent({
       topic: 'mm.exit.withdrawal.initiated',
       aggregateType: 'market_making_order',
