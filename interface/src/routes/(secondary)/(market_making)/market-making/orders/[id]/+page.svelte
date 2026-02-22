@@ -576,6 +576,7 @@
         canceledRate={canceledRate}
         totalVolume={reportVolume}
         volumeCurrency={order.balances?.quote?.symbol || "---"}
+        buckets5m={executionReport?.by5m || []}
         on:close={() => (showExecutionDetails = false)}
     />
 </div>

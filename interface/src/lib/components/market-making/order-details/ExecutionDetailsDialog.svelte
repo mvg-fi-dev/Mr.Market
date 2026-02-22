@@ -13,6 +13,14 @@
     export let totalVolume = "458,291.50";
     export let volumeCurrency = "Usdt";
 
+    export let buckets5m: Array<{
+        bucketStart: string;
+        trades: number;
+        volume: string;
+        buyVolume: string;
+        sellVolume: string;
+    }> = [];
+
     const dispatch = createEventDispatcher();
 
     function close() {
@@ -172,6 +180,27 @@
                 <div class="text-sm font-bold text-base-content/40 mt-1">
                     {volumeCurrency}
                 </div>
+
+                {#if buckets5m && buckets5m.length > 0}
+                    <div class="mt-4 text-left">
+                        <div class="text-xs font-bold text-base-content/60 mb-2">
+                            5-min buckets (latest)
+                        </div>
+                        <div class="space-y-2 max-h-40 overflow-y-auto">
+                            {#each buckets5m.slice(-24).reverse() as b}
+                                <div class="flex items-center justify-between text-xs bg-base-200/40 rounded-xl px-3 py-2">
+                                    <div class="font-mono text-base-content/70">
+                                        {new Date(b.bucketStart).toLocaleString()}
+                                    </div>
+                                    <div class="flex items-center gap-3 font-mono">
+                                        <span class="opacity-70">t={b.trades}</span>
+                                        <span>v={b.volume}</span>
+                                    </div>
+                                </div>
+                            {/each}
+                        </div>
+                    </div>
+                {/if}
             </div>
 
             <!-- Actions -->
