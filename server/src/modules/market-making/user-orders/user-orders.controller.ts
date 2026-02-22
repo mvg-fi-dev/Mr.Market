@@ -7,6 +7,7 @@ import {
   Param,
   Post,
   Query,
+  Req,
 } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { MarketMakingHistory } from 'src/common/entities/market-making/market-making-order.entity';
@@ -138,12 +139,17 @@ export class UserOrdersController {
   async stopMarketMaking(
     @Param('orderId') orderId: string,
     @Body() body: StopMarketMakingDto,
+    @Req() req: any,
   ) {
-    this.logger.log(`Soft stop market making requested: orderId=${orderId}`);
+    const traceId = req?.traceId;
 
-    await this.userOrdersService.stopMarketMaking(body.userId, orderId);
+    this.logger.log(
+      `Soft stop market making requested: orderId=${orderId} traceId=${traceId || '---'}`,
+    );
 
-    return { ok: true };
+    await this.userOrdersService.stopMarketMaking(body.userId, orderId, traceId);
+
+    return { ok: true, traceId };
   }
 
   @Post('/market-making/:orderId/pause')
@@ -159,12 +165,17 @@ export class UserOrdersController {
   async pauseMarketMaking(
     @Param('orderId') orderId: string,
     @Body() body: StopMarketMakingDto,
+    @Req() req: any,
   ) {
-    this.logger.log(`Pause market making requested: orderId=${orderId}`);
+    const traceId = req?.traceId;
 
-    await this.userOrdersService.pauseMarketMaking(body.userId, orderId);
+    this.logger.log(
+      `Pause market making requested: orderId=${orderId} traceId=${traceId || '---'}`,
+    );
 
-    return { ok: true };
+    await this.userOrdersService.pauseMarketMaking(body.userId, orderId, traceId);
+
+    return { ok: true, traceId };
   }
 
   @Post('/market-making/:orderId/resume')
@@ -178,12 +189,17 @@ export class UserOrdersController {
   async resumeMarketMaking(
     @Param('orderId') orderId: string,
     @Body() body: StopMarketMakingDto,
+    @Req() req: any,
   ) {
-    this.logger.log(`Resume market making requested: orderId=${orderId}`);
+    const traceId = req?.traceId;
 
-    await this.userOrdersService.resumeMarketMaking(body.userId, orderId);
+    this.logger.log(
+      `Resume market making requested: orderId=${orderId} traceId=${traceId || '---'}`,
+    );
 
-    return { ok: true };
+    await this.userOrdersService.resumeMarketMaking(body.userId, orderId, traceId);
+
+    return { ok: true, traceId };
   }
 
   @Post('/market-making/:orderId/exit-withdrawal')
@@ -199,12 +215,17 @@ export class UserOrdersController {
   async exitMarketMaking(
     @Param('orderId') orderId: string,
     @Body() body: ExitMarketMakingDto,
+    @Req() req: any,
   ) {
-    this.logger.log(`Exit withdrawal requested: orderId=${orderId}`);
+    const traceId = req?.traceId;
 
-    await this.userOrdersService.exitMarketMaking(body.userId, orderId);
+    this.logger.log(
+      `Exit withdrawal requested: orderId=${orderId} traceId=${traceId || '---'}`,
+    );
 
-    return { ok: true };
+    await this.userOrdersService.exitMarketMaking(body.userId, orderId, traceId);
+
+    return { ok: true, traceId };
   }
 
   @Get('/market-making/history/:userId')

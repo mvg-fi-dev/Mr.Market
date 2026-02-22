@@ -402,12 +402,13 @@ export class UserOrdersService {
     return await (this.marketMakingQueue as any).add(name, data, opts);
   }
 
-  async stopMarketMaking(userId: string, orderId: string) {
+  async stopMarketMaking(userId: string, orderId: string, traceId?: string) {
     await this.addQueueJobOnce({
       name: 'stop_mm',
       data: {
         userId,
         orderId,
+        traceId,
       },
       opts: {
         jobId: `stop_mm_${orderId}`,
@@ -419,12 +420,13 @@ export class UserOrdersService {
     await this.updateMarketMakingOrderState(orderId, 'stopped');
   }
 
-  async pauseMarketMaking(userId: string, orderId: string) {
+  async pauseMarketMaking(userId: string, orderId: string, traceId?: string) {
     await this.addQueueJobOnce({
       name: 'pause_mm',
       data: {
         userId,
         orderId,
+        traceId,
       },
       opts: {
         jobId: `pause_mm_${orderId}`,
@@ -436,12 +438,13 @@ export class UserOrdersService {
     await this.updateMarketMakingOrderState(orderId, 'paused');
   }
 
-  async resumeMarketMaking(userId: string, orderId: string) {
+  async resumeMarketMaking(userId: string, orderId: string, traceId?: string) {
     await this.addQueueJobOnce({
       name: 'start_mm',
       data: {
         userId,
         orderId,
+        traceId,
       },
       opts: {
         jobId: `resume_mm_${orderId}`,
@@ -453,7 +456,7 @@ export class UserOrdersService {
     await this.updateMarketMakingOrderState(orderId, 'created');
   }
 
-  async exitMarketMaking(userId: string, orderId: string) {
+  async exitMarketMaking(userId: string, orderId: string, traceId?: string) {
     const order = await this.findMarketMakingByOrderId(orderId);
 
     if (!order) {
@@ -484,6 +487,7 @@ export class UserOrdersService {
       data: {
         userId,
         orderId,
+        traceId,
       },
       opts: {
         jobId: `exit_withdrawal_${orderId}`,

@@ -1,5 +1,5 @@
 import { BullModule } from '@nestjs/bull';
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -7,6 +7,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import * as dotenv from 'dotenv';
 import { MixinMessage } from 'src/common/entities/mixin/mixin-message.entity';
 import { MixinUser } from 'src/common/entities/mixin/mixin-user.entity';
+import { TraceIdMiddleware } from './common/middleware/trace-id.middleware';
 
 import { AppController } from './app.controller';
 import { APIKeysConfig } from './common/entities/admin/api-keys.entity';
@@ -186,4 +187,8 @@ dotenv.config();
   controllers: [AppController, AdminController],
   providers: [CustomLogger],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(TraceIdMiddleware).forRoutes('*');
+  }
+}

@@ -1128,9 +1128,9 @@ export class MarketMakingOrderProcessor {
   }
 
   @Process('start_mm')
-  async handleStartMM(job: Job<{ userId: string; orderId: string }>) {
+  async handleStartMM(job: Job<{ userId: string; orderId: string; traceId?: string }>) {
     const { userId, orderId } = job.data;
-    const traceId = `mm:${orderId}`;
+    const traceId = job.data?.traceId || `mm:${orderId}`;
 
     this.logger.log(
       `${this.logCtx({
@@ -1226,15 +1226,17 @@ export class MarketMakingOrderProcessor {
   }
 
   @Process('stop_mm')
-  async handleStopMM(job: Job<{ userId: string; orderId: string }>) {
+  async handleStopMM(job: Job<{ userId: string; orderId: string; traceId?: string }>) {
     // Backwards-compatible: some schedulers/clients still enqueue stop_mm for paused orders.
     // We keep this handler as the canonical stop behavior.
 
     const { userId, orderId } = job.data;
 
+    const traceId = job.data?.traceId || `mm:${orderId}`;
+
     this.logger.log(
       `${this.logCtx({
-        traceId: `mm:${orderId}`,
+        traceId,
         orderId,
         job,
       })} Stopping MM for user ${userId}`,
@@ -1252,12 +1254,14 @@ export class MarketMakingOrderProcessor {
   }
 
   @Process('pause_mm')
-  async handlePauseMM(job: Job<{ userId: string; orderId: string }>) {
+  async handlePauseMM(job: Job<{ userId: string; orderId: string; traceId?: string }>) {
     const { userId, orderId } = job.data;
+
+    const traceId = job.data?.traceId || `mm:${orderId}`;
 
     this.logger.log(
       `${this.logCtx({
-        traceId: `mm:${orderId}`,
+        traceId,
         orderId,
         job,
       })} Pausing MM for user ${userId}`,
@@ -1285,10 +1289,10 @@ export class MarketMakingOrderProcessor {
    * - refund back to the user on Mixin
    */
   @Process('exit_withdrawal')
-  async handleExitWithdrawal(job: Job<{ userId: string; orderId: string }>) {
+  async handleExitWithdrawal(job: Job<{ userId: string; orderId: string; traceId?: string }>) {
     const { userId, orderId } = job.data;
 
-    const exitTraceId = `mm:exit:${orderId}`;
+    const exitTraceId = job.data?.traceId || `mm:exit:${orderId}`;
 
     this.logger.log(
       `${this.logCtx({
@@ -1772,6 +1776,8 @@ export class MarketMakingOrderProcessor {
       expectedQuoteTxHash,
       traceId,
     } = job.data;
+    const exitTraceId = traceId || `mm:exit:${orderId}`;
+
     const startedAt = job.data.startedAt ?? Date.now();
 
     if (!job.data.startedAt) {
@@ -1792,7 +1798,7 @@ export class MarketMakingOrderProcessor {
     if (order.state === 'exit_complete') {
       this.logger.log(
         `${this.logCtx({
-          traceId: traceId || `mm:exit:${orderId}`,
+          traceId: traceId || exitTraceId,
           orderId,
           job,
         })} Exit already completed, skipping refund`,
@@ -1816,14 +1822,14 @@ export class MarketMakingOrderProcessor {
         topic: 'mm.exit.timeout',
         aggregateType: 'market_making_order',
         aggregateId: orderId,
-        traceId: traceId || `mm:exit:${orderId}`,
+        traceId: traceId || exitTraceId,
         orderId,
         payload: {
           orderId,
           userId,
           elapsedMs: elapsed,
           startedAt,
-          traceId: traceId || `mm:exit:${orderId}`,
+          traceId: traceId || exitTraceId,
         },
       });
 
@@ -1868,7 +1874,7 @@ export class MarketMakingOrderProcessor {
 
     this.logger.log(
       `${this.logCtx({
-        traceId: traceId || `mm:exit:${orderId}`,
+        traceId: traceId || exitTraceId,
         orderId,
         job,
       })} Exit deposit status - Base: ${
@@ -1889,7 +1895,7 @@ export class MarketMakingOrderProcessor {
       topic: 'mm.exit.deposits.confirmed',
       aggregateType: 'market_making_order',
       aggregateId: orderId,
-      traceId: traceId || `mm:exit:${orderId}`,
+      traceId: traceId || exitTraceId,
       orderId,
       payload: {
         orderId,
@@ -1905,7 +1911,7 @@ export class MarketMakingOrderProcessor {
         baseConfirmedAmount: baseSnapshot?.amount || '0',
         quoteConfirmedAmount: quoteSnapshot?.amount || '0',
         startedAt,
-        traceId: traceId || `mm:exit:${orderId}`,
+        traceId: traceId || exitTraceId,
       },
     });
 
@@ -1917,7 +1923,7 @@ export class MarketMakingOrderProcessor {
         debitIdempotencyKey: `mm-exit-refund:${orderId}:${baseAssetId}`,
         refType: 'market_making_exit_refund',
         refId: orderId,
-        traceId: traceId || `mm:exit:${orderId}`,
+        traceId: traceId || exitTraceId,
         orderId,
         transfer: async () =>
           await this.transactionService.transfer(
@@ -1937,7 +1943,7 @@ export class MarketMakingOrderProcessor {
         debitIdempotencyKey: `mm-exit-refund:${orderId}:${quoteAssetId}`,
         refType: 'market_making_exit_refund',
         refId: orderId,
-        traceId: traceId || `mm:exit:${orderId}`,
+        traceId: traceId || exitTraceId,
         orderId,
         transfer: async () =>
           await this.transactionService.transfer(
@@ -1958,14 +1964,14 @@ export class MarketMakingOrderProcessor {
       topic: 'mm.exit.completed',
       aggregateType: 'market_making_order',
       aggregateId: orderId,
-      traceId: traceId || `mm:exit:${orderId}`,
+      traceId: traceId || exitTraceId,
       orderId,
       payload: {
         orderId,
         userId,
         baseSnapshotId: baseSnapshot?.snapshot_id || '',
         quoteSnapshotId: quoteSnapshot?.snapshot_id || '',
-        traceId: traceId || `mm:exit:${orderId}`,
+        traceId: traceId || exitTraceId,
       },
     });
 
