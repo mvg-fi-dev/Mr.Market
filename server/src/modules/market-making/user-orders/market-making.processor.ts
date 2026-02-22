@@ -1715,6 +1715,22 @@ export class MarketMakingOrderProcessor {
       this.logger.error(
         `Exit withdrawal timeout for order ${orderId} after ${elapsed}ms`,
       );
+
+      await this.durabilityService.appendOutboxEvent({
+        topic: 'mm.exit.timeout',
+        aggregateType: 'market_making_order',
+        aggregateId: orderId,
+        traceId: traceId || `mm:exit:${orderId}`,
+        orderId,
+        payload: {
+          orderId,
+          userId,
+          elapsedMs: elapsed,
+          startedAt,
+          traceId: traceId || `mm:exit:${orderId}`,
+        },
+      });
+
       await this.userOrdersService.updateMarketMakingOrderState(
         orderId,
         'failed',
