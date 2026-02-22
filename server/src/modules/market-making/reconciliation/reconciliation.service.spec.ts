@@ -160,4 +160,68 @@ describe('ReconciliationService', () => {
       }),
     );
   });
+
+  it('re-enqueues monitor_exit_mixin_deposit for exit_withdrawing orders (when allocation + pair config are available)', async () => {
+    const queue = { add: jest.fn().mockResolvedValue(undefined) };
+
+    const findBy = jest
+      .fn()
+      .mockResolvedValueOnce([
+        {
+          orderId: 'order-exit-1',
+          userId: 'user-1',
+          exchangeName: 'mexc',
+          pair: 'BTC/USDT',
+          state: 'exit_withdrawing',
+          createdAt: '2026-02-18T00:00:00.000Z',
+        },
+      ])
+      .mockResolvedValueOnce([]);
+
+    const service = new ReconciliationService(
+      { find: jest.fn().mockResolvedValue([]) } as any,
+      { getOpenOrders: jest.fn().mockReturnValue([]) } as any,
+      { find: jest.fn().mockResolvedValue([]) } as any,
+      { find: jest.fn().mockResolvedValue([]) } as any,
+      { find: jest.fn().mockResolvedValue([]) } as any,
+      { findBy } as any,
+      {
+        findOneBy: jest.fn().mockResolvedValue({
+          orderId: 'order-exit-1',
+          baseAllocatedAmount: '1',
+          quoteAllocatedAmount: '2',
+          exitExpectedBaseTxHash: '0xbase',
+          exitExpectedQuoteTxHash: '0xquote',
+          exitWithdrawalStartedAt: '2026-02-18T01:00:00.000Z',
+        }),
+      } as any,
+      queue as any,
+      {
+        findMarketMakingPairByExchangeAndSymbol: jest.fn().mockResolvedValue({
+          exchange_id: 'mexc',
+          base_asset_id: 'asset-base',
+          quote_asset_id: 'asset-quote',
+        }),
+      } as any,
+    );
+
+    const report = await service.reconcileExitInProgressOrders();
+
+    expect(report.checked).toBe(1);
+    expect(report.repaired).toBe(1);
+    expect(queue.add).toHaveBeenCalledWith(
+      'monitor_exit_mixin_deposit',
+      expect.objectContaining({
+        userId: 'user-1',
+        orderId: 'order-exit-1',
+        expectedBaseAmount: '1',
+        expectedQuoteAmount: '2',
+        expectedBaseTxHash: '0xbase',
+        expectedQuoteTxHash: '0xquote',
+      }),
+      expect.objectContaining({
+        jobId: 'monitor_exit_mixin_deposit_order-exit-1',
+      }),
+    );
+  });
 });
