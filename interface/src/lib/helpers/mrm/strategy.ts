@@ -208,6 +208,17 @@ export type OutboxSummaryV0 = {
   lastCreatedAt?: string;
 };
 
+export type OutboxEventV0 = {
+  eventId: string;
+  topic: string;
+  aggregateType: string;
+  aggregateId: string;
+  traceId?: string;
+  orderId?: string;
+  payload: string;
+  createdAt: string;
+};
+
 export type LedgerEntryV0 = {
   entryId: string;
   userId: string;
@@ -237,7 +248,7 @@ export type MarketMakingLifecycleBundle =
       trades?: unknown[];
       ledgerEntries?: LedgerEntryV0[];
       outboxSummary?: OutboxSummaryV0;
-      outbox?: unknown[];
+      outbox?: OutboxEventV0[];
     };
 
 export const getMarketMakingLifecycleBundle = async (

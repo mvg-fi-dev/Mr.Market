@@ -9,6 +9,9 @@
     import CancelOrderDialog from "$lib/components/market-making/order-details/CancelOrderDialog.svelte";
     // ModifyOrderModal removed (no modify action in order details UI)
     import ExecutionDetailsDialog from "$lib/components/market-making/order-details/ExecutionDetailsDialog.svelte";
+    import LifecycleTimeline, {
+        type TimelineItem,
+    } from "$lib/components/market-making/order-details/LifecycleTimeline.svelte";
     import type { PageData } from "./$types";
     import { _ } from "svelte-i18n";
     import BigNumber from "bignumber.js";
@@ -87,6 +90,106 @@
     $: history = data.history || [];
     $: executionReport = data.executionReport;
     $: lifecycle = data.lifecycle;
+
+    const safeParsePayload = (payload: string) => {
+        try {
+            return JSON.parse(payload);
+        } catch {
+            return null;
+        }
+    };
+
+    const topicTone = (topic?: string): TimelineItem["tone"] => {
+        if (!topic) return "info";
+        if (topic.includes(".failed") || topic.includes(".timeout")) return "error";
+        if (topic.includes(".confirmed") || topic.includes(".completed") || topic.includes(".started"))
+            return "success";
+        return "info";
+    };
+
+    const topicTitle = (topic?: string): string => {
+        if (!topic) return "Event";
+
+        const map: Record<string, string> = {
+            "mm.deposit.confirmed": "Exchange deposits confirmed",
+            "mm.started": "Market making started",
+            "mm.start_mm.failed": "Start market making failed",
+            "mm.campaign.joined": "Campaign joined",
+
+            "mm.exit.withdrawal.initiated": "Exit: withdrawal initiated",
+            "mm.exit.withdrawal.failed": "Exit: withdrawal failed",
+            "mm.exit.drain_open_orders.failed": "Exit: drain open orders failed",
+            "mm.exit.deposits.confirmed": "Exit: deposits confirmed",
+            "mm.exit.completed": "Exit: completed",
+            "mm.exit.timeout": "Exit: timed out",
+
+            "ledger.entry.created": "Ledger entry created",
+            "market_making.trade.executed": "Trade executed",
+            "market_making.trade.failed": "Trade failed",
+        };
+
+        return map[topic] || topic;
+    };
+
+    $: timelineItems = (() => {
+        if (!lifecycle?.ok) return [] as TimelineItem[];
+
+        const outbox = lifecycle.outbox || [];
+        const ledgerEntries = lifecycle.ledgerEntries || [];
+
+        const fromOutbox: TimelineItem[] = outbox
+            .map((e: any) => {
+                const ts = Date.parse(e.createdAt);
+                const payload = typeof e.payload === "string" ? safeParsePayload(e.payload) : null;
+
+                const meta: Record<string, string> = {};
+                if (e.traceId) meta.traceId = String(e.traceId);
+                if (e.orderId) meta.orderId = String(e.orderId);
+                if (payload?.exchange) meta.exchange = String(payload.exchange);
+                if (payload?.symbol) meta.symbol = String(payload.symbol);
+                if (payload?.baseAmount) meta.baseAmount = String(payload.baseAmount);
+                if (payload?.quoteAmount) meta.quoteAmount = String(payload.quoteAmount);
+                if (payload?.error) meta.error = String(payload.error).slice(0, 140);
+
+                return {
+                    id: `outbox:${e.eventId}`,
+                    ts: Number.isFinite(ts) ? ts : Date.now(),
+                    title: topicTitle(e.topic),
+                    detail: payload?.eventType ? String(payload.eventType) : undefined,
+                    tone: topicTone(e.topic),
+                    topic: e.topic,
+                    meta,
+                };
+            })
+            .filter((x) => Number.isFinite(x.ts));
+
+        const fromLedger: TimelineItem[] = ledgerEntries
+            .map((l: any) => {
+                const ts = Date.parse(l.createdAt);
+                const meta: Record<string, string> = {
+                    assetId: String(l.assetId),
+                    amount: String(l.amount),
+                    type: String(l.type),
+                };
+                if (l.traceId) meta.traceId = String(l.traceId);
+                if (l.orderId) meta.orderId = String(l.orderId);
+                if (l.refType) meta.refType = String(l.refType);
+
+                return {
+                    id: `ledger:${l.entryId}`,
+                    ts: Number.isFinite(ts) ? ts : Date.now(),
+                    title: "Ledger movement",
+                    detail: l.refType ? String(l.refType) : undefined,
+                    tone: (String(l.amount || "").startsWith("-")
+                        ? "warning"
+                        : "info") as TimelineItem["tone"],
+                    meta,
+                };
+            })
+            .filter((x) => Number.isFinite(x.ts));
+
+        return [...fromOutbox, ...fromLedger].sort((a, b) => a.ts - b.ts);
+    })();
 
     let polling = {
         enabled: true,
@@ -405,6 +508,8 @@
                 {/if}
             </div>
         </div>
+
+        <LifecycleTimeline items={timelineItems} />
     {/if}
 
     <RevenueCard
