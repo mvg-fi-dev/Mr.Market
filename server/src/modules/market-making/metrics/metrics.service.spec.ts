@@ -99,6 +99,15 @@ describe('MetricsService', () => {
       ])
       .mockResolvedValueOnce([
         {
+          date: '2026-02-11 00:00:00',
+          trades: 1,
+          volume: 100.5,
+          buyVolume: 70.25,
+          sellVolume: 30.25,
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
           id: 1,
           exchange: 'mexc',
           pair: 'BTC/USDT',
@@ -124,10 +133,11 @@ describe('MetricsService', () => {
     expect(report.byDay[0].date).toBe('2026-02-11');
     expect(report.facts.sample[0].orderId).toBe('ex-oid-1');
 
-    expect(repository.query).toHaveBeenCalledTimes(3);
+    expect(repository.query).toHaveBeenCalledTimes(4);
 
     const totalsSql = String(repository.query.mock.calls[0][0]);
     const byDaySql = String(repository.query.mock.calls[1][0]);
+    const by5mSql = String(repository.query.mock.calls[2][0]);
 
     expect(totalsSql).toContain('FROM market_making_history');
     expect(totalsSql).toContain('"clientId" = ?');
@@ -136,5 +146,8 @@ describe('MetricsService', () => {
 
     expect(byDaySql).toContain('DATE("executedAt") AS date');
     expect(byDaySql).toContain('GROUP BY DATE("executedAt")');
+
+    expect(by5mSql).toContain("STRFTIME('%s', \"executedAt\")");
+    expect(by5mSql).toContain('GROUP BY bucketStart');
   });
 });

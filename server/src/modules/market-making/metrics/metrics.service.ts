@@ -111,6 +111,13 @@ export class MetricsService {
       buyVolume: string;
       sellVolume: string;
     }>;
+    by5m: Array<{
+      bucketStart: string;
+      trades: number;
+      volume: string;
+      buyVolume: string;
+      sellVolume: string;
+    }>;
     facts: {
       source: 'market_making_history';
       fields: string[];
@@ -170,6 +177,20 @@ export class MetricsService {
       args,
     );
 
+    const by5mRows = await this.orderRepository.query(
+      `SELECT
+        DATETIME(CAST((STRFTIME('%s', "executedAt") / 300) AS INTEGER) * 300, 'unixepoch') AS bucketStart,
+        COUNT(*) AS trades,
+        COALESCE(SUM(CAST("amount" AS REAL) * CAST("price" AS REAL)), 0) AS volume,
+        COALESCE(SUM(CASE WHEN "side" = 'buy' THEN CAST("amount" AS REAL) * CAST("price" AS REAL) ELSE 0 END), 0) AS buyVolume,
+        COALESCE(SUM(CASE WHEN "side" = 'sell' THEN CAST("amount" AS REAL) * CAST("price" AS REAL) ELSE 0 END), 0) AS sellVolume
+      FROM market_making_history
+      ${whereSql}
+      GROUP BY bucketStart
+      ORDER BY bucketStart ASC`,
+      args,
+    );
+
     const sampleRows = await this.orderRepository.query(
       `SELECT
         "id",
@@ -209,6 +230,13 @@ export class MetricsService {
       },
       byDay: (byDayRows || []).map((r: any) => ({
         date: String(r.date),
+        trades: Number(r.trades || 0),
+        volume: String(r.volume ?? '0'),
+        buyVolume: String(r.buyVolume ?? '0'),
+        sellVolume: String(r.sellVolume ?? '0'),
+      })),
+      by5m: (by5mRows || []).map((r: any) => ({
+        bucketStart: String(r.bucketStart),
         trades: Number(r.trades || 0),
         volume: String(r.volume ?? '0'),
         buyVolume: String(r.buyVolume ?? '0'),

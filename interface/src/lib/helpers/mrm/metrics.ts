@@ -24,6 +24,13 @@ export type ExecutionReportV0 = {
     buyVolume: string;
     sellVolume: string;
   }>;
+  by5m?: Array<{
+    bucketStart: string;
+    trades: number;
+    volume: string;
+    buyVolume: string;
+    sellVolume: string;
+  }>;
   facts: {
     source: string;
     fields: string[];
