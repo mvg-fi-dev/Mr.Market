@@ -14,6 +14,7 @@
     "test": "bun run test:e2e & bun run test:unit",
     "test:install-deps": "npx playwright install-deps",
     "test:unit": "vitest",
+    "test:unit:once": "vitest run",
     "test:e2e": "playwright test",
     "pr:check": "bun run lint:fix && bun run test"
   },
