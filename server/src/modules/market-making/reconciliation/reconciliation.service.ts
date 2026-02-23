@@ -425,6 +425,42 @@ export class ReconciliationService {
               },
             });
           }
+
+          // Partial-failure idempotency markers: if allocation is exit_withdrawing and amounts > 0,
+          // both sides should eventually be issued. If not, alert early.
+          const needsBase = base.isGreaterThan(0);
+          const needsQuote = quote.isGreaterThan(0);
+          const baseIssued = Boolean((allocation as any).exitBaseIssuedAt);
+          const quoteIssued = Boolean((allocation as any).exitQuoteIssuedAt);
+
+          const baseReady = !needsBase || baseIssued;
+          const quoteReady = !needsQuote || quoteIssued;
+
+          if (!baseReady || !quoteReady) {
+            violations += 1;
+            await this.durabilityService.appendOutboxEvent({
+              topic: 'mm.allocation.exit_issued_missing',
+              aggregateType: 'market_making_order',
+              aggregateId: order.orderId,
+              traceId: `mm:reconcile:alloc:${order.orderId}`,
+              orderId: order.orderId,
+              payload: {
+                orderId: order.orderId,
+                userId: allocation.userId,
+                exchange: allocation.exchange,
+                allocationState: allocation.state,
+                orderState: order.state,
+                baseAllocatedAmount: allocation.baseAllocatedAmount,
+                quoteAllocatedAmount: allocation.quoteAllocatedAmount,
+                exitWithdrawalStartedAt: allocation.exitWithdrawalStartedAt || '',
+                exitBaseIssuedAt: (allocation as any).exitBaseIssuedAt || '',
+                exitQuoteIssuedAt: (allocation as any).exitQuoteIssuedAt || '',
+                exitExpectedBaseTxHash: allocation.exitExpectedBaseTxHash || '',
+                exitExpectedQuoteTxHash: allocation.exitExpectedQuoteTxHash || '',
+                traceId: `mm:reconcile:alloc:${order.orderId}`,
+              },
+            });
+          }
         }
       } catch (error) {
         violations += 1;
