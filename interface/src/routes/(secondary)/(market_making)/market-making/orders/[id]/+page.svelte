@@ -137,6 +137,13 @@
             "mm.exit.completed": "Exit: completed",
             "mm.exit.timeout": "Exit: timed out",
 
+            "mm.allocation.missing": "ALERT: allocation missing",
+            "mm.allocation.invalid_amount": "ALERT: allocation invalid amount",
+            "mm.allocation.exit_marker_missing": "ALERT: exit marker missing",
+            "mm.allocation.exit_issued_missing": "ALERT: exit issued marker missing",
+            "mm.allocation.state_mismatch": "ALERT: allocation state mismatch",
+            "mm.allocation.exit_stuck": "ALERT: exit stuck",
+
             "ledger.entry.created": "Ledger entry created",
             "market_making.trade.executed": "Trade executed",
             "market_making.trade.failed": "Trade failed",
