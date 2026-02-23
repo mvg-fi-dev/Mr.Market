@@ -86,12 +86,77 @@ describe('ReconciliationService', () => {
 
     const report = await service.reconcileAllocationInvariants();
 
-    expect(report.violations).toBe(1);
+    // Violations:
+    // - mm.allocation.exit_issued_missing (quote marker missing)
+    // - mm.allocation.exit_stuck (startedAt is far in the past)
+    expect(report.violations).toBe(2);
+
     expect(appendOutboxEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         topic: 'mm.allocation.exit_issued_missing',
         aggregateId: 'order-exit-1',
         orderId: 'order-exit-1',
+      }),
+    );
+
+    expect(appendOutboxEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        topic: 'mm.allocation.exit_stuck',
+        aggregateId: 'order-exit-1',
+        orderId: 'order-exit-1',
+      }),
+    );
+  });
+
+  it('alerts when order is in exit state but allocation state is not', async () => {
+    const appendOutboxEvent = jest.fn().mockResolvedValue(undefined);
+
+    const service = new ReconciliationService(
+      { find: jest.fn().mockResolvedValue([]) } as any,
+      { getOpenOrders: jest.fn().mockReturnValue([]) } as any,
+      { find: jest.fn().mockResolvedValue([]) } as any,
+      { find: jest.fn().mockResolvedValue([]) } as any,
+      { find: jest.fn().mockResolvedValue([]) } as any,
+      {
+        findBy: jest.fn().mockResolvedValue([
+          {
+            orderId: 'order-exit-2',
+            userId: 'user-1',
+            exchangeName: 'mexc',
+            pair: 'BTC/USDT',
+            state: 'exit_withdrawing',
+            createdAt: '2026-02-18T00:00:00.000Z',
+          },
+        ]),
+      } as any,
+      {
+        findOneBy: jest.fn().mockResolvedValue({
+          orderId: 'order-exit-2',
+          userId: 'user-1',
+          exchange: 'mexc',
+          baseAllocatedAmount: '1',
+          quoteAllocatedAmount: '2',
+          // mismatch here
+          state: 'exchange_deposit_confirmed',
+        }),
+      } as any,
+      { add: jest.fn().mockResolvedValue(undefined) } as any,
+      {
+        findMarketMakingPairByExchangeAndSymbol: jest
+          .fn()
+          .mockResolvedValue(null),
+      } as any,
+      { appendOutboxEvent } as any,
+    );
+
+    const report = await service.reconcileAllocationInvariants();
+
+    expect(report.violations).toBe(1);
+    expect(appendOutboxEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        topic: 'mm.allocation.state_mismatch',
+        aggregateId: 'order-exit-2',
+        orderId: 'order-exit-2',
       }),
     );
   });

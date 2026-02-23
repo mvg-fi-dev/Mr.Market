@@ -401,6 +401,60 @@ export class ReconciliationService {
           });
         }
 
+        // State consistency: order.state should be compatible with allocation.state.
+        // (Alert-only; do NOT attempt to auto-fix.)
+        const orderState = String(order.state || '');
+        const allocState = String(allocation.state || '');
+
+        const isOrderExitState = orderState.startsWith('exit_');
+        const isAllocExitState = allocState.startsWith('exit_');
+
+        // When order enters exit flow, allocation should also be in exit_withdrawing/exit_complete.
+        if (isOrderExitState && !isAllocExitState) {
+          violations += 1;
+          await this.durabilityService.appendOutboxEvent({
+            topic: 'mm.allocation.state_mismatch',
+            aggregateType: 'market_making_order',
+            aggregateId: order.orderId,
+            traceId: `mm:reconcile:alloc:${order.orderId}`,
+            orderId: order.orderId,
+            payload: {
+              orderId: order.orderId,
+              userId: allocation.userId,
+              exchange: allocation.exchange,
+              pair: order.pair,
+              orderState,
+              allocationState: allocState,
+              baseAllocatedAmount: allocation.baseAllocatedAmount,
+              quoteAllocatedAmount: allocation.quoteAllocatedAmount,
+              traceId: `mm:reconcile:alloc:${order.orderId}`,
+            },
+          });
+        }
+
+        // If order is exit_complete, allocation should also be exit_complete.
+        if (orderState === 'exit_complete' && allocState !== 'exit_complete') {
+          violations += 1;
+          await this.durabilityService.appendOutboxEvent({
+            topic: 'mm.allocation.state_mismatch',
+            aggregateType: 'market_making_order',
+            aggregateId: order.orderId,
+            traceId: `mm:reconcile:alloc:${order.orderId}`,
+            orderId: order.orderId,
+            payload: {
+              orderId: order.orderId,
+              userId: allocation.userId,
+              exchange: allocation.exchange,
+              pair: order.pair,
+              orderState,
+              allocationState: allocState,
+              baseAllocatedAmount: allocation.baseAllocatedAmount,
+              quoteAllocatedAmount: allocation.quoteAllocatedAmount,
+              traceId: `mm:reconcile:alloc:${order.orderId}`,
+            },
+          });
+        }
+
         // Exit markers should exist once allocation is in exit_withdrawing
         if (allocation.state === 'exit_withdrawing') {
           const hasMarker = Boolean(allocation.exitWithdrawalStartedAt);
@@ -460,6 +514,38 @@ export class ReconciliationService {
                 traceId: `mm:reconcile:alloc:${order.orderId}`,
               },
             });
+          }
+
+          // Stuck exit detection: if we started exit withdrawal long ago but still not complete,
+          // emit a durable alert (useful when the monitor job was lost).
+          const startedAtMs = allocation.exitWithdrawalStartedAt
+            ? Date.parse(allocation.exitWithdrawalStartedAt)
+            : NaN;
+
+          if (Number.isFinite(startedAtMs)) {
+            const elapsedMs = Date.now() - startedAtMs;
+            const STUCK_THRESHOLD_MS = 90 * 60 * 1000; // 90 minutes
+
+            if (elapsedMs > STUCK_THRESHOLD_MS && orderState !== 'exit_complete') {
+              violations += 1;
+              await this.durabilityService.appendOutboxEvent({
+                topic: 'mm.allocation.exit_stuck',
+                aggregateType: 'market_making_order',
+                aggregateId: order.orderId,
+                traceId: `mm:reconcile:alloc:${order.orderId}`,
+                orderId: order.orderId,
+                payload: {
+                  orderId: order.orderId,
+                  userId: allocation.userId,
+                  exchange: allocation.exchange,
+                  orderState,
+                  allocationState: allocState,
+                  exitWithdrawalStartedAt: allocation.exitWithdrawalStartedAt || '',
+                  elapsedMs,
+                  traceId: `mm:reconcile:alloc:${order.orderId}`,
+                },
+              });
+            }
           }
         }
       } catch (error) {
